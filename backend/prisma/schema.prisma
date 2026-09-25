@@ -1,0 +1,130 @@
+// ReViveX Prisma Schema
+// Modular schema supporting multi-member collaboration
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ITEM_OWNER
+  SERVICE_PROVIDER
+  BUYER_REUSER
+  RECYCLER
+  ADMIN
+}
+
+// Member 1 - User Model
+model User {
+  id              String            @id @default(uuid())
+  name            String
+  email           String            @unique
+  passwordHash    String?
+  role            Role              @default(ITEM_OWNER)
+  profileImage    String?
+  location        String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Member 2 Items
+  items           Item[]            @relation("UserItems")
+
+  // Member 4 Service Provider Profile
+  serviceProvider ServiceProvider?
+
+  // Member 6 Reviews authored
+  reviewsAuthored Review[]          @relation("ReviewerUser")
+}
+
+// Member 2 - Item Model
+model Item {
+  id              String            @id @default(uuid())
+  ownerId         String
+  categoryId      String?
+  name            String
+  brand           String?
+  condition       String?
+  description     String?
+  imageUrl        String?
+  location        String?
+  status          String            @default("POSTED")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  owner           User              @relation("UserItems", fields: [ownerId], references: [id])
+  repairRequests  RepairRequest[]
+  reviews         Review[]
+}
+
+// Member 4 - Service Provider Model
+model ServiceProvider {
+  id                 String          @id @default(uuid())
+  userId             String          @unique
+  businessName       String
+  description        String?
+  services           String[]        @default([])
+  availability       String?
+  verificationStatus String          @default("PENDING")
+  location           String?
+  rating             Float?          @default(0.0)
+  reviewCount        Int             @default(0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  user               User            @relation(fields: [userId], references: [id])
+  repairRequests     RepairRequest[]
+  reviewsReceived    Review[]        @relation("ProviderReviews")
+}
+
+// Member 4 - Repair Request Model
+model RepairRequest {
+  id            String           @id @default(uuid())
+  itemId        String
+  customerId    String
+  providerId    String?
+  description   String?
+  requestedDate DateTime?
+  price         Float?
+  status        String           @default("PENDING") // PENDING, ACCEPTED, IN_PROGRESS, COMPLETED
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  item          Item             @relation(fields: [itemId], references: [id])
+  provider      ServiceProvider? @relation(fields: [providerId], references: [id])
+  reviews       Review[]
+}
+
+// =========================================================================
+// MEMBER 6 - REVIEW MODEL (Phase 1 Independent Scope)
+// =========================================================================
+model Review {
+  id              String           @id @default(uuid())
+  rating          Int              // Integer between 1 and 5
+  comment         String?          // Optional written review feedback
+  
+  // Reviewer reference (from Member 1)
+  reviewerId      String
+  reviewer        User             @relation("ReviewerUser", fields: [reviewerId], references: [id], onDelete: Cascade)
+  
+  // Target Service Provider reference (from Member 4) - optional for general interactions
+  providerId      String?
+  provider        ServiceProvider? @relation("ProviderReviews", fields: [providerId], references: [id], onDelete: SetNull)
+  
+  // Optional references for specific interaction context
+  repairRequestId String?
+  repairRequest   RepairRequest?   @relation(fields: [repairRequestId], references: [id], onDelete: SetNull)
+
+  itemId          String?
+  item            Item?            @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([providerId])
+  @@index([reviewerId])
+  @@index([createdAt])
+}
