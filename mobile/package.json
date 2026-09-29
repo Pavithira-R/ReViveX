@@ -1,0 +1,19 @@
+{
+  "name": "revivex-mobile",
+  "version": "1.0.0",
+  "description": "ReViveX Mobile Client - Member 4 Module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Mobile tests configured\"",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "18.2.0",
+    "react-native": "0.73.4"
+  },
+  "devDependencies": {
+    "@types/react": "~18.2.45",
+    "@types/react-native": "^0.73.0",
+    "typescript": "^5.3.3"
+  }
+}
