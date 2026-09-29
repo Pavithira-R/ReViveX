@@ -1,0 +1,131 @@
+// Prisma schema for ReViveX
+// Database source and generator
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model (Member 1 integration target)
+model User {
+  id             String           @id @default(uuid())
+  email          String           @unique
+  name           String
+  role           String           @default("CUSTOMER") // CUSTOMER, SERVICE_PROVIDER, ADMIN
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  // Relations relevant to Member 4
+  serviceProfile ServiceProvider?
+  repairRequests RepairRequest[]  @relation("CustomerRequests")
+  bookings       Booking[]        @relation("CustomerBookings")
+}
+
+// Item model (Member 2 integration target)
+model Item {
+  id             String          @id @default(uuid())
+  title          String
+  category       String
+  description    String
+  condition      String
+  imageUrl       String?
+  ownerId        String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  repairRequests RepairRequest[]
+}
+
+// ServiceProvider model (Member 4 - Phase 1)
+model ServiceProvider {
+  id              String          @id @default(uuid())
+  userId          String?         @unique
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name            String
+  businessName    String
+  profileImage    String?
+  isVerified      Boolean         @default(false)
+  description     String
+  servicesOffered String[]
+  availability    String          @default("Mon-Sat: 9:00 AM - 6:00 PM")
+  location        String
+  distanceKm      Float?
+  rating          Float           @default(5.0)
+  reviewCount     Int             @default(0)
+  startingPrice   Float?
+  currency        String          @default("USD")
+  phoneNumber     String?
+  email           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  repairRequests  RepairRequest[]
+  bookings        Booking[]
+}
+
+enum RepairStatus {
+  POSTED
+  MATCHED
+  ACCEPTED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+// RepairRequest model (Member 4 - Phase 2, 3, 5)
+model RepairRequest {
+  id                 String          @id @default(uuid())
+  itemId             String
+  item               Item            @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  customerId         String
+  customer           User            @relation("CustomerRequests", fields: [customerId], references: [id], onDelete: Cascade)
+  providerId         String
+  provider           ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  problemDescription String
+  preferredDate      DateTime
+  preferredTime      String?
+  notes              String?
+  
+  status             RepairStatus    @default(POSTED)
+  estimatedPrice     Float?
+  providerNotes      String?
+  rejectionReason    String?
+  
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  bookings           Booking[]
+}
+
+// Booking model (Member 4 - Phase 4)
+model Booking {
+  id                 String          @id @default(uuid())
+  repairRequestId    String
+  repairRequest      RepairRequest   @relation(fields: [repairRequestId], references: [id], onDelete: Cascade)
+  customerId         String
+  customer           User            @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  providerId         String
+  provider           ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  appointmentDate    DateTime
+  appointmentTime    String
+  status             BookingStatus   @default(CONFIRMED)
+  notes              String?
+  confirmationCode   String          @default(uuid())
+  
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+}
