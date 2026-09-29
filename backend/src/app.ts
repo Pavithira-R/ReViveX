@@ -5,6 +5,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import providerRoutes from './routes/providerRoutes';
+import repairRequestRoutes from './routes/repairRequestRoutes';
 
 const app = express();
 
@@ -18,6 +19,9 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // Phase 1 Routes
 app.use('/api/providers', providerRoutes);
+
+// Phase 2 Routes
+app.use('/api/repair-requests', repairRequestRoutes);
 
 // Fallback 404 Handler
 app.use((_req: Request, res: Response) => {
