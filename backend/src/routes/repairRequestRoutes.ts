@@ -19,4 +19,7 @@ router.get('/:id', (req, res) => repairRequestController.getRequestById(req, res
 // PATCH /api/repair-requests/:id/respond - Provider Accept/Reject with quotation (Phase 3)
 router.patch('/:id/respond', (req, res) => repairRequestController.respondToRequest(req, res));
 
+// PATCH /api/repair-requests/:id/status - Update Repair Progress Status (Phase 5)
+router.patch('/:id/status', (req, res) => repairRequestController.updateStatus(req, res));
+
 export default router;

@@ -145,6 +145,44 @@ export class RepairRequestController {
       });
     }
   }
+
+  async updateStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { status, providerNotes } = req.body;
+
+      const { validateUpdateRepairStatus } = await import('../validators/repairRequestValidator');
+      const validation = validateUpdateRepairStatus(status);
+      if (!validation.isValid) {
+        res.status(400).json({
+          success: false,
+          statusCode: 400,
+          error: validation.errors.join(', '),
+        });
+        return;
+      }
+
+      const result = await repairRequestService.updateRepairStatus(id, status, providerNotes);
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        data: result.request,
+        hookResult: result.hookResult,
+        message: `Repair request status updated to ${status}`,
+      });
+    } catch (error: any) {
+      const statusCode = error.message.includes('not found')
+        ? 404
+        : error.message.includes('transition') || error.message.includes('not allowed')
+        ? 400
+        : 500;
+      res.status(statusCode).json({
+        success: false,
+        statusCode,
+        error: error.message || 'Failed to update repair status',
+      });
+    }
+  }
 }
 
 export const repairRequestController = new RepairRequestController();

@@ -1,6 +1,8 @@
 // ============================================================================
-// Member 4 - Repair Request Validator (Phase 2)
+// Member 4 - Repair Request Validator (Phase 2 & 5)
 // ============================================================================
+
+import { RepairStatus } from '../types';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -49,6 +51,20 @@ export const validateCreateRepairRequest = (input: Partial<CreateRepairRequestIn
 
   if (input.notes && input.notes.length > 1000) {
     errors.push('Additional notes cannot exceed 1000 characters');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+  };
+};
+
+export const validateUpdateRepairStatus = (status: string): ValidationResult => {
+  const errors: string[] = [];
+  const validStatuses = Object.values(RepairStatus);
+
+  if (!status || !validStatuses.includes(status as RepairStatus)) {
+    errors.push(`Invalid repair status. Must be one of: ${validStatuses.join(', ')}`);
   }
 
   return {

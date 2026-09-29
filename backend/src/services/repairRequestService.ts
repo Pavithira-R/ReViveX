@@ -143,6 +143,43 @@ export class RepairRequestService {
     return this.updateRequest(request);
   }
 
+  async updateRepairStatus(
+    requestId: string,
+    targetStatus: RepairStatus,
+    providerNotes?: string
+  ): Promise<{ request: RepairRequest; hookResult?: any }> {
+    const request = await this.getRequestById(requestId);
+    if (!request) {
+      throw new Error(`Repair Request '${requestId}' was not found.`);
+    }
+
+    const { statusTransitionService } = await import('./statusTransitionService');
+    const transitionCheck = statusTransitionService.validateTransition(request.status, targetStatus);
+    if (!transitionCheck.allowed) {
+      throw new Error(transitionCheck.error || 'Transition not allowed');
+    }
+
+    request.status = targetStatus;
+    if (providerNotes) {
+      request.providerNotes = providerNotes;
+    }
+
+    const updated = await this.updateRequest(request);
+
+    let hookResult;
+    if (targetStatus === RepairStatus.COMPLETED) {
+      // Trigger isolated Member 6 hook
+      hookResult = statusTransitionService.handlePostCompletionHooks({
+        repairRequestId: request.id,
+        customerId: request.customerId,
+        providerId: request.providerId,
+        deviceCategory: request.itemSummary?.category || 'Electronics',
+      });
+    }
+
+    return { request: updated, hookResult };
+  }
+
   // Update full request entity (used internally by Phase 3 and Phase 5)
   async updateRequest(updated: RepairRequest): Promise<RepairRequest> {
     const index = this.requests.findIndex((r) => r.id === updated.id);
