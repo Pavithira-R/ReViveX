@@ -108,6 +108,41 @@ export class RepairRequestService {
     return [...this.requests];
   }
 
+  async respondToRequest(
+    requestId: string,
+    response: {
+      action: 'ACCEPT' | 'REJECT';
+      estimatedPrice?: number;
+      providerNotes?: string;
+      rejectionReason?: string;
+    }
+  ): Promise<RepairRequest> {
+    const request = await this.getRequestById(requestId);
+    if (!request) {
+      throw new Error(`Repair Request '${requestId}' was not found.`);
+    }
+
+    // Only POSTED or MATCHED requests can be responded to
+    if (request.status !== RepairStatus.POSTED && request.status !== RepairStatus.MATCHED) {
+      throw new Error(
+        `Cannot respond to request in '${request.status}' status. Only POSTED requests can be accepted or rejected.`
+      );
+    }
+
+    if (response.action === 'ACCEPT') {
+      request.status = RepairStatus.ACCEPTED;
+      request.estimatedPrice = response.estimatedPrice;
+      request.providerNotes = response.providerNotes;
+      request.rejectionReason = undefined;
+    } else {
+      request.status = RepairStatus.REJECTED;
+      request.rejectionReason = response.rejectionReason;
+      request.providerNotes = response.providerNotes;
+    }
+
+    return this.updateRequest(request);
+  }
+
   // Update full request entity (used internally by Phase 3 and Phase 5)
   async updateRequest(updated: RepairRequest): Promise<RepairRequest> {
     const index = this.requests.findIndex((r) => r.id === updated.id);

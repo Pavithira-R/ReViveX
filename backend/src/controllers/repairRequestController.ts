@@ -100,6 +100,51 @@ export class RepairRequestController {
       });
     }
   }
+
+  async respondToRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { action, estimatedPrice, providerNotes, rejectionReason } = req.body;
+
+      const { validateProviderResponse } = await import('../validators/quotationValidator');
+      const validation = validateProviderResponse({
+        action,
+        estimatedPrice,
+        providerNotes,
+        rejectionReason,
+      });
+
+      if (!validation.isValid) {
+        res.status(400).json({
+          success: false,
+          statusCode: 400,
+          error: validation.errors.join(', '),
+        });
+        return;
+      }
+
+      const updated = await repairRequestService.respondToRequest(id, {
+        action,
+        estimatedPrice,
+        providerNotes,
+        rejectionReason,
+      });
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        data: updated,
+        message: `Repair request ${action === 'ACCEPT' ? 'accepted with quotation' : 'rejected'} successfully`,
+      });
+    } catch (error: any) {
+      const statusCode = error.message.includes('not found') ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        statusCode,
+        error: error.message || 'Failed to respond to repair request',
+      });
+    }
+  }
 }
 
 export const repairRequestController = new RepairRequestController();

@@ -16,4 +16,7 @@ router.get('/', (req, res) => repairRequestController.getRequests(req, res));
 // GET /api/repair-requests/:id - Get specific repair request
 router.get('/:id', (req, res) => repairRequestController.getRequestById(req, res));
 
+// PATCH /api/repair-requests/:id/respond - Provider Accept/Reject with quotation (Phase 3)
+router.patch('/:id/respond', (req, res) => repairRequestController.respondToRequest(req, res));
+
 export default router;
