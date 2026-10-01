@@ -7,7 +7,7 @@ import app from '../src/app';
 import { recommendationService } from '../src/services/recommendationService';
 import { validateRecommendationInput } from '../src/validators/recommendationValidator';
 
-async function runRecommendationTests() {
+export async function runRecommendationTests() {
   console.log('=== RUNNING MEMBER 3 TESTS: Recommendation Engine & Validation ===\n');
   let passed = 0;
   let failed = 0;
@@ -268,4 +268,6 @@ async function runRecommendationTests() {
   }
 }
 
-runRecommendationTests();
+if (require.main === module) {
+  runRecommendationTests();
+}

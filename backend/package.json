@@ -5,7 +5,9 @@
   "main": "dist/app.js",
   "scripts": {
     "build": "tsc",
-    "test": "ts-node tests/recommendation.test.ts"
+    "test": "ts-node tests/runAllTests.ts",
+    "test:recommendation": "ts-node tests/recommendation.test.ts",
+    "test:adapters": "ts-node tests/adapters.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
