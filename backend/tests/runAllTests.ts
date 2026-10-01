@@ -5,6 +5,7 @@
 
 import { runRecommendationTests } from './recommendation.test';
 import { runAdapterTests } from './adapters.test';
+import { runSearchTests } from './search.test';
 
 async function main() {
   console.log('************************************************************');
@@ -14,6 +15,7 @@ async function main() {
   try {
     await runRecommendationTests();
     await runAdapterTests();
+    await runSearchTests();
     console.log('************************************************************');
     console.log('    ALL MEMBER 3 TEST SUITES PASSED SUCCESSFULLY (100%)    ');
     console.log('************************************************************\n');

@@ -5,6 +5,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import recommendationRoutes from './routes/recommendationRoutes';
+import searchRoutes from './routes/searchRoutes';
 
 const app = express();
 
@@ -18,6 +19,9 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // Member 3 - Recommendation Routes
 app.use('/api/recommendations', recommendationRoutes);
+
+// Member 3 - Search & Filtering Routes
+app.use('/api/search', searchRoutes);
 
 // 404 Fallback Handler
 app.use((_req: Request, res: Response) => {
