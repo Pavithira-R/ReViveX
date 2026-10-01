@@ -6,6 +6,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import recommendationRoutes from './routes/recommendationRoutes';
 import searchRoutes from './routes/searchRoutes';
+import discoveryRoutes from './routes/discoveryRoutes';
 
 const app = express();
 
@@ -22,6 +23,9 @@ app.use('/api/recommendations', recommendationRoutes);
 
 // Member 3 - Search & Filtering Routes
 app.use('/api/search', searchRoutes);
+
+// Member 3 - Discovery Feed Routes
+app.use('/api/discovery', discoveryRoutes);
 
 // 404 Fallback Handler
 app.use((_req: Request, res: Response) => {
