@@ -80,7 +80,7 @@ const items = await apiRequest<Item[]>('GET', '/items');  // token added automat
 
 ## API endpoints
 
-Base URL: `http://localhost:5000/api` (Android emulator: `http://10.0.2.2:5000/api`)
+Base URL: `http://localhost:5000/api` (on Android, run `adb reverse tcp:5000 tcp:5000` first – see Running it)
 
 | Method | Endpoint | Auth | Purpose |
 |---|---|---|---|
@@ -124,9 +124,17 @@ npm test                      # 43 tests, no database needed (Prisma is mocked)
 ```bash
 cd mobile
 npm install
+adb reverse tcp:5000 tcp:5000 # lets the phone/emulator reach the backend on your PC
 npm run android               # backend must be running
 npm test                      # auth flow tests with a mocked server
 ```
+
+Works on a real Android phone over USB (enable Developer options → USB debugging),
+which is much lighter than an emulator on 8 GB RAM laptops. Keep the cable connected
+while testing; re-run `adb reverse` after reconnecting the phone.
+
+> On Windows, keep the project in a short path outside OneDrive (e.g. `C:\dev\ReViveX`).
+> Deep paths break the Android C++ build ("Filename longer than 260 characters").
 
 ---
 
