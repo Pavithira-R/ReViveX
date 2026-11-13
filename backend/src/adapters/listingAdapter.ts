@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { NormalizedListing, ListingQueryParams } from './types';
+import { calculateHaversineDistanceKm } from '../utils/distance';
 
 /**
  * Normalizes a raw Member 5 listing (Sell, Donate, or Reuse) into a uniform Member 3 listing
@@ -41,6 +42,10 @@ export function normalizeListing(
     price: typeof raw.price === 'number' ? raw.price : null,
     organization: raw.organization ? String(raw.organization) : null,
     imageUrl: raw.imageUrl ? String(raw.imageUrl) : null,
+    location: raw.location ? String(raw.location) : null,
+    latitude: typeof raw.latitude === 'number' ? raw.latitude : null,
+    longitude: typeof raw.longitude === 'number' ? raw.longitude : null,
+    distanceKm: typeof raw.distanceKm === 'number' ? raw.distanceKm : null,
     status: String(raw.status || 'AVAILABLE'),
     createdAt: raw.createdAt ? new Date(raw.createdAt).toISOString() : new Date().toISOString(),
     source: 'MEMBER_5_MARKETPLACE',
@@ -60,6 +65,9 @@ const SEEDED_MEMBER_5_SELL = [
     condition: 'Like New',
     price: 550.0,
     imageUrl: 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9',
+    location: 'Downtown Tech District, NY',
+    latitude: 40.7128,
+    longitude: -74.006,
     status: 'AVAILABLE',
     createdAt: '2026-09-24T12:00:00.000Z',
   },
@@ -72,6 +80,9 @@ const SEEDED_MEMBER_5_SELL = [
     condition: 'Good',
     price: 130.0,
     imageUrl: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b',
+    location: 'Midtown Plaza, Suite 4, NY',
+    latitude: 40.758,
+    longitude: -73.9855,
     status: 'AVAILABLE',
     createdAt: '2026-09-26T09:30:00.000Z',
   },
@@ -87,6 +98,9 @@ const SEEDED_MEMBER_5_DONATE = [
     condition: 'Good',
     organization: 'City Youth Education Foundation',
     imageUrl: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0',
+    location: 'Westside Community Center, NY',
+    latitude: 40.7306,
+    longitude: -73.9352,
     status: 'AVAILABLE',
     createdAt: '2026-09-23T15:00:00.000Z',
   },
@@ -101,6 +115,9 @@ const SEEDED_MEMBER_5_REUSE = [
     category: 'Phones',
     condition: 'Working with minor wear',
     imageUrl: 'https://images.unsplash.com/photo-1580910051074-3eb694886505',
+    location: 'Midtown East, NY',
+    latitude: 40.7549,
+    longitude: -73.984,
     status: 'AVAILABLE',
     createdAt: '2026-09-21T18:00:00.000Z',
   },
@@ -119,7 +136,7 @@ export const ListingAdapter = {
   },
 
   /**
-   * Retrieves listings across Sell, Donate, and Reuse domains
+   * Retrieves listings across Sell, Donate, and Reuse domains with filtering, distance, and pagination
    */
   async queryListings(params?: ListingQueryParams): Promise<NormalizedListing[]> {
     if (externalQueryDelegate) {
@@ -143,6 +160,28 @@ export const ListingAdapter = {
       combined = combined.filter((l) => l.category.toLowerCase().includes(cat));
     }
 
+    // Condition filter applied before pagination
+    if (params?.condition) {
+      const cond = params.condition.toLowerCase();
+      combined = combined.filter((l) => {
+        const lCond = l.condition.toLowerCase();
+        if (lCond.includes(cond)) return true;
+        if (
+          (cond === 'working' || cond === 'working_normally') &&
+          (lCond.includes('like new') || lCond.includes('good') || lCond.includes('working'))
+        ) {
+          return true;
+        }
+        if (
+          (cond === 'damaged' || cond === 'working_with_problems') &&
+          (lCond.includes('minor wear') || lCond.includes('damaged') || lCond.includes('problems'))
+        ) {
+          return true;
+        }
+        return false;
+      });
+    }
+
     if (params?.search) {
       const term = params.search.toLowerCase();
       combined = combined.filter(
@@ -159,6 +198,52 @@ export const ListingAdapter = {
 
     if (params?.maxPrice !== undefined && params.maxPrice !== null) {
       combined = combined.filter((l) => l.price !== null && l.price !== undefined && l.price <= params.maxPrice!);
+    }
+
+    // Dynamic Haversine distance calculation
+    const hasUserCoords =
+      params?.latitude !== undefined &&
+      params?.longitude !== undefined &&
+      !isNaN(params.latitude) &&
+      !isNaN(params.longitude);
+
+    if (hasUserCoords) {
+      combined = combined.map((l) => {
+        const dist = calculateHaversineDistanceKm(
+          params!.latitude!,
+          params!.longitude!,
+          l.latitude,
+          l.longitude
+        );
+        return {
+          ...l,
+          distanceKm: dist,
+        };
+      });
+
+      const maxDist = params?.radiusKm;
+      if (maxDist !== undefined && maxDist !== null && maxDist > 0) {
+        combined = combined.filter(
+          (l) => l.distanceKm !== null && l.distanceKm !== undefined && l.distanceKm <= maxDist
+        );
+      }
+
+      combined.sort((a, b) => {
+        const hasA = a.distanceKm !== null && a.distanceKm !== undefined;
+        const hasB = b.distanceKm !== null && b.distanceKm !== undefined;
+        if (!hasA && !hasB) return 0;
+        if (!hasA) return 1;
+        if (!hasB) return -1;
+        return a.distanceKm! - b.distanceKm!;
+      });
+    }
+
+    // Apply pagination if page or limit explicitly requested
+    if (params?.page !== undefined || params?.limit !== undefined) {
+      const page = params.page && params.page > 0 ? params.page : 1;
+      const limit = params.limit && params.limit > 0 ? params.limit : 20;
+      const start = (page - 1) * limit;
+      return combined.slice(start, start + limit);
     }
 
     return combined;

@@ -45,6 +45,9 @@ export interface SearchQueryParams {
   entityType?: string;
   minRating?: string | number;
   maxDistanceKm?: string | number;
+  radiusKm?: string | number;
+  latitude?: string | number;
+  longitude?: string | number;
   minPrice?: string | number;
   maxPrice?: string | number;
   page?: string | number;
@@ -62,6 +65,9 @@ export interface ValidatedSearchQuery {
   entityType: SearchEntityType;
   minRating?: number;
   maxDistanceKm?: number;
+  radiusKm?: number;
+  latitude?: number;
+  longitude?: number;
   minPrice?: number;
   maxPrice?: number;
   page: number;
@@ -108,6 +114,9 @@ export interface UnifiedSearchResponseData {
     entityType: SearchEntityType;
     minRating?: number;
     maxDistanceKm?: number;
+    radiusKm?: number;
+    latitude?: number;
+    longitude?: number;
     minPrice?: number;
     maxPrice?: number;
   };

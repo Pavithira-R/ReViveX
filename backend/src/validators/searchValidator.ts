@@ -141,18 +141,55 @@ export function validateSearchQuery(query: SearchQueryParams): SearchValidationR
     }
   }
 
-  // 7. Max Distance (maxDistanceKm: > 0)
-  let maxDistanceKm: number | undefined;
-  if (query.maxDistanceKm !== undefined && query.maxDistanceKm !== '') {
-    const num = Number(query.maxDistanceKm);
-    if (isNaN(num) || num <= 0) {
-      errors.push("Parameter 'maxDistanceKm' must be a positive number greater than 0.");
+  // 7. Geographic Coordinates (latitude & longitude)
+  let latitude: number | undefined;
+  let longitude: number | undefined;
+  const hasLat = query.latitude !== undefined && query.latitude !== null && query.latitude !== '';
+  const hasLon = query.longitude !== undefined && query.longitude !== null && query.longitude !== '';
+
+  if (hasLat || hasLon) {
+    if (!hasLat || !hasLon) {
+      errors.push("Both 'latitude' and 'longitude' must be provided together.");
     } else {
-      maxDistanceKm = num;
+      const parsedLat = Number(query.latitude);
+      const parsedLon = Number(query.longitude);
+
+      if (isNaN(parsedLat) || parsedLat < -90 || parsedLat > 90) {
+        errors.push("Parameter 'latitude' must be a valid number between -90 and 90.");
+      } else {
+        latitude = parsedLat;
+      }
+
+      if (isNaN(parsedLon) || parsedLon < -180 || parsedLon > 180) {
+        errors.push("Parameter 'longitude' must be a valid number between -180 and 180.");
+      } else {
+        longitude = parsedLon;
+      }
     }
   }
 
-  // 8. Price Range (minPrice, maxPrice >= 0, maxPrice >= minPrice)
+  // 8. Max Distance / Radius (radiusKm or maxDistanceKm > 0)
+  const rawDistance = query.radiusKm !== undefined && query.radiusKm !== ''
+    ? query.radiusKm
+    : query.maxDistanceKm;
+  let maxDistanceKm: number | undefined;
+  let radiusKm: number | undefined;
+
+  if (rawDistance !== undefined && rawDistance !== '') {
+    const num = Number(rawDistance);
+    if (isNaN(num) || num <= 0) {
+      errors.push("Parameter 'maxDistanceKm' (or 'radiusKm') must be a positive number greater than 0.");
+    } else {
+      maxDistanceKm = num;
+      radiusKm = num;
+    }
+  } else if (latitude !== undefined && longitude !== undefined) {
+    // Default radius of 10 km per specification §9.1 when user coordinates are supplied
+    maxDistanceKm = 10;
+    radiusKm = 10;
+  }
+
+  // 9. Price Range (minPrice, maxPrice >= 0, maxPrice >= minPrice)
   let minPrice: number | undefined;
   if (query.minPrice !== undefined && query.minPrice !== '') {
     const num = Number(query.minPrice);
@@ -177,7 +214,7 @@ export function validateSearchQuery(query: SearchQueryParams): SearchValidationR
     errors.push("Parameter 'maxPrice' must be greater than or equal to 'minPrice'.");
   }
 
-  // 9. Pagination (page >= 1, limit: 1-100)
+  // 10. Pagination (page >= 1, limit: 1-100)
   let page = 1;
   if (query.page !== undefined && query.page !== '') {
     const num = Number(query.page);
@@ -216,6 +253,9 @@ export function validateSearchQuery(query: SearchQueryParams): SearchValidationR
       entityType,
       minRating,
       maxDistanceKm,
+      radiusKm,
+      latitude,
+      longitude,
       minPrice,
       maxPrice,
       page,

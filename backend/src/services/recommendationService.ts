@@ -6,15 +6,107 @@ import {
   NormalizedRecommendationInput,
   RecommendationResult,
   RecommendationOutcome,
+  DeviceCategory,
 } from '../types/recommendation.types';
+import { ProviderAdapter, ListingAdapter, RecyclingAdapter } from '../adapters';
+
+/**
+ * Capitalizes category for user-facing titles (e.g. LAPTOP -> Laptop)
+ */
+function formatCategory(category: DeviceCategory): string {
+  return category.charAt(0).toUpperCase() + category.slice(1).toLowerCase();
+}
+
+/**
+ * Generates user-facing headline title based on recommendation and category
+ */
+function generateTitle(action: RecommendationOutcome, category: DeviceCategory): string {
+  const cat = formatCategory(category);
+  switch (action) {
+    case 'REPAIR':
+      return `Repair Your ${cat}`;
+    case 'SELL':
+      return `Sell Your ${cat}`;
+    case 'DONATE':
+      return `Donate Your ${cat}`;
+    case 'REUSE':
+      return `Repurpose & Reuse Your ${cat}`;
+    case 'RECYCLE':
+      return `Safely Recycle Your ${cat}`;
+  }
+}
+
+/**
+ * Returns circular call-to-action button label matching docs/member3-recommendation-discovery.md §5.1 #4
+ */
+function generateNextActionLabel(action: RecommendationOutcome): string {
+  switch (action) {
+    case 'REPAIR':
+      return 'Find Repair Providers';
+    case 'SELL':
+      return 'List for Sale';
+    case 'DONATE':
+      return 'Browse Donation Programs';
+    case 'REUSE':
+      return 'Explore Reuse Guides';
+    case 'RECYCLE':
+      return 'Find E-Waste Drop-Offs';
+  }
+}
+
+/**
+ * PLACEHOLDER: Environmental impact calculation.
+ *
+ * DEPENDENCY: Member 6 (Communication, Reviews, Eco Impact & Integration).
+ * The official CO2e and Eco Points formulas and carbon savings coefficients are owned
+ * and defined by Member 6 per project specification §1.2 & §10.1.
+ *
+ * Standard indicative baseline values are provided below as a placeholder until
+ * Member 6 integrates the official coefficient calculator.
+ */
+function getPlaceholderEcoImpact(
+  category: DeviceCategory,
+  action: RecommendationOutcome
+): { estimatedCo2SavingsKg: number | null; estimatedEcoPoints: number | null } {
+  // Baseline CO2 displacement benchmarks per device type (kg CO2e)
+  const categoryCo2Weights: Record<DeviceCategory, number> = {
+    LAPTOP: 120.0,
+    DESKTOP: 150.0,
+    PHONE: 60.0,
+    TABLET: 75.0,
+    MONITOR: 80.0,
+    PRINTER: 65.0,
+    OTHER: 40.0,
+  };
+
+  const actionMultiplier: Record<RecommendationOutcome, number> = {
+    REPAIR: 1.0,
+    REUSE: 0.9,
+    SELL: 0.8,
+    DONATE: 0.85,
+    RECYCLE: 0.5,
+  };
+
+  const baseCo2 = categoryCo2Weights[category] || 50.0;
+  const multiplier = actionMultiplier[action] || 0.7;
+
+  const estimatedCo2SavingsKg = Math.round(baseCo2 * multiplier * 10) / 10;
+  const estimatedEcoPoints = Math.round(estimatedCo2SavingsKg * 1.25);
+
+  return {
+    estimatedCo2SavingsKg,
+    estimatedEcoPoints,
+  };
+}
 
 export class RecommendationService {
   /**
-   * Evaluates normalized questionnaire inputs using deterministic circular-economy rules.
+   * Evaluates questionnaire inputs using deterministic circular-economy rules.
    * Completely explainable, rule-based logic without AI/ML black boxes.
+   * Matches downstream service providers, marketplace listings, or e-waste drop-offs.
    */
-  evaluate(input: NormalizedRecommendationInput): RecommendationResult {
-    const { category, condition, age, intention, urgency } = input;
+  async evaluate(input: NormalizedRecommendationInput): Promise<RecommendationResult> {
+    const { category, condition, age, intention, urgency, userCoordinates } = input;
 
     let recommendation: RecommendationOutcome;
     let alternativeAction: RecommendationOutcome | null = null;
@@ -202,17 +294,92 @@ export class RecommendationService {
       }
     }
 
+    // ------------------------------------------------------------------------
+    // Handoff Matching (Section 11.1)
+    // ------------------------------------------------------------------------
+    const needsProviders = recommendation === 'REPAIR' || alternativeAction === 'REPAIR';
+    const needsListings =
+      ['SELL', 'DONATE', 'REUSE'].includes(recommendation) ||
+      (alternativeAction !== null && ['SELL', 'DONATE', 'REUSE'].includes(alternativeAction));
+    const needsRecycling = recommendation === 'RECYCLE' || alternativeAction === 'RECYCLE';
+
+    const providerPromise = needsProviders
+      ? ProviderAdapter.queryProviders({
+          category,
+          latitude: userCoordinates?.latitude,
+          longitude: userCoordinates?.longitude,
+          limit: 3,
+        })
+      : Promise.resolve([]);
+
+    let listingActionParam: 'ALL' | 'SELL' | 'DONATE' | 'REUSE' = 'ALL';
+    if (recommendation === 'SELL' || alternativeAction === 'SELL') listingActionParam = 'SELL';
+    else if (recommendation === 'DONATE' || alternativeAction === 'DONATE') listingActionParam = 'DONATE';
+    else if (recommendation === 'REUSE' || alternativeAction === 'REUSE') listingActionParam = 'REUSE';
+
+    const listingPromise = needsListings
+      ? ListingAdapter.queryListings({
+          category,
+          actionType: listingActionParam,
+          latitude: userCoordinates?.latitude,
+          longitude: userCoordinates?.longitude,
+          limit: 3,
+        })
+      : Promise.resolve([]);
+
+    const recyclingPromise = needsRecycling
+      ? RecyclingAdapter.queryRecyclingRequests({
+          search: category,
+          latitude: userCoordinates?.latitude,
+          longitude: userCoordinates?.longitude,
+          limit: 3,
+        })
+      : Promise.resolve([]);
+
+    const [matchedProvidersSettled, matchedListingsSettled, matchedRecycleSettled] =
+      await Promise.allSettled([providerPromise, listingPromise, recyclingPromise]);
+
+    const matchedProviders =
+      matchedProvidersSettled.status === 'fulfilled' ? matchedProvidersSettled.value : [];
+    const matchedListings =
+      matchedListingsSettled.status === 'fulfilled' ? matchedListingsSettled.value : [];
+    const matchedRecyclePoints =
+      matchedRecycleSettled.status === 'fulfilled' ? matchedRecycleSettled.value : [];
+
+    // Unique evaluation identifier
+    const randomSuffix = Math.random().toString(36).substring(2, 7);
+    const evaluationId = `rec_${category.toLowerCase()}_${Date.now()}_${randomSuffix}`;
+
+    const title = generateTitle(recommendation, category);
+    const nextActionLabel = generateNextActionLabel(recommendation);
+    const { estimatedCo2SavingsKg, estimatedEcoPoints } = getPlaceholderEcoImpact(
+      category,
+      recommendation
+    );
+
     return {
+      evaluationId,
+      primaryAction: recommendation,
+      secondaryAction: alternativeAction,
       recommendation,
-      rationale,
       alternativeAction,
       ruleTriggered,
+      title,
+      rationale,
+      estimatedCo2SavingsKg,
+      estimatedEcoPoints,
+      nextActionLabel,
+      matchedProviders,
+      matchedListings,
+      matchedRecyclePoints,
+      timestamp: new Date().toISOString(),
       details: {
         category,
         condition,
         age,
         intention,
         urgency,
+        ...(userCoordinates ? { userCoordinates } : {}),
       },
     };
   }

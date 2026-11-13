@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { NormalizedItem, ItemQueryParams } from './types';
+import { calculateHaversineDistanceKm } from '../utils/distance';
 
 /**
  * Maps Member 3 questionnaire/discovery condition enums to Member 2's condition strings
@@ -53,6 +54,7 @@ export function normalizeItem(raw: any): NormalizedItem {
       ? [String(raw.imageUrl)]
       : [],
     location: raw.location && typeof raw.location === 'object' ? raw.location : null,
+    distanceKm: typeof raw.distanceKm === 'number' ? raw.distanceKm : null,
     ownerName: raw.owner?.name ? String(raw.owner.name) : undefined,
     ownerId: raw.ownerId ? String(raw.ownerId) : undefined,
     status: String(raw.status || 'POSTED'),
@@ -132,44 +134,108 @@ export const ItemAdapter = {
   },
 
   /**
-   * Retrieves electronic items applying optional Member 2 filters
+   * Retrieves electronic items applying Member 2 filters and geographic distance calculation
    */
   async queryItems(params?: ItemQueryParams): Promise<NormalizedItem[]> {
+    let results: NormalizedItem[];
+
     if (externalQueryDelegate) {
       const rawList = await externalQueryDelegate(params);
-      return rawList.map(normalizeItem);
+      results = rawList.map(normalizeItem);
+    } else {
+      results = SEEDED_MEMBER_2_ITEMS.map(normalizeItem);
     }
 
-    // Default integration stub matching Member 2 query semantics
-    let results = [...SEEDED_MEMBER_2_ITEMS];
-
+    // 1. Text keyword search
     if (params?.search) {
       const q = params.search.toLowerCase();
       results = results.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
           (i.brand && i.brand.toLowerCase().includes(q)) ||
-          i.description.toLowerCase().includes(q)
+          (i.description && i.description.toLowerCase().includes(q))
       );
     }
 
+    // 2. Category name filtering (before pagination)
+    if (params?.category) {
+      const cat = params.category.toLowerCase();
+      results = results.filter(
+        (i) =>
+          i.categoryName.toLowerCase().includes(cat) ||
+          i.name.toLowerCase().includes(cat)
+      );
+    }
+
+    // 3. Category ID filtering
     if (params?.categoryId) {
       results = results.filter((i) => i.categoryId === params.categoryId);
     }
 
+    // 4. Condition filtering
     if (params?.condition) {
       results = results.filter((i) => i.condition === params.condition);
     }
 
+    // 5. Action filtering
     if (params?.action) {
       results = results.filter((i) => i.action === params.action);
     }
 
-    const page = params?.page && params.page > 0 ? params.page : 1;
-    const limit = params?.limit && params.limit > 0 ? params.limit : 20;
-    const start = (page - 1) * limit;
+    // 6. GPS Haversine Distance calculation & filtering
+    const hasUserCoords =
+      params?.latitude !== undefined &&
+      params?.longitude !== undefined &&
+      !isNaN(params.latitude) &&
+      !isNaN(params.longitude);
 
-    return results.slice(start, start + limit).map(normalizeItem);
+    if (hasUserCoords) {
+      results = results.map((item) => {
+        const itemLat = item.location?.latitude;
+        const itemLon = item.location?.longitude;
+        const dist = calculateHaversineDistanceKm(
+          params!.latitude!,
+          params!.longitude!,
+          itemLat,
+          itemLon
+        );
+        return {
+          ...item,
+          distanceKm: dist,
+        };
+      });
+
+      // Filter by radius if provided
+      const effectiveRadius = params?.radiusKm;
+      if (effectiveRadius !== undefined && effectiveRadius > 0) {
+        results = results.filter(
+          (item) =>
+            item.distanceKm !== null &&
+            item.distanceKm !== undefined &&
+            item.distanceKm <= effectiveRadius
+        );
+      }
+
+      // Sort by distance ascending (nearest first)
+      results.sort((a, b) => {
+        const hasA = a.distanceKm !== null && a.distanceKm !== undefined;
+        const hasB = b.distanceKm !== null && b.distanceKm !== undefined;
+        if (!hasA && !hasB) return 0;
+        if (!hasA) return 1;
+        if (!hasB) return -1;
+        return a.distanceKm! - b.distanceKm!;
+      });
+    }
+
+    // 7. Pagination (only applied if page or limit explicitly requested)
+    if (params?.page !== undefined || params?.limit !== undefined) {
+      const page = params.page && params.page > 0 ? params.page : 1;
+      const limit = params.limit && params.limit > 0 ? params.limit : 20;
+      const start = (page - 1) * limit;
+      return results.slice(start, start + limit);
+    }
+
+    return results;
   },
 
   /**

@@ -24,6 +24,7 @@ export interface NormalizedItem {
     longitude?: number;
     [key: string]: unknown;
   } | null;
+  distanceKm?: number | null;
   ownerName?: string;
   ownerId?: string;
   status: string;
@@ -36,11 +37,15 @@ export interface NormalizedItem {
  */
 export interface ItemQueryParams {
   search?: string;
+  category?: string;
   categoryId?: string;
   condition?: 'WORKING' | 'DAMAGED' | 'BROKEN';
   action?: 'REPAIR' | 'REUSE' | 'SELL' | 'DONATE' | 'RECYCLE';
   page?: number;
   limit?: number;
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
 }
 
 /**
@@ -54,6 +59,8 @@ export interface NormalizedProvider {
   servicesOffered: string[];
   availability: string;
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
   distanceKm?: number | null;
   rating: number;
   reviewCount: number;
@@ -74,6 +81,11 @@ export interface ProviderQueryParams {
   category?: string;
   minRating?: number;
   maxDistanceKm?: number;
+  radiusKm?: number;
+  page?: number;
+  limit?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 /**
@@ -90,6 +102,10 @@ export interface NormalizedListing {
   price?: number | null;
   organization?: string | null;
   imageUrl?: string | null;
+  location?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceKm?: number | null;
   status: string;
   createdAt: string;
   source: 'MEMBER_5_MARKETPLACE';
@@ -101,9 +117,15 @@ export interface NormalizedListing {
 export interface ListingQueryParams {
   actionType?: 'ALL' | 'SELL' | 'DONATE' | 'REUSE';
   category?: string;
+  condition?: string;
   search?: string;
   minPrice?: number;
   maxPrice?: number;
+  page?: number;
+  limit?: number;
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
 }
 
 /**
@@ -117,6 +139,9 @@ export interface NormalizedRecyclingRequest {
   quantity: number;
   pickupAddress: string;
   pickupDate?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceKm?: number | null;
   status: string;
   createdAt: string;
   source: 'MEMBER_5_RECYCLING';
@@ -129,4 +154,9 @@ export interface RecyclingQueryParams {
   search?: string;
   status?: string;
   userId?: string;
+  page?: number;
+  limit?: number;
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
 }

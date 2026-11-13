@@ -2,6 +2,12 @@
 // Member 3 - Recommendation Types & Domain Models
 // ============================================================================
 
+import {
+  NormalizedProvider,
+  NormalizedListing,
+  NormalizedRecyclingRequest,
+} from '../adapters/types';
+
 export type DeviceCategory =
   | 'LAPTOP'
   | 'PHONE'
@@ -48,13 +54,19 @@ export interface RecommendationInput {
   age?: string;
   intention?: string;
   urgency?: string;
-  // Aliases for compatibility
+  // Aliases for specification compatibility
   ageGroup?: string;
   userIntention?: string;
+  userCoordinates?: {
+    latitude: number;
+    longitude: number;
+  };
+  latitude?: number | string;
+  longitude?: number | string;
 }
 
 /**
- * Normalized input with validated domain enums
+ * Normalized input with validated domain enums and optional coordinates
  */
 export interface NormalizedRecommendationInput {
   category: DeviceCategory;
@@ -62,22 +74,42 @@ export interface NormalizedRecommendationInput {
   age: DeviceAge;
   intention: UserIntention;
   urgency: ResolutionUrgency;
+  userCoordinates?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 /**
- * Evaluated recommendation response structure
+ * Complete evaluated recommendation response structure aligned with docs/member3-recommendation-discovery.md §11.1
  */
 export interface RecommendationResult {
+  evaluationId: string;
+  primaryAction: RecommendationOutcome;
+  secondaryAction: RecommendationOutcome | null;
+  // Backward compatibility aliases
   recommendation: RecommendationOutcome;
-  rationale: string[];
   alternativeAction: RecommendationOutcome | null;
   ruleTriggered: string;
+  title: string;
+  rationale: string[];
+  estimatedCo2SavingsKg: number | null;
+  estimatedEcoPoints: number | null;
+  nextActionLabel: string;
+  matchedProviders: NormalizedProvider[];
+  matchedListings: NormalizedListing[];
+  matchedRecyclePoints: NormalizedRecyclingRequest[];
+  timestamp: string;
   details: {
     category: DeviceCategory;
     condition: DeviceCondition;
     age: DeviceAge;
     intention: UserIntention;
     urgency: ResolutionUrgency;
+    userCoordinates?: {
+      latitude: number;
+      longitude: number;
+    };
   };
 }
 

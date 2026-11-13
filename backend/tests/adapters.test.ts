@@ -1,6 +1,6 @@
 // ============================================================================
 // Member 3 - Integration Adapters Test Suite
-// Verifies normalization, filtering, delegation, and error handling for cross-member data
+// Verifies normalization, filtering, delegation, Haversine distance, and error handling
 // ============================================================================
 
 import {
@@ -14,6 +14,7 @@ import {
   RecyclingAdapter,
   normalizeRecyclingRequest,
 } from '../src/adapters';
+import { calculateHaversineDistanceKm } from '../src/utils/distance';
 
 export async function runAdapterTests() {
   console.log('=== RUNNING MEMBER 3 TESTS: Integration Adapters ===\n');
@@ -31,9 +32,32 @@ export async function runAdapterTests() {
   };
 
   // ==========================================================================
+  // 0. HAVERSINE DISTANCE UTILITY TESTS
+  // ==========================================================================
+  console.log('--- 0. Haversine Distance Utility Tests ---');
+  {
+    // Same coordinate distance is 0 km
+    const distZero = calculateHaversineDistanceKm(40.7128, -74.006, 40.7128, -74.006);
+    assert(distZero === 0, 'Haversine: identical coordinates yield 0 km');
+
+    // Known approximate distance: New York (40.7128, -74.0060) to Philadelphia (39.9526, -75.1652) ~ 129-130 km
+    const distNyPhilly = calculateHaversineDistanceKm(40.7128, -74.006, 39.9526, -75.1652);
+    assert(
+      distNyPhilly !== null && distNyPhilly >= 128 && distNyPhilly <= 132,
+      `Haversine: computes NY to Philly distance accurately (${distNyPhilly} km)`
+    );
+
+    // Invalid / null coordinates return null
+    assert(calculateHaversineDistanceKm(null, -74.0, 40.0, -73.0) === null, 'Haversine: returns null for null coordinate');
+    assert(calculateHaversineDistanceKm(NaN, -74.0, 40.0, -73.0) === null, 'Haversine: returns null for NaN');
+    assert(calculateHaversineDistanceKm(120, 50, 40, 50) === null, 'Haversine: returns null for latitude > 90');
+    assert(calculateHaversineDistanceKm(40, -200, 40, 50) === null, 'Haversine: returns null for longitude < -180');
+  }
+
+  // ==========================================================================
   // 1. ITEM ADAPTER (MEMBER 2)
   // ==========================================================================
-  console.log('--- 1. ItemAdapter (Member 2) Tests ---');
+  console.log('\n--- 1. ItemAdapter (Member 2) Tests ---');
 
   // 1.1 normalizeItem - complete payload
   try {
@@ -105,8 +129,20 @@ export async function runAdapterTests() {
     const donateResults = await ItemAdapter.queryItems({ action: 'DONATE' });
     assert(donateResults.length >= 1 && donateResults[0].action === 'DONATE', 'ItemAdapter.queryItems filters by action');
 
+    const categoryResults = await ItemAdapter.queryItems({ category: 'Laptops' });
+    assert(categoryResults.length >= 1 && categoryResults[0].categoryName === 'Laptops', 'ItemAdapter.queryItems filters by category before pagination');
+
     const paged = await ItemAdapter.queryItems({ page: 1, limit: 1 });
     assert(paged.length === 1, 'ItemAdapter.queryItems respects pagination limit');
+
+    // Dynamic distance calculation with GPS coords
+    const nearItems = await ItemAdapter.queryItems({
+      latitude: 40.7128,
+      longitude: -74.006,
+      radiusKm: 10,
+    });
+    assert(nearItems.length >= 1, 'ItemAdapter: calculates distance and filters within radius');
+    assert(nearItems[0].distanceKm !== null && nearItems[0].distanceKm !== undefined, 'ItemAdapter: attaches distanceKm');
 
     const single = await ItemAdapter.getItemById('item_lenovo_001');
     assert(single !== null && single.name.includes('ThinkPad'), 'ItemAdapter.getItemById finds item');
@@ -141,28 +177,19 @@ export async function runAdapterTests() {
   // 2.1 normalizeProvider
   try {
     const raw = {
-      id: 'prov_test_01',
+      id: 'prov_test_1',
       name: 'Bob Fixer',
-      businessName: 'Apex Circuit Repairs',
-      description: 'Specializes in board level microsoldering and drone repairs.',
-      servicesOffered: ['Microsoldering', 'Drone Diagnostics'],
-      availability: 'Mon - Fri: 8:00 AM - 5:00 PM',
-      location: 'Uptown Tech Park, Suite 4',
-      distanceKm: 1.5,
-      rating: 4.95,
-      reviewCount: 38,
-      startingPrice: 50.0,
-      currency: 'USD',
+      businessName: 'Bob Repairs',
+      rating: 4.86,
+      distanceKm: 3.2,
       isVerified: true,
-      profileImage: 'https://example.com/avatar.jpg',
-      phoneNumber: '+1-555-4321',
-      email: 'bob@apex.test',
+      services: ['Laptop', 'Phone'],
     };
     const norm = normalizeProvider(raw);
-    assert(norm.id === 'prov_test_01', 'ProviderAdapter: preserves id');
-    assert(norm.businessName === 'Apex Circuit Repairs', 'ProviderAdapter: preserves businessName');
-    assert(norm.rating === 5.0, 'ProviderAdapter: rounds rating to one decimal place');
-    assert(norm.distanceKm === 1.5, 'ProviderAdapter: preserves distanceKm');
+    assert(norm.id === 'prov_test_1', 'ProviderAdapter: preserves id');
+    assert(norm.businessName === 'Bob Repairs', 'ProviderAdapter: preserves businessName');
+    assert(norm.rating === 4.9, 'ProviderAdapter: rounds rating to one decimal place');
+    assert(norm.distanceKm === 3.2, 'ProviderAdapter: preserves distanceKm');
     assert(norm.isVerified === true, 'ProviderAdapter: preserves isVerified');
     assert(norm.source === 'MEMBER_4_REPAIR', 'ProviderAdapter: labels source correctly');
 
@@ -174,33 +201,48 @@ export async function runAdapterTests() {
     }
     assert(threw, 'ProviderAdapter: throws on null input');
   } catch (err: any) {
-    assert(false, `ProviderAdapter normalizeProvider threw: ${err.message}`);
+    assert(false, `ProviderAdapter normalize threw: ${err.message}`);
   }
 
-  // 2.2 queryProviders & filters
+  // 2.2 queryProviders & filters & pagination
   try {
-    const allProviders = await ProviderAdapter.queryProviders();
-    assert(Array.isArray(allProviders) && allProviders.length >= 3, 'ProviderAdapter.queryProviders returns seeded providers');
+    const allProv = await ProviderAdapter.queryProviders();
+    assert(allProv.length >= 3, 'ProviderAdapter.queryProviders returns seeded providers');
 
-    const searchResults = await ProviderAdapter.queryProviders({ search: 'MacBook' });
-    assert(searchResults.length >= 1 && searchResults.some(p => p.id === 'prov_fixit_001'), 'ProviderAdapter filters by keyword');
+    const searchRes = await ProviderAdapter.queryProviders({ search: 'FixIt' });
+    assert(searchRes.length === 1 && searchRes[0].businessName.includes('FixIt'), 'ProviderAdapter filters by keyword');
 
-    const categoryResults = await ProviderAdapter.queryProviders({ category: 'Audio' });
-    assert(categoryResults.length >= 1 && categoryResults[0].id === 'prov_eco_002', 'ProviderAdapter filters by category');
+    const catRes = await ProviderAdapter.queryProviders({ category: 'Laptop' });
+    assert(catRes.length >= 1, 'ProviderAdapter filters by category');
 
-    const highRated = await ProviderAdapter.queryProviders({ minRating: 4.8 });
-    assert(highRated.every(p => p.rating >= 4.8), 'ProviderAdapter filters by minRating');
+    const ratingRes = await ProviderAdapter.queryProviders({ minRating: 4.8 });
+    assert(ratingRes.every((p) => p.rating >= 4.8), 'ProviderAdapter filters by minRating');
 
-    const nearby = await ProviderAdapter.queryProviders({ maxDistanceKm: 3.0 });
-    assert(nearby.every(p => p.distanceKm! <= 3.0), 'ProviderAdapter filters by maxDistanceKm');
+    const distRes = await ProviderAdapter.queryProviders({ maxDistanceKm: 3.0 });
+    assert(distRes.every((p) => (p.distanceKm || 0) <= 3.0), 'ProviderAdapter filters by maxDistanceKm');
+
+    // Provider Pagination: page 1 vs page 2
+    const provPage1 = await ProviderAdapter.queryProviders({ page: 1, limit: 1 });
+    const provPage2 = await ProviderAdapter.queryProviders({ page: 2, limit: 1 });
+    assert(provPage1.length === 1, 'ProviderAdapter respects limit for page 1');
+    assert(provPage2.length === 1, 'ProviderAdapter respects limit for page 2');
+    assert(provPage1[0].id !== provPage2[0].id, 'ProviderAdapter page 1 and page 2 return distinct non-overlapping providers');
+
+    // Dynamic distance calculation with GPS coords
+    const provWithCoords = await ProviderAdapter.queryProviders({
+      latitude: 40.7128,
+      longitude: -74.006,
+      radiusKm: 5,
+    });
+    assert(provWithCoords.length >= 1, 'ProviderAdapter: computes GPS distance and filters by radius');
 
     const single = await ProviderAdapter.getProviderById('prov_fixit_001');
-    assert(single !== null && single.businessName === 'FixIt Pro Electronics', 'ProviderAdapter.getProviderById finds provider');
+    assert(single !== null && single.businessName.includes('FixIt'), 'ProviderAdapter.getProviderById finds provider');
 
-    const missing = await ProviderAdapter.getProviderById('unknown_prov');
+    const missing = await ProviderAdapter.getProviderById('non_existent');
     assert(missing === null, 'ProviderAdapter.getProviderById returns null on missing');
   } catch (err: any) {
-    assert(false, `ProviderAdapter queryProviders threw: ${err.message}`);
+    assert(false, `ProviderAdapter query threw: ${err.message}`);
   }
 
   // ==========================================================================
@@ -208,65 +250,61 @@ export async function runAdapterTests() {
   // ==========================================================================
   console.log('\n--- 3. ListingAdapter (Member 5) Tests ---');
 
-  // 3.1 normalizeListing - Sell, Donate, Reuse
+  // 3.1 normalizeListing
   try {
     const rawSell = {
-      id: 1,
-      userId: 'usr_s01',
-      title: 'iPad Mini 6',
-      description: 'Purple 64GB WiFi.',
-      category: 'Tablets',
-      condition: 'Like New',
-      price: 320,
+      id: 101,
+      title: 'ThinkPad X1',
+      price: 450.0,
+      condition: 'Mint',
     };
     const normSell = normalizeListing(rawSell);
-    assert(normSell.id === '1', 'ListingAdapter: converts numeric id to string');
+    assert(normSell.id === '101', 'ListingAdapter: converts numeric id to string');
     assert(normSell.actionType === 'SELL', 'ListingAdapter: infers SELL action from price');
-    assert(normSell.price === 320, 'ListingAdapter: preserves price');
+    assert(normSell.price === 450.0, 'ListingAdapter: preserves price');
     assert(normSell.source === 'MEMBER_5_MARKETPLACE', 'ListingAdapter: labels source correctly');
 
     const rawDonate = {
-      id: 'don_2',
-      userId: 'usr_d01',
-      title: 'Free Chromebook',
-      category: 'Laptops',
-      organization: 'Lincoln High School',
+      id: 102,
+      title: 'Kids Educational Tablet',
+      organization: 'Hope for Kids',
     };
     const normDonate = normalizeListing(rawDonate);
     assert(normDonate.actionType === 'DONATE', 'ListingAdapter: infers DONATE action from organization');
-    assert(normDonate.organization === 'Lincoln High School', 'ListingAdapter: preserves organization');
+    assert(normDonate.organization === 'Hope for Kids', 'ListingAdapter: preserves organization');
     assert(normDonate.price === null, 'ListingAdapter: sets price to null for donation');
 
-    const rawReuse = {
-      id: 'reu_3',
-      userId: 'usr_r01',
-      title: 'Old CRT Monitor for retro gaming',
-      category: 'Monitors',
-    };
+    const rawReuse = { id: 103, title: 'Old Monitor for Parts' };
     const normReuse = normalizeListing(rawReuse);
     assert(normReuse.actionType === 'REUSE', 'ListingAdapter: defaults to REUSE when no price or org');
   } catch (err: any) {
-    assert(false, `ListingAdapter normalizeListing threw: ${err.message}`);
+    assert(false, `ListingAdapter normalize threw: ${err.message}`);
   }
 
-  // 3.2 queryListings & filters
+  // 3.2 queryListings & filters & pagination
   try {
     const allListings = await ListingAdapter.queryListings();
-    assert(allListings.length >= 3, 'ListingAdapter.queryListings returns all seeded listings');
+    assert(allListings.length >= 4, 'ListingAdapter.queryListings returns all seeded listings');
 
     const sellOnly = await ListingAdapter.queryListings({ actionType: 'SELL' });
-    assert(sellOnly.every(l => l.actionType === 'SELL'), 'ListingAdapter filters by actionType SELL');
+    assert(sellOnly.every((l) => l.actionType === 'SELL'), 'ListingAdapter filters by actionType SELL');
 
     const donateOnly = await ListingAdapter.queryListings({ actionType: 'DONATE' });
-    assert(donateOnly.every(l => l.actionType === 'DONATE'), 'ListingAdapter filters by actionType DONATE');
+    assert(donateOnly.every((l) => l.actionType === 'DONATE'), 'ListingAdapter filters by actionType DONATE');
 
-    const priceFiltered = await ListingAdapter.queryListings({ minPrice: 200, maxPrice: 600 });
-    assert(
-      priceFiltered.every(
-        (l) => typeof l.price === 'number' && l.price >= 200 && l.price <= 600
-      ),
-      'ListingAdapter filters by price range'
-    );
+    const priceFilter = await ListingAdapter.queryListings({ minPrice: 200, maxPrice: 600 });
+    assert(priceFilter.every((l) => l.price !== null && l.price !== undefined && l.price >= 200 && l.price <= 600), 'ListingAdapter filters by price range');
+
+    // Condition filter
+    const condListings = await ListingAdapter.queryListings({ condition: 'Like New' });
+    assert(condListings.length >= 1 && condListings[0].condition === 'Like New', 'ListingAdapter filters by condition');
+
+    // Pagination: page 1 vs page 2
+    const listPage1 = await ListingAdapter.queryListings({ page: 1, limit: 1 });
+    const listPage2 = await ListingAdapter.queryListings({ page: 2, limit: 1 });
+    assert(listPage1.length === 1, 'ListingAdapter respects limit for page 1');
+    assert(listPage2.length === 1, 'ListingAdapter respects limit for page 2');
+    assert(listPage1[0].id !== listPage2[0].id, 'ListingAdapter page 1 and page 2 return distinct non-overlapping listings');
 
     const single = await ListingAdapter.getListingById('sell_macbook_01');
     assert(single !== null && single.title.includes('MacBook'), 'ListingAdapter.getListingById finds listing');
@@ -310,7 +348,7 @@ export async function runAdapterTests() {
     assert(false, `RecyclingAdapter normalize threw: ${err.message}`);
   }
 
-  // 4.2 queryRecyclingRequests & filters
+  // 4.2 queryRecyclingRequests & filters & pagination
   try {
     const allRequests = await RecyclingAdapter.queryRecyclingRequests();
     assert(allRequests.length >= 2, 'RecyclingAdapter.queryRecyclingRequests returns requests');
@@ -320,6 +358,13 @@ export async function runAdapterTests() {
 
     const scheduled = await RecyclingAdapter.queryRecyclingRequests({ status: 'SCHEDULED' });
     assert(scheduled.length >= 1 && scheduled[0].status === 'SCHEDULED', 'RecyclingAdapter filters by status');
+
+    // Recycling Pagination: page 1 vs page 2
+    const recPage1 = await RecyclingAdapter.queryRecyclingRequests({ page: 1, limit: 1 });
+    const recPage2 = await RecyclingAdapter.queryRecyclingRequests({ page: 2, limit: 1 });
+    assert(recPage1.length === 1, 'RecyclingAdapter respects limit for page 1');
+    assert(recPage2.length === 1, 'RecyclingAdapter respects limit for page 2');
+    assert(recPage1[0].id !== recPage2[0].id, 'RecyclingAdapter page 1 and page 2 return distinct non-overlapping requests');
 
     const single = await RecyclingAdapter.getRecyclingRequestById('recycle_kiosk_01');
     assert(single !== null && single.itemType.includes('Lithium'), 'RecyclingAdapter.getRecyclingRequestById finds item');

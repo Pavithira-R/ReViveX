@@ -7,6 +7,7 @@ import { runRecommendationTests } from './recommendation.test';
 import { runAdapterTests } from './adapters.test';
 import { runSearchTests } from './search.test';
 import { runDiscoveryTests } from './discovery.test';
+import { runMobileQaAudit } from './mobileQaAudit.test';
 
 async function main() {
   console.log('************************************************************');
@@ -18,6 +19,7 @@ async function main() {
     await runAdapterTests();
     await runSearchTests();
     await runDiscoveryTests();
+    await runMobileQaAudit();
     console.log('************************************************************');
     console.log('    ALL MEMBER 3 TEST SUITES PASSED SUCCESSFULLY (100%)    ');
     console.log('************************************************************\n');

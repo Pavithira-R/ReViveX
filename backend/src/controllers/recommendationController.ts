@@ -9,7 +9,8 @@ import { validateRecommendationInput } from '../validators/recommendationValidat
 export class RecommendationController {
   /**
    * POST /api/recommendations/evaluate
-   * Evaluates user questionnaire inputs and returns the recommended circular-economy action.
+   * Evaluates user questionnaire inputs and returns the recommended circular-economy action
+   * with matched service providers, listings, and e-waste drop-offs.
    */
   async evaluate(req: Request, res: Response): Promise<void> {
     try {
@@ -25,21 +26,16 @@ export class RecommendationController {
         return;
       }
 
-      const result = recommendationService.evaluate(validation.normalized);
+      const result = await recommendationService.evaluate(validation.normalized);
 
       res.status(200).json({
         success: true,
         statusCode: 200,
-        data: {
-          recommendation: result.recommendation,
-          rationale: result.rationale,
-          alternativeAction: result.alternativeAction,
-          ruleTriggered: result.ruleTriggered,
-          details: result.details,
-        },
         message: 'Recommendation generated successfully',
+        data: result,
       });
     } catch (error: any) {
+      console.error('Unhandled recommendation controller error:', error);
       res.status(500).json({
         success: false,
         statusCode: 500,

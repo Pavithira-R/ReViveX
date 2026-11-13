@@ -197,6 +197,34 @@ export function validateRecommendationInput(input: RecommendationInput): Validat
     }
   }
 
+  // 6. User Coordinates validation (optional)
+  let userCoordinates: { latitude: number; longitude: number } | undefined;
+  const rawLat = input.userCoordinates?.latitude ?? input.latitude;
+  const rawLon = input.userCoordinates?.longitude ?? input.longitude;
+
+  const hasLat = rawLat !== undefined && rawLat !== null && rawLat !== '';
+  const hasLon = rawLon !== undefined && rawLon !== null && rawLon !== '';
+
+  if (hasLat || hasLon) {
+    if (!hasLat || !hasLon) {
+      errors.push("Both 'latitude' and 'longitude' must be provided together.");
+    } else {
+      const latNum = Number(rawLat);
+      const lonNum = Number(rawLon);
+
+      if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+        errors.push("Field 'latitude' must be a valid number between -90 and 90.");
+      }
+      if (isNaN(lonNum) || lonNum < -180 || lonNum > 180) {
+        errors.push("Field 'longitude' must be a valid number between -180 and 180.");
+      }
+
+      if (!isNaN(latNum) && !isNaN(lonNum) && latNum >= -90 && latNum <= 90 && lonNum >= -180 && lonNum <= 180) {
+        userCoordinates = { latitude: latNum, longitude: lonNum };
+      }
+    }
+  }
+
   if (errors.length > 0 || !normalizedCategory || !normalizedCondition || !normalizedAge || !normalizedIntention) {
     return {
       isValid: false,
@@ -213,6 +241,7 @@ export function validateRecommendationInput(input: RecommendationInput): Validat
       age: normalizedAge,
       intention: normalizedIntention,
       urgency: normalizedUrgency,
+      ...(userCoordinates ? { userCoordinates } : {}),
     },
   };
 }

@@ -24,6 +24,7 @@ import {
 export class SearchService {
   /**
    * Executes unified search across all domains in parallel using Promise.allSettled()
+   * Guarantees that filtering occurs BEFORE pagination and distance calculations are respected.
    */
   async search(query: ValidatedSearchQuery): Promise<UnifiedSearchResponseData> {
     const {
@@ -34,11 +35,16 @@ export class SearchService {
       entityType,
       minRating,
       maxDistanceKm,
+      radiusKm,
+      latitude,
+      longitude,
       minPrice,
       maxPrice,
       page,
       limit,
     } = query;
+
+    const effectiveRadius = radiusKm ?? maxDistanceKm;
 
     // ------------------------------------------------------------------------
     // 1. Determine which sources are active based on actionType & entityType
@@ -59,18 +65,22 @@ export class SearchService {
       (actionType === 'ALL' || actionType === 'RECYCLE');
 
     // ------------------------------------------------------------------------
-    // 2. Build adapter query parameter objects with strict filter scoping
+    // 2. Build adapter query parameters with filtering and pagination
     // ------------------------------------------------------------------------
-    // Member 2 Items Query
+    // Member 2 Items Query (filtering before pagination)
     const itemActionParam = actionType !== 'ALL' ? actionType : undefined;
     const itemConditionParam = mapToMember2Condition(condition);
 
     const itemPromise = shouldQueryItems
       ? ItemAdapter.queryItems({
           search: q,
+          category,
           action: itemActionParam,
           condition: itemConditionParam,
-          page: entityType === 'ITEMS' ? page : 1,
+          latitude,
+          longitude,
+          radiusKm: effectiveRadius,
+          page,
           limit,
         })
       : null;
@@ -81,7 +91,12 @@ export class SearchService {
           search: q,
           category,
           minRating,
-          maxDistanceKm,
+          maxDistanceKm: effectiveRadius,
+          radiusKm: effectiveRadius,
+          latitude,
+          longitude,
+          page,
+          limit,
         })
       : null;
 
@@ -95,9 +110,15 @@ export class SearchService {
       ? ListingAdapter.queryListings({
           search: q,
           category,
+          condition,
           actionType: listingActionParam,
           minPrice,
           maxPrice,
+          latitude,
+          longitude,
+          radiusKm: effectiveRadius,
+          page,
+          limit,
         })
       : null;
 
@@ -105,6 +126,11 @@ export class SearchService {
     const recyclingPromise = shouldQueryRecycling
       ? RecyclingAdapter.queryRecyclingRequests({
           search: q,
+          latitude,
+          longitude,
+          radiusKm: effectiveRadius,
+          page,
+          limit,
         })
       : null;
 
@@ -126,11 +152,6 @@ export class SearchService {
     let itemsStatus: AdapterSourceStatus = shouldQueryItems ? 'OK' : 'SKIPPED';
     if (itemSettled.status === 'fulfilled') {
       items = itemSettled.value as NormalizedItem[];
-      // Apply category text filter on items if category was provided
-      if (category && items.length > 0) {
-        const catLower = category.toLowerCase();
-        items = items.filter((i) => i.categoryName.toLowerCase().includes(catLower));
-      }
     } else {
       console.warn('ItemAdapter query failed:', itemSettled.reason?.message || itemSettled.reason);
       itemsStatus = 'UNAVAILABLE';
@@ -149,11 +170,6 @@ export class SearchService {
     let listingsStatus: AdapterSourceStatus = shouldQueryListings ? 'OK' : 'SKIPPED';
     if (listingSettled.status === 'fulfilled') {
       listings = listingSettled.value as NormalizedListing[];
-      // Apply condition filter on listings if condition was provided
-      if (condition && listings.length > 0) {
-        const condLower = condition.toLowerCase();
-        listings = listings.filter((l) => l.condition.toLowerCase().includes(condLower));
-      }
     } else {
       console.warn('ListingAdapter query failed:', listingSettled.reason?.message || listingSettled.reason);
       listingsStatus = 'UNAVAILABLE';
@@ -166,16 +182,6 @@ export class SearchService {
     } else {
       console.warn('RecyclingAdapter query failed:', recyclingSettled.reason?.message || recyclingSettled.reason);
       recyclingStatus = 'UNAVAILABLE';
-    }
-
-    // ------------------------------------------------------------------------
-    // 5. Apply pagination limit per active bucket
-    // ------------------------------------------------------------------------
-    if (entityType === 'ALL') {
-      items = items.slice(0, limit);
-      providers = providers.slice(0, limit);
-      listings = listings.slice(0, limit);
-      recycling = recycling.slice(0, limit);
     }
 
     const totalResults =
@@ -192,7 +198,10 @@ export class SearchService {
         condition,
         entityType,
         minRating,
-        maxDistanceKm,
+        maxDistanceKm: effectiveRadius,
+        radiusKm: effectiveRadius,
+        latitude,
+        longitude,
         minPrice,
         maxPrice,
       },
