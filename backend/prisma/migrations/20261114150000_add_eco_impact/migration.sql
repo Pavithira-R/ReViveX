@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "eco_actions" ADD COLUMN     "device_category" TEXT NOT NULL DEFAULT 'OTHER',
+ADD COLUMN     "co2_saved_kg" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "ewaste_kg" DOUBLE PRECISION NOT NULL DEFAULT 0;
