@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { BackHandler, Alert } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, StyleSheet, View } from 'react-native';
+import { COLORS } from '../constants';
 import { useAuth } from '../context';
 import {
   AdminUsersScreen,
@@ -23,7 +24,7 @@ type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact' | 'Member3';
  * agrees on the shared mobile project setup; the auth gating logic stays the same.
  */
 export const AppNavigator: React.FC = () => {
-  const { isAuthenticated, hasRole } = useAuth();
+  const { isAuthenticated, isRestoring, hasRole } = useAuth();
   const [authRoute, setAuthRoute] = useState<AuthRoute>('Login');
   const [appRoute, setAppRoute] = useState<AppRoute>('Home');
 
@@ -48,6 +49,14 @@ export const AppNavigator: React.FC = () => {
     });
     return () => subscription.remove();
   }, [isAuthenticated, appRoute, authRoute]);
+
+  if (isRestoring) {
+    return (
+      <View style={styles.splash}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
 
   if (!isAuthenticated) {
     return authRoute === 'Login' ? (
@@ -103,3 +112,12 @@ export const AppNavigator: React.FC = () => {
     />
   );
 };
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+});
