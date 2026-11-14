@@ -3,7 +3,7 @@
  * Run: npm run db:seed   (reads ADMIN_NAME / ADMIN_EMAIL / ADMIN_PASSWORD from .env)
  */
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 dotenv.config();
@@ -22,8 +22,8 @@ async function main(): Promise<void> {
   const passwordHash = await bcrypt.hash(password, 10);
   const admin = await prisma.user.upsert({
     where: { email },
-    update: { role: 'ADMIN', isActive: true },
-    create: { name, email, passwordHash, role: 'ADMIN' },
+    update: { role: Role.ADMIN, isActive: true },
+    create: { name, email, passwordHash, role: Role.ADMIN },
   });
 
   console.log(`[seed] Admin account ready: ${admin.email}`);

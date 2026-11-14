@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -12,12 +12,20 @@ datasource db {
 // Shared foundation: other modules reference User.id as a FK.
 // ============================================================
 
+enum Role {
+  ITEM_OWNER
+  SERVICE_PROVIDER
+  BUYER
+  RECYCLER
+  ADMIN
+}
+
 model User {
   id           String   @id @default(uuid())
   name         String
   email        String   @unique
   passwordHash String   @map("password_hash")
-  role         String   @default("ITEM_OWNER")
+  role         Role     @default(ITEM_OWNER)
   phone        String?
   profileImage String?  @map("profile_image")
   latitude     Float?
@@ -40,21 +48,29 @@ model User {
 // reuse or recycling request is completed.
 // ============================================================
 
+enum EcoActionType {
+  REPAIR
+  REUSE
+  SELL
+  DONATE
+  RECYCLE
+}
+
 model EcoAction {
-  id             String   @id @default(uuid())
-  userId         String   @map("user_id")
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type           String
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           EcoActionType
   points         Int
   /// Id of the completed record (repair request, listing, recycling request).
-  refId          String   @map("ref_id")
+  refId          String        @map("ref_id")
   /// PHONE, LAPTOP, TABLET, DESKTOP, MONITOR, PRINTER, HEADPHONES, KEYBOARD, CAMERA, BATTERY_CHARGER or OTHER
-  deviceCategory String   @default("OTHER") @map("device_category")
+  deviceCategory String        @default("OTHER") @map("device_category")
   /// Estimated CO2 emissions avoided by this activity, in kg.
-  co2SavedKg     Float    @default(0) @map("co2_saved_kg")
+  co2SavedKg     Float         @default(0) @map("co2_saved_kg")
   /// Estimated weight of electronics kept out of landfill, in kg.
-  ewasteKg       Float    @default(0) @map("ewaste_kg")
-  createdAt      DateTime @default(now()) @map("created_at")
+  ewasteKg       Float         @default(0) @map("ewaste_kg")
+  createdAt      DateTime      @default(now()) @map("created_at")
 
   /// The same completed activity can only earn points once.
   @@unique([type, refId])

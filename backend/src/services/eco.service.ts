@@ -165,9 +165,7 @@ export class EcoService {
     let co2SavedKg = 0;
     let ewasteKg = 0;
     for (const action of actions) {
-      if (action.type in counts) {
-        counts[action.type as EcoActionType] += 1;
-      }
+      counts[action.type] += 1;
       totalPoints += action.points;
       co2SavedKg += action.co2SavedKg;
       ewasteKg += action.ewasteKg;
@@ -181,7 +179,7 @@ export class EcoService {
       impact: toImpact(co2SavedKg, ewasteKg),
       recent: actions.slice(0, RECENT_LIMIT).map((action) => ({
         id: action.id,
-        type: action.type as EcoActionType,
+        type: action.type,
         points: action.points,
         refId: action.refId,
         deviceCategory: action.deviceCategory,
