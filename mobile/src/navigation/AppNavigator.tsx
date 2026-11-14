@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BackHandler } from 'react-native';
+import { BackHandler, Alert } from 'react-native';
 import { useAuth } from '../context';
 import {
   AdminUsersScreen,
@@ -9,9 +9,10 @@ import {
   ProfileScreen,
   RegisterScreen,
 } from '../screens';
+import { Member3Navigator } from '../features/member3';
 
 type AuthRoute = 'Login' | 'Register';
-type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact';
+type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact' | 'Member3';
 
 /**
  * Top-level navigator with protected screens:
@@ -67,12 +68,38 @@ export const AppNavigator: React.FC = () => {
   if (appRoute === 'AdminUsers' && hasRole('ADMIN')) {
     return <AdminUsersScreen onBack={goHome} />;
   }
+  if (appRoute === 'Member3') {
+    return (
+      <Member3Navigator
+        onNavigateBack={goHome}
+        onNavigateToModule4={(providerId, category) => {
+          Alert.alert(
+            'Handoff to Member 4 (Repair)',
+            `Booking service provider: ${providerId || 'Selected Provider'} for ${category || 'Device'}`
+          );
+        }}
+        onNavigateToModule5={(actionType, draft) => {
+          Alert.alert(
+            'Handoff to Member 5 (Marketplace / Donation / Recycling)',
+            `Action: ${actionType}\nDraft: ${JSON.stringify(draft || {}, null, 2)}`
+          );
+        }}
+        onNavigateToModule2={(itemDraft) => {
+          Alert.alert(
+            'Handoff to Member 2 (Inventory)',
+            `Item saved to user inventory: ${JSON.stringify(itemDraft || {}, null, 2)}`
+          );
+        }}
+      />
+    );
+  }
 
   return (
     <HomeScreen
       onOpenProfile={() => setAppRoute('Profile')}
       onOpenEcoImpact={() => setAppRoute('EcoImpact')}
       onOpenAdmin={() => setAppRoute('AdminUsers')}
+      onOpenDiscovery={() => setAppRoute('Member3')}
     />
   );
 };
