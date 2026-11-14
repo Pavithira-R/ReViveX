@@ -4,3 +4,4 @@ export * from './discovery.types';
 export * from './recommendation.types';
 export * from './search.types';
 export * from './notification.types';
+export * from './chat.types';

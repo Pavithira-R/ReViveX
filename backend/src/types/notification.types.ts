@@ -1,6 +1,13 @@
 // Member 6 – In-app notifications
 
-export type NotificationType = 'ECO' | 'REPAIR' | 'LISTING' | 'RECYCLING' | 'REVIEW' | 'GENERAL';
+export type NotificationType =
+  | 'ECO'
+  | 'REPAIR'
+  | 'LISTING'
+  | 'RECYCLING'
+  | 'REVIEW'
+  | 'MESSAGE'
+  | 'GENERAL';
 
 export interface NotificationView {
   id: string;
