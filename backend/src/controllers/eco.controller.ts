@@ -14,6 +14,18 @@ export class EcoController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/eco/community
+   */
+  async getCommunity(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const impact = await ecoService.getCommunityImpact();
+      sendSuccess(res, 'Community impact retrieved', impact);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const ecoController = new EcoController();

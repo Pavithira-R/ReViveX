@@ -26,6 +26,7 @@ Built for the Mobile Application Development (INTE 22283) group project.
 | Discovery | Smart recommendation questionnaire, discovery feed, search and filters | ✅ Done |
 | Discovery | Nearby technicians/recyclers with GPS, Device Health Check | ✅ Done |
 | Eco impact | Eco points, badges, My Eco Impact screen | ✅ Done |
+| Eco impact | Estimated CO2 saved and e-waste kept out of landfill, personal and community totals | ✅ Done |
 | Items | Post item with photos, My Items, browse, item details | 🔄 Being integrated |
 | Repair | Provider profiles, repair requests, quotations, booking, status tracking | 🔄 Being integrated |
 | Reviews | Ratings and reviews after completed services | 🔄 Being integrated |
