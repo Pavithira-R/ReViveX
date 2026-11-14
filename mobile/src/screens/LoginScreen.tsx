@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormInput, MessageBanner, PrimaryButton } from '../components';
 import { APP_NAME, APP_TAGLINE, COLORS } from '../constants';
 import { useAuth } from '../context';
+import { useCapability } from '../services';
 import { getErrorMessage, isValidEmail } from '../utils';
 
 interface LoginScreenProps {
@@ -19,7 +20,10 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }) => {
-  const { login } = useAuth();
+  const { login, loginWithBiometrics, isBiometricEnabled } = useAuth();
+  const { status: biometricStatus } = useCapability('biometric');
+  const canUseFingerprint = isBiometricEnabled && biometricStatus === 'available';
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +48,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Login failed. Please check your credentials.'));
       setIsLoading(false);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    setErrorMessage(null);
+    setIsBiometricLoading(true);
+    try {
+      const signedIn = await loginWithBiometrics();
+      if (!signedIn) {
+        setErrorMessage('Fingerprint not confirmed. Sign in with your password instead.');
+      }
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, 'Fingerprint login failed. Sign in with your password.'));
+    } finally {
+      setIsBiometricLoading(false);
     }
   };
 
@@ -88,6 +107,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }
           />
 
           <PrimaryButton title="Sign In" onPress={handleLogin} loading={isLoading} />
+          {canUseFingerprint ? (
+            <PrimaryButton
+              title="Log in with fingerprint"
+              variant="outlined"
+              onPress={handleBiometricLogin}
+              loading={isBiometricLoading}
+              disabled={isLoading}
+            />
+          ) : null}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>

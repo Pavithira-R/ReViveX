@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -12,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormInput, MessageBanner, PrimaryButton } from '../components';
 import { COLORS, ROLE_LABELS } from '../constants';
 import { useAuth } from '../context';
+import { useCapability } from '../services';
 import { getErrorMessage } from '../utils';
 
 interface ProfileScreenProps {
@@ -19,7 +21,9 @@ interface ProfileScreenProps {
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
-  const { user, updateProfile, logout } = useAuth();
+  const { user, updateProfile, logout, isBiometricEnabled, setBiometricEnabled } = useAuth();
+  const { status: biometricStatus } = useCapability('biometric');
+  const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
@@ -51,6 +55,31 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
       setIsSaving(false);
     }
   };
+
+  const handleBiometricToggle = async (enabled: boolean) => {
+    setMessage(null);
+    setIsTogglingBiometric(true);
+    const changed = await setBiometricEnabled(enabled);
+    setIsTogglingBiometric(false);
+    if (!changed) {
+      setMessage({
+        text: "Fingerprint login couldn't be turned on. Check that a fingerprint is set up on this phone.",
+        type: 'error',
+      });
+      return;
+    }
+    setMessage({
+      text: enabled ? 'Fingerprint login turned on.' : 'Fingerprint login turned off.',
+      type: 'success',
+    });
+  };
+
+  const biometricHint =
+    biometricStatus === null
+      ? 'Checking this phone…'
+      : biometricStatus === 'available'
+        ? 'After logging out, sign back in with your fingerprint.'
+        : 'Not available on this phone. Sign in with your password.';
 
   const initials = user.name
     .split(' ')
@@ -116,6 +145,21 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
                   value={new Date(user.createdAt).toLocaleDateString()}
                   last
                 />
+              </View>
+              <View style={styles.card}>
+                <View style={styles.switchRow}>
+                  <View style={styles.switchText}>
+                    <Text style={styles.rowValue}>Fingerprint login</Text>
+                    <Text style={styles.rowLabel}>{biometricHint}</Text>
+                  </View>
+                  <Switch
+                    value={isBiometricEnabled}
+                    onValueChange={handleBiometricToggle}
+                    disabled={biometricStatus !== 'available' || isTogglingBiometric}
+                    accessibilityLabel="Fingerprint login"
+                    trackColor={{ true: COLORS.primary, false: COLORS.border }}
+                  />
+                </View>
               </View>
               <PrimaryButton title="Edit Profile" onPress={startEditing} />
               <PrimaryButton title="Log Out" variant="danger" onPress={logout} />
@@ -187,6 +231,8 @@ const styles = StyleSheet.create({
   rowDivider: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
   rowLabel: { fontSize: 13, color: COLORS.textMuted },
   rowValue: { fontSize: 16, color: COLORS.text, marginTop: 2 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  switchText: { flex: 1, marginRight: 12 },
   hint: { fontSize: 13, color: COLORS.textMuted, marginBottom: 4 },
 });
 
