@@ -1,4 +1,4 @@
-/// <reference path="../../mobile/src/declarations.d.ts" />
+/// <reference path="./declarations.d.ts" />
 
 // ============================================================================
 // Member 3 - Comprehensive Mobile QA Audit & Verification Test Suite
@@ -16,6 +16,23 @@ Module.prototype.require = function (id: string) {
       Platform: { OS: 'android', select: (obj: any) => obj.android || obj.default },
       StyleSheet: { create: (styles: any) => styles },
       Alert: { alert: (_title: string, _msg?: string, _btn?: any) => {} },
+      PermissionsAndroid: {
+        PERMISSIONS: {
+          ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION',
+          ACCESS_COARSE_LOCATION: 'android.permission.ACCESS_COARSE_LOCATION',
+          CAMERA: 'android.permission.CAMERA',
+        },
+        RESULTS: {
+          GRANTED: 'granted',
+          DENIED: 'denied',
+          NEVER_ASK_AGAIN: 'never_ask_again',
+        },
+        requestMultiple: async () => ({
+          'android.permission.ACCESS_FINE_LOCATION': 'granted',
+          'android.permission.ACCESS_COARSE_LOCATION': 'granted',
+        }),
+        request: async () => 'granted',
+      },
       View: () => null,
       Text: () => null,
       TouchableOpacity: () => null,
@@ -51,7 +68,30 @@ import {
   isValidCoordinate,
   calculateHaversineDistanceKm,
   formatDistance,
+  SRI_LANKA_CITY_PRESETS,
+  findNearestCityPreset,
+  formatLocationSourceLabel,
 } from '../../mobile/src/features/member3/utils/location';
+import {
+  resolveUserLocation,
+  setManualCity,
+  getLocationState,
+  subscribeToLocation,
+  requestAndroidLocationPermission,
+} from '../../mobile/src/features/member3/services/locationService';
+import {
+  evaluateTouchTest,
+  probeCameraCapability,
+  probeBatteryCapability,
+  probeAccelerometer,
+  probeGyroscope,
+  compileHealthReport,
+} from '../../mobile/src/features/member3/services/healthCheckService';
+import {
+  FourCornerTouchState,
+  HealthTestId,
+  HealthTestResult,
+} from '../../mobile/src/features/member3/types/healthCheck.types';
 import {
   evaluateRecommendation,
 } from '../../mobile/src/features/member3/services/recommendationService';
@@ -426,6 +466,215 @@ export async function runMobileQaAudit(): Promise<void> {
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
+
+  // ==========================================================================
+  // SECTION 5: GPS 3-Tier Fallback Hierarchy & Spatial Resolution
+  // ==========================================================================
+  console.log('\n--- 5. GPS 3-Tier Fallback Hierarchy & Spatial Resolution ---');
+
+  // 5.1 Sri Lanka City Presets Coverage
+  assert(
+    SRI_LANKA_CITY_PRESETS.length === 12,
+    `City Presets: Exactly 12 Sri Lankan regional hubs registered (found ${SRI_LANKA_CITY_PRESETS.length})`
+  );
+  const colomboPreset = SRI_LANKA_CITY_PRESETS.find((c) => c.name === 'Colombo');
+  const kandyPreset = SRI_LANKA_CITY_PRESETS.find((c) => c.name === 'Kandy');
+  const gallePreset = SRI_LANKA_CITY_PRESETS.find((c) => c.name === 'Galle');
+  const jaffnaPreset = SRI_LANKA_CITY_PRESETS.find((c) => c.name === 'Jaffna');
+  assert(Boolean(colomboPreset && kandyPreset && gallePreset && jaffnaPreset), 'City Presets: Major provincial capitals covered');
+
+  // 5.2 Nearest City Matcher
+  const nearestColombo = findNearestCityPreset({ latitude: 6.9271, longitude: 79.8612 });
+  assert(nearestColombo.name === 'Colombo', 'Nearest City: Exact Colombo coords map to Colombo preset');
+
+  const nearestKandy = findNearestCityPreset({ latitude: 7.2906, longitude: 80.6337 });
+  assert(nearestKandy.name === 'Kandy', 'Nearest City: Exact Kandy coords map to Kandy preset');
+
+  const nearestGalle = findNearestCityPreset({ latitude: 6.0535, longitude: 80.2210 });
+  assert(nearestGalle.name === 'Galle', 'Nearest City: Exact Galle coords map to Galle preset');
+
+  // 5.3 Location Source Formatter
+  assert(formatLocationSourceLabel('GPS') === 'GPS (Live)', 'Source Formatter: GPS -> GPS (Live)');
+  assert(formatLocationSourceLabel('PROFILE') === 'Profile (Saved)', 'Source Formatter: PROFILE -> Profile (Saved)');
+  assert(formatLocationSourceLabel('MANUAL') === 'Manual', 'Source Formatter: MANUAL -> Manual');
+
+  // 5.4 Tier 1: Real-Time GPS Acquisition with Mocked Geolocation
+  Object.defineProperty(globalThis, 'navigator', {
+    value: {
+      geolocation: {
+        getCurrentPosition: (success: (pos: any) => void) => {
+          success({
+            coords: {
+              latitude: 6.9271,
+              longitude: 79.8612,
+            },
+          });
+        },
+      },
+    },
+    configurable: true,
+    writable: true,
+  });
+
+  const gpsResolved = await resolveUserLocation();
+  assert(gpsResolved.source === 'GPS', 'Tier 1 GPS: Source resolved to GPS');
+  assert(gpsResolved.isLiveGps === true, 'Tier 1 GPS: isLiveGps marked true');
+  assert(gpsResolved.coordinates.latitude === 6.9271, 'Tier 1 GPS: Correct live latitude acquired');
+
+  // 5.5 Tier 2: Saved Profile Fallback (when GPS unavailable/denied)
+  Object.defineProperty(globalThis, 'navigator', {
+    value: {},
+    configurable: true,
+    writable: true,
+  });
+  const profileCoords = { latitude: 7.2906, longitude: 80.6337 };
+  const profileResolved = await resolveUserLocation({
+    coordinates: profileCoords,
+    cityName: 'Kandy',
+    district: 'Kandy',
+  });
+  assert(profileResolved.source === 'PROFILE', 'Tier 2 Profile: Falls back to PROFILE when GPS fails');
+  assert(profileResolved.cityName === 'Kandy', 'Tier 2 Profile: Profile city preserved');
+  assert(profileResolved.coordinates.latitude === 7.2906, 'Tier 2 Profile: Coordinates match saved profile');
+  assert(profileResolved.isLiveGps === false, 'Tier 2 Profile: isLiveGps is false');
+
+  // 5.6 Tier 3: Manual City Selection Fallback
+  let listenerTriggered: boolean = false;
+  const unsubscribeLoc = subscribeToLocation((newLoc) => {
+    if (newLoc.source === 'MANUAL' && newLoc.cityName === 'Galle') {
+      listenerTriggered = true;
+    }
+  });
+
+  setManualCity(gallePreset!);
+  const currentManualState = getLocationState();
+  assert(currentManualState.source === 'MANUAL', 'Tier 3 Manual: Source is MANUAL');
+  assert(currentManualState.cityName === 'Galle', 'Tier 3 Manual: City updated to Galle');
+  assert(currentManualState.coordinates.latitude === gallePreset!.coordinates.latitude, 'Tier 3 Manual: Coordinates match Galle preset');
+  assert(Boolean(listenerTriggered), 'Location Subscription: Reactive listener received manual city update');
+  unsubscribeLoc();
+
+  // ==========================================================================
+  // SECTION 6: Device Health Check Diagnostic Engine
+  // ==========================================================================
+  console.log('\n--- 6. Device Health Check Diagnostic Engine Verification ---');
+
+  // 6.1 Four-Corner Touch Test Evaluation
+  const allCornersTouched: FourCornerTouchState = {
+    topLeft: true,
+    topRight: true,
+    bottomLeft: true,
+    bottomRight: true,
+  };
+  const touchAllPass = evaluateTouchTest(allCornersTouched);
+  assert(touchAllPass.status === 'PASSED', 'Touch Test: 4/4 corners passes');
+  assert(touchAllPass.earnedScore === 30, 'Touch Test: Full 30 points awarded');
+  assert(touchAllPass.defect === null, 'Touch Test: No defects for 4/4');
+
+  const partialCornersTouched: FourCornerTouchState = {
+    topLeft: true,
+    topRight: true,
+    bottomLeft: true,
+    bottomRight: false,
+  };
+  const touchPartial = evaluateTouchTest(partialCornersTouched);
+  assert(touchPartial.status === 'PASSED', 'Touch Test: 3/4 corners classified as passable wear');
+  assert(touchPartial.earnedScore === 23, 'Touch Test: Proportional points earned for 3/4');
+
+  const failedCornersTouched: FourCornerTouchState = {
+    topLeft: true,
+    topRight: false,
+    bottomLeft: false,
+    bottomRight: false,
+  };
+  const touchFail = evaluateTouchTest(failedCornersTouched);
+  assert(touchFail.status === 'FAILED', 'Touch Test: 1/4 corners fails');
+  assert(touchFail.defect !== null, 'Touch Test: Deadzone defect recorded');
+
+  // 6.2 Battery Probe
+  const batteryPass = await probeBatteryCapability(true);
+  assert(batteryPass.status === 'PASSED', 'Battery Check: Holds charge passes');
+  assert(batteryPass.earnedScore === 25, 'Battery Check: 25 points awarded for holding charge');
+
+  const batteryFail = await probeBatteryCapability(false);
+  assert(batteryFail.status === 'FAILED', 'Battery Check: Does not hold charge fails');
+  assert(batteryFail.earnedScore === 0, 'Battery Check: 0 points awarded');
+  assert(Boolean(batteryFail.defect), 'Battery Check: Defect recorded for failing battery');
+
+  // 6.3 Optical Camera Probe
+  const cameraRes = await probeCameraCapability();
+  assert(cameraRes.id === 'CAMERA', 'Camera Check: Probes camera without uncaught exception');
+  assert(cameraRes.maxScore === 15, 'Camera Check: Max score is 15');
+
+  // 6.4 Motion Sensor Probes (Accelerometer & Gyroscope)
+  const accelRes = await probeAccelerometer();
+  assert(accelRes.id === 'ACCELEROMETER', 'Accelerometer Check: Safe evaluation in bare RN environment');
+  assert(accelRes.status === 'PASSED', 'Accelerometer Check: Defaults safely to PASSED');
+
+  const gyroRes = await probeGyroscope();
+  assert(gyroRes.id === 'GYROSCOPE', 'Gyroscope Check: Safe evaluation in bare RN environment');
+  assert(gyroRes.status === 'PASSED', 'Gyroscope Check: Defaults safely to PASSED');
+
+  // 6.5 Full Report Compilation & Condition Derivation: Pristine Hardware
+  const pristineResults: Record<HealthTestId, HealthTestResult> = {
+    TOUCH_SCREEN: touchAllPass,
+    BATTERY: batteryPass,
+    CAMERA: {
+      id: 'CAMERA',
+      name: 'Camera Capability',
+      description: 'Camera optical sensor check',
+      status: 'PASSED',
+      maxScore: 15,
+      earnedScore: 15,
+      details: 'Camera operational.',
+      defect: null,
+    },
+    ACCELEROMETER: accelRes,
+    GYROSCOPE: gyroRes,
+  };
+  const pristineReport = compileHealthReport(pristineResults);
+  assert(pristineReport.overallScore === 100, 'Health Report: Pristine hardware scores 100%');
+  assert(pristineReport.derivedCondition === 'WORKING_NORMALLY', 'Health Report: 100% derives WORKING_NORMALLY');
+  assert(pristineReport.grade === 'EXCELLENT', 'Health Report: 100% grade is EXCELLENT');
+  assert(pristineReport.defects.length === 0, 'Health Report: Zero defects for pristine device');
+  assert(Boolean(pristineReport.completedAt), 'Health Report: ISO timestamp present');
+
+  // 6.6 Full Report Compilation: Moderate Degradation
+  const degradedResults: Record<HealthTestId, HealthTestResult> = {
+    TOUCH_SCREEN: touchPartial,
+    BATTERY: {
+      id: 'BATTERY',
+      name: 'Battery',
+      description: 'Battery health',
+      status: 'PASSED',
+      maxScore: 25,
+      earnedScore: 18,
+      details: 'Minor wear',
+      defect: null,
+    },
+    CAMERA: cameraRes,
+    ACCELEROMETER: accelRes,
+    GYROSCOPE: gyroRes,
+  };
+  const degradedReport = compileHealthReport(degradedResults);
+  assert(degradedReport.overallScore < 85 && degradedReport.overallScore >= 50, 'Health Report: Degraded hardware scores 50-84%');
+  assert(degradedReport.derivedCondition === 'WORKING_WITH_PROBLEMS', 'Health Report: Degraded device derives WORKING_WITH_PROBLEMS');
+
+  // 6.7 Full Report Compilation: Severe Defects
+  const defectiveResults: Record<HealthTestId, HealthTestResult> = {
+    TOUCH_SCREEN: touchFail,
+    BATTERY: batteryFail,
+    CAMERA: cameraRes,
+    ACCELEROMETER: accelRes,
+    GYROSCOPE: gyroRes,
+  };
+  const defectiveReport = compileHealthReport(defectiveResults);
+  assert(defectiveReport.overallScore < 50, 'Health Report: Severe defects score < 50%');
+  assert(
+    defectiveReport.derivedCondition === 'PHYSICALLY_DAMAGED' || defectiveReport.derivedCondition === 'NOT_WORKING',
+    'Health Report: Severe defects map to PHYSICALLY_DAMAGED or NOT_WORKING'
+  );
+  assert(defectiveReport.defects.length >= 2, 'Health Report: Multiple defects enumerated');
 
   // ==========================================================================
   // FINAL QA AUDIT SUMMARY

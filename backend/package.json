@@ -1,25 +1,56 @@
 {
   "name": "revivex-backend",
   "version": "1.0.0",
-  "description": "ReViveX Circular Economy Backend - Member 3 Smart Recommendation Module",
+  "description": "ReViveX REST API Backend",
   "main": "dist/app.js",
   "scripts": {
     "build": "tsc",
-    "test": "ts-node tests/runAllTests.ts",
+    "start": "node dist/app.js",
+    "dev": "tsx watch src/app.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:member3": "ts-node tests/runAllTests.ts",
     "test:recommendation": "ts-node tests/recommendation.test.ts",
-    "test:adapters": "ts-node tests/adapters.test.ts"
+    "test:adapters": "ts-node tests/adapters.test.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:validate": "prisma validate",
+    "prisma:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed"
   },
+  "keywords": [
+    "revivex",
+    "express",
+    "typescript",
+    "prisma"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.10.0",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "debug": "^2.6.9",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/node": "^20.11.0",
-    "prisma": "^5.10.0",
+    "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.10.2",
+    "@types/supertest": "^7.2.1",
+    "jest": "^30.5.1",
+    "prisma": "^5.22.0",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

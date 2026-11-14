@@ -1,49 +1,57 @@
-// ============================================================================
-// Member 3 - Express App & API Router
-// ============================================================================
-
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
+import dotenv from 'dotenv';
+
+// Member 1 - Auth & User Routes
+import apiRoutes from './routes';
+import { errorHandler, notFoundHandler } from './middleware';
+
+// Member 3 - Smart Recommendation, Search & Discovery Routes
 import recommendationRoutes from './routes/recommendationRoutes';
 import searchRoutes from './routes/searchRoutes';
 import discoveryRoutes from './routes/discoveryRoutes';
 
-const app = express();
+dotenv.config();
 
+const app: Application = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Health Check Endpoint
+// Health Check Endpoints (Supports both Member 1 & Member 3 contracts)
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', service: 'ReViveX Backend API' });
 });
 
-// Member 3 - Recommendation Routes
+// Root fallback route
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({
+    name: 'ReViveX API',
+    status: 'running',
+    healthCheck: '/api/health',
+  });
+});
+
+// Member 1 - Core API Routes (/api/auth, /api/users, /api/admin, /api/health)
+app.use('/api', apiRoutes);
+
+// Member 3 - Recommendation, Search & Discovery Routes
 app.use('/api/recommendations', recommendationRoutes);
-
-// Member 3 - Search & Filtering Routes
 app.use('/api/search', searchRoutes);
-
-// Member 3 - Discovery Feed Routes
 app.use('/api/discovery', discoveryRoutes);
 
-// 404 Fallback Handler
-app.use((_req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    statusCode: 404,
-    error: 'Endpoint not found',
-  });
-});
+// Unknown routes + global error handler (must be last)
+app.use(notFoundHandler);
+app.use(errorHandler);
 
-// Global Error Handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Unhandled server error:', err);
-  res.status(500).json({
-    success: false,
-    statusCode: 500,
-    error: err.message || 'Internal server error',
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`[ReViveX Backend] Server is running on port ${PORT}`);
+    console.log(`[ReViveX Backend] Health endpoint: http://localhost:${PORT}/api/health`);
   });
-});
+}
 
 export default app;

@@ -34,15 +34,16 @@ export class DiscoveryService {
    * Generates the multi-section Discovery Feed with resilient parallel execution
    */
   async getFeed(query: ValidatedDiscoveryQuery): Promise<DiscoveryFeedResponseData> {
-    const { sectionLimit } = query;
+    const { sectionLimit, latitude, longitude, radiusKm } = query;
+    const adapterSpatialParams = { latitude, longitude, radiusKm };
 
     // Parallel execution across all four domain adapters using Promise.allSettled
     const [providersSettled, listingsSettled, recyclingSettled, itemsSettled] =
       await Promise.allSettled([
-        ProviderAdapter.queryProviders(),
-        ListingAdapter.queryListings(),
-        RecyclingAdapter.queryRecyclingRequests(),
-        ItemAdapter.queryItems(),
+        ProviderAdapter.queryProviders(adapterSpatialParams),
+        ListingAdapter.queryListings(adapterSpatialParams),
+        RecyclingAdapter.queryRecyclingRequests(adapterSpatialParams),
+        ItemAdapter.queryItems(adapterSpatialParams),
       ]);
 
     // 1. Nearby / Curated Providers (Member 4)
@@ -130,6 +131,20 @@ export class DiscoveryService {
       eWasteRequests = requests
         .filter((r) => r.status === 'PENDING' || r.status === 'SCHEDULED')
         .sort((a, b) => {
+          // If distances are known, prioritize closest drop-off / collection points first
+          const hasDistA = typeof a.distanceKm === 'number' && !isNaN(a.distanceKm);
+          const hasDistB = typeof b.distanceKm === 'number' && !isNaN(b.distanceKm);
+
+          if (hasDistA && hasDistB) {
+            if (a.distanceKm !== b.distanceKm) {
+              return a.distanceKm! - b.distanceKm!;
+            }
+          } else if (hasDistA && !hasDistB) {
+            return -1;
+          } else if (!hasDistA && hasDistB) {
+            return 1;
+          }
+
           const timeA = a.pickupDate ? new Date(a.pickupDate).getTime() : NaN;
           const timeB = b.pickupDate ? new Date(b.pickupDate).getTime() : NaN;
           const hasDateA = !isNaN(timeA);

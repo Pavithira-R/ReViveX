@@ -3,9 +3,138 @@
 // Haversine calculation, coordinate validation, and distance formatting
 // ============================================================================
 
-import { LocationCoordinates } from '../types';
+import { LocationCoordinates, CityPreset, LocationSource } from '../types';
 
 export const EARTH_RADIUS_KM = 6371;
+
+/**
+ * Curated Sri Lankan city presets for Tier 3 manual location selection
+ */
+export const SRI_LANKA_CITY_PRESETS: CityPreset[] = [
+  {
+    id: 'city_cmb',
+    name: 'Colombo',
+    district: 'Colombo',
+    province: 'Western',
+    coordinates: { latitude: 6.9271, longitude: 79.8612 },
+  },
+  {
+    id: 'city_kdy',
+    name: 'Kandy',
+    district: 'Kandy',
+    province: 'Central',
+    coordinates: { latitude: 7.2906, longitude: 80.6337 },
+  },
+  {
+    id: 'city_gle',
+    name: 'Galle',
+    district: 'Galle',
+    province: 'Southern',
+    coordinates: { latitude: 6.0535, longitude: 80.221 },
+  },
+  {
+    id: 'city_jaf',
+    name: 'Jaffna',
+    district: 'Jaffna',
+    province: 'Northern',
+    coordinates: { latitude: 9.6615, longitude: 80.0255 },
+  },
+  {
+    id: 'city_gmp',
+    name: 'Gampaha',
+    district: 'Gampaha',
+    province: 'Western',
+    coordinates: { latitude: 7.084, longitude: 79.9925 },
+  },
+  {
+    id: 'city_neg',
+    name: 'Negombo',
+    district: 'Gampaha',
+    province: 'Western',
+    coordinates: { latitude: 7.2008, longitude: 79.8736 },
+  },
+  {
+    id: 'city_kur',
+    name: 'Kurunegala',
+    district: 'Kurunegala',
+    province: 'North Western',
+    coordinates: { latitude: 7.4818, longitude: 80.3609 },
+  },
+  {
+    id: 'city_mat',
+    name: 'Matara',
+    district: 'Matara',
+    province: 'Southern',
+    coordinates: { latitude: 5.9549, longitude: 80.555 },
+  },
+  {
+    id: 'city_anu',
+    name: 'Anuradhapura',
+    district: 'Anuradhapura',
+    province: 'North Central',
+    coordinates: { latitude: 8.3114, longitude: 80.4037 },
+  },
+  {
+    id: 'city_bat',
+    name: 'Batticaloa',
+    district: 'Batticaloa',
+    province: 'Eastern',
+    coordinates: { latitude: 7.731, longitude: 81.6747 },
+  },
+  {
+    id: 'city_tri',
+    name: 'Trincomalee',
+    district: 'Trincomalee',
+    province: 'Eastern',
+    coordinates: { latitude: 8.5874, longitude: 81.2152 },
+  },
+  {
+    id: 'city_rat',
+    name: 'Ratnapura',
+    district: 'Ratnapura',
+    province: 'Sabaragamuwa',
+    coordinates: { latitude: 6.6828, longitude: 80.4034 },
+  },
+];
+
+/**
+ * Finds the closest preset city given a coordinate point
+ */
+export function findNearestCityPreset(coords: LocationCoordinates): CityPreset {
+  let nearest = SRI_LANKA_CITY_PRESETS[0];
+  let minDistance = Infinity;
+
+  for (const city of SRI_LANKA_CITY_PRESETS) {
+    const dist = calculateHaversineDistanceKm(
+      coords.latitude,
+      coords.longitude,
+      city.coordinates.latitude,
+      city.coordinates.longitude
+    );
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearest = city;
+    }
+  }
+
+  return nearest;
+}
+
+/**
+ * Formats the location source for display
+ */
+export function formatLocationSourceLabel(source: LocationSource): string {
+  switch (source) {
+    case 'GPS':
+      return 'GPS (Live)';
+    case 'PROFILE':
+      return 'Profile (Saved)';
+    case 'MANUAL':
+      return 'Manual';
+    default:
+      return 'Nearby';
+  }
+}
 
 /**
  * Validates latitude and longitude within geographic bounds

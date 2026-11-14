@@ -39,7 +39,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
               {provider.businessName}
             </Text>
             {provider.isVerified && (
-              <Text style={styles.verifiedBadge} title="Verified Provider">
+              <Text style={styles.verifiedBadge} accessibilityLabel="Verified Provider">
                 ✓
               </Text>
             )}

@@ -20,7 +20,7 @@ import {
   RecyclePointSummary,
 } from '../types';
 import { searchUnified } from '../services/searchService';
-import { DEFAULT_USER_COORDINATES } from '../utils/location';
+import { getLocationState } from '../services/locationService';
 import { SearchBarHeader } from '../components/SearchBarHeader';
 import { MultiFacetFilterModal } from '../components/MultiFacetFilterModal';
 import { ProviderCard } from '../components/ProviderCard';
@@ -49,8 +49,8 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
 }) => {
   const [filters, setFilters] = useState<SearchFilters>({
     ...initialFilters,
-    latitude: initialFilters.latitude ?? DEFAULT_USER_COORDINATES.latitude,
-    longitude: initialFilters.longitude ?? DEFAULT_USER_COORDINATES.longitude,
+    latitude: initialFilters.latitude ?? getLocationState().coordinates.latitude,
+    longitude: initialFilters.longitude ?? getLocationState().coordinates.longitude,
     page: 1,
     limit: 10,
   });

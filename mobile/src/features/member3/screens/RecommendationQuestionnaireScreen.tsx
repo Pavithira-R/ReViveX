@@ -23,7 +23,7 @@ import {
   RecommendationResult,
 } from '../types';
 import { evaluateRecommendation } from '../services/recommendationService';
-import { DEFAULT_USER_COORDINATES } from '../utils/location';
+import { getLocationState } from '../services/locationService';
 import { CategoryGrid } from '../components/CategoryGrid';
 import { ConditionSelector } from '../components/ConditionSelector';
 import { AgeGroupChips } from '../components/AgeGroupChips';
@@ -102,7 +102,7 @@ export const RecommendationQuestionnaireScreen: React.FC<
       ageGroup,
       userIntention,
       urgency,
-      userCoordinates: DEFAULT_USER_COORDINATES,
+      userCoordinates: getLocationState().coordinates,
     };
 
     try {

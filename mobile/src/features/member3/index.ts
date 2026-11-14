@@ -30,11 +30,29 @@ export { RecyclePointCard } from './components/RecyclePointCard';
 export { UrgentDonationCard } from './components/UrgentDonationCard';
 export { SearchBarHeader } from './components/SearchBarHeader';
 export { MultiFacetFilterModal } from './components/MultiFacetFilterModal';
+export { LocationStatusBadge } from './components/LocationStatusBadge';
+export { LocationSelectorModal } from './components/LocationSelectorModal';
+export { DeviceHealthCheckModal } from './components/DeviceHealthCheckModal';
 
 // Services
 export { evaluateRecommendation } from './services/recommendationService';
 export { searchUnified } from './services/searchService';
 export { fetchDiscoveryFeed } from './services/discoveryService';
+export {
+  resolveUserLocation,
+  setManualCity,
+  getLocationState,
+  subscribeToLocation,
+  requestAndroidLocationPermission,
+} from './services/locationService';
+export {
+  evaluateTouchTest,
+  probeCameraCapability,
+  probeBatteryCapability,
+  probeAccelerometer,
+  probeGyroscope,
+  compileHealthReport,
+} from './services/healthCheckService';
 export { setApiBaseUrl, getApiBaseUrl } from './services/apiClient';
 
 // Utilities
@@ -43,12 +61,16 @@ export {
   formatDistance,
   isValidCoordinate,
   DEFAULT_USER_COORDINATES,
+  SRI_LANKA_CITY_PRESETS,
+  findNearestCityPreset,
+  formatLocationSourceLabel,
 } from './utils/location';
 export { evaluateLocalRecommendation } from './utils/ruleEngine';
 export * from './utils/mockData';
 
 // Types & Contracts
 export * from './types';
+export * from './types/healthCheck.types';
 
 // Theme Constants
 export * from './constants/theme';

@@ -20,10 +20,20 @@ import {
   RecyclePointSummary,
   UrgentDonationSummary,
   LocationCoordinates,
+  UserLocationState,
+  DeviceCondition,
 } from '../types';
+import { DeviceHealthReport } from '../types/healthCheck.types';
 import { fetchDiscoveryFeed } from '../services/discoveryService';
-import { DEFAULT_USER_COORDINATES } from '../utils/location';
+import {
+  getLocationState,
+  subscribeToLocation,
+  resolveUserLocation,
+} from '../services/locationService';
 import { SearchBarHeader } from '../components/SearchBarHeader';
+import { LocationStatusBadge } from '../components/LocationStatusBadge';
+import { LocationSelectorModal } from '../components/LocationSelectorModal';
+import { DeviceHealthCheckModal } from '../components/DeviceHealthCheckModal';
 import { DiscoveryFeedHero } from '../components/DiscoveryFeedHero';
 import { SectionHeader } from '../components/SectionHeader';
 import { ProviderCard } from '../components/ProviderCard';
@@ -41,6 +51,8 @@ interface DiscoveryHomeScreenProps {
   onSelectDonation?: (donation: UrgentDonationSummary) => void;
   onSeeAllProviders?: () => void;
   onSeeAllListings?: () => void;
+  profileCoordinates?: LocationCoordinates | null;
+  profileCity?: string | null;
 }
 
 export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
@@ -52,19 +64,41 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
   onSelectDonation,
   onSeeAllProviders,
   onSeeAllListings,
+  profileCoordinates,
+  profileCity,
 }) => {
   const [feed, setFeed] = useState<DiscoveryFeedData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
-  const [userCoords, setUserCoords] = useState<LocationCoordinates>(DEFAULT_USER_COORDINATES);
+  const [userLocation, setUserLocation] = useState<UserLocationState>(getLocationState());
+  const [locationModalVisible, setLocationModalVisible] = useState<boolean>(false);
+  const [healthModalVisible, setHealthModalVisible] = useState<boolean>(false);
+  const [latestHealthReport, setLatestHealthReport] = useState<DeviceHealthReport | null>(null);
+
+  const handleApplyDiagnosedCondition = (
+    _condition: DeviceCondition,
+    report: DeviceHealthReport
+  ) => {
+    setLatestHealthReport(report);
+    setHealthModalVisible(false);
+    onStartQuestionnaire();
+  };
+
+  useEffect(() => {
+    // Subscribe to location updates
+    const unsubscribe = subscribeToLocation((newState) => {
+      setUserLocation(newState);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const loadFeed = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
     try {
-      const response = await fetchDiscoveryFeed(userCoords);
+      const response = await fetchDiscoveryFeed(userLocation.coordinates);
       setFeed(response.feed);
       setIsOffline(response.isOfflineFallback);
     } catch (err) {
@@ -73,26 +107,38 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userCoords]);
+  }, [userLocation.coordinates]);
 
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
 
+  const handleRefresh = async () => {
+    // On pull-to-refresh, attempt lazy GPS update if user was in prompt state
+    if (userLocation.permissionStatus === 'PROMPT') {
+      await resolveUserLocation({
+        coordinates: profileCoordinates,
+        cityName: profileCity,
+      });
+    }
+    loadFeed(true);
+  };
+
   return (
     <View style={styles.screen}>
-      {/* App Header & Location Pill */}
+      {/* App Header */}
       <View style={styles.topHeader}>
         <View style={styles.brandContainer}>
           <Text style={styles.brandTitle}>ReViveX</Text>
           <Text style={styles.brandBadge}>DISCOVERY</Text>
         </View>
-
-        <TouchableOpacity style={styles.locationPill} activeOpacity={0.7}>
-          <Text style={styles.locationPin}>📍</Text>
-          <Text style={styles.locationText}>Colombo Central</Text>
-        </TouchableOpacity>
       </View>
+
+      {/* Location Status Badge & Selector Trigger */}
+      <LocationStatusBadge
+        location={userLocation}
+        onPressChange={() => setLocationModalVisible(true)}
+      />
 
       {/* Search Header Bar (Read-only trigger) */}
       <SearchBarHeader
@@ -137,6 +183,37 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
               onPressStart={onStartQuestionnaire}
             />
           )}
+
+          {/* Quick Hardware Diagnostic Card */}
+          <View style={styles.diagnosticCard}>
+            <View style={styles.diagnosticCardHeader}>
+              <View style={styles.diagnosticCardBadge}>
+                <Text style={styles.diagnosticCardBadgeText}>HARDWARE DIAGNOSTICS</Text>
+              </View>
+              {latestHealthReport && (
+                <View style={styles.diagnosticScorePill}>
+                  <Text style={styles.diagnosticScorePillText}>
+                    Score: {latestHealthReport.overallScore}% ({latestHealthReport.derivedCondition})
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.diagnosticCardTitle}>
+              🩺 Check Device Health & Repair Viability
+            </Text>
+            <Text style={styles.diagnosticCardSubtitle}>
+              Self-test screen digitizer, battery retention, camera sensor, and motion gyroscopes before choosing whether to repair, sell, donate, or recycle.
+            </Text>
+            <TouchableOpacity
+              style={styles.diagnosticCardButton}
+              onPress={() => setHealthModalVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.diagnosticCardButtonText}>
+                {latestHealthReport ? 'Run Diagnostic Again ↻' : 'Run 30-Sec Health Check →'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Section 1: Nearby Repair Providers */}
           {feed?.nearbyProviders && feed.nearbyProviders.length > 0 && (
@@ -227,6 +304,23 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
           <View style={styles.bottomPad} />
         </ScrollView>
       )}
+
+      {/* Location Selector Modal */}
+      <LocationSelectorModal
+        visible={locationModalVisible}
+        currentLocation={userLocation}
+        profileCoordinates={profileCoordinates}
+        profileCity={profileCity}
+        onLocationChanged={(newLoc) => setUserLocation(newLoc)}
+        onClose={() => setLocationModalVisible(false)}
+      />
+
+      {/* Device Health Check Modal */}
+      <DeviceHealthCheckModal
+        visible={healthModalVisible}
+        onApplyCondition={handleApplyDiagnosedCondition}
+        onClose={() => setHealthModalVisible(false)}
+      />
     </View>
   );
 };
@@ -317,6 +411,71 @@ const styles = StyleSheet.create({
   },
   sectionWrapper: {
     marginBottom: SPACING.lg,
+  },
+  diagnosticCard: {
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.lg,
+    backgroundColor: '#F8FAFC',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: SPACING.md,
+  },
+  diagnosticCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.xs,
+  },
+  diagnosticCardBadge: {
+    backgroundColor: '#E0E7FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: RADIUS.xs,
+  },
+  diagnosticCardBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#4338CA',
+    letterSpacing: 0.5,
+  },
+  diagnosticScorePill: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: RADIUS.xs,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  diagnosticScorePillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  diagnosticCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  diagnosticCardSubtitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 17,
+    marginBottom: SPACING.md,
+  },
+  diagnosticCardButton: {
+    backgroundColor: '#4F46E5',
+    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  diagnosticCardButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   horizontalScroll: {
     paddingHorizontal: SPACING.lg,

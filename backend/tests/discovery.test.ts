@@ -276,10 +276,104 @@ export async function runDiscoveryTests(): Promise<void> {
   assert(feedMultiFail.recommendationPrompt !== undefined, 'Scenario 27: Prompt always returned even in multi-failure');
   ProviderAdapter.setDelegates(null, null);
   ListingAdapter.setDelegate(null);
+  // --------------------------------------------------------------------------
+  // 27b. GPS & Spatial Coordinate Validation Tests
+  // --------------------------------------------------------------------------
+  console.log('\n--- Discovery Spatial & GPS Validation Tests ---');
+
+  const valSpatialValid = validateDiscoveryQuery({
+    latitude: 40.7128,
+    longitude: -74.006,
+    radiusKm: 25,
+  });
+  assert(
+    valSpatialValid.isValid &&
+      valSpatialValid.validatedQuery?.latitude === 40.7128 &&
+      valSpatialValid.validatedQuery?.longitude === -74.006 &&
+      valSpatialValid.validatedQuery?.radiusKm === 25,
+    'Scenario 27b.1: Valid latitude, longitude, and radiusKm pass validation'
+  );
+
+  const valLoneLat = validateDiscoveryQuery({ latitude: 40.7128 });
+  assert(
+    !valLoneLat.isValid && valLoneLat.errors.some((e) => e.includes('longitude')),
+    'Scenario 27b.2: Lone latitude without longitude is rejected'
+  );
+
+  const valLoneLng = validateDiscoveryQuery({ longitude: -74.006 });
+  assert(
+    !valLoneLng.isValid && valLoneLng.errors.some((e) => e.includes('latitude')),
+    'Scenario 27b.3: Lone longitude without latitude is rejected'
+  );
+
+  const valLatOverflow = validateDiscoveryQuery({ latitude: 95.0, longitude: -74.006 });
+  assert(
+    !valLatOverflow.isValid && valLatOverflow.errors.some((e) => e.includes('latitude')),
+    'Scenario 27b.4: Latitude > 90 is rejected'
+  );
+
+  const valLngUnderflow = validateDiscoveryQuery({ latitude: 40.7128, longitude: -195.0 });
+  assert(
+    !valLngUnderflow.isValid && valLngUnderflow.errors.some((e) => e.includes('longitude')),
+    'Scenario 27b.5: Longitude < -180 is rejected'
+  );
+
+  const valNegativeRadius = validateDiscoveryQuery({
+    latitude: 40.7128,
+    longitude: -74.006,
+    radiusKm: -5,
+  });
+  assert(
+    !valNegativeRadius.isValid && valNegativeRadius.errors.some((e) => e.includes('radiusKm')),
+    'Scenario 27b.6: Negative radiusKm is rejected'
+  );
 
   // --------------------------------------------------------------------------
-  // 28-30. Live Express HTTP Server Pipeline Integration & Envelope Tests
+  // 27c. Spatial Sorting & Proximity in Discovery Feed
   // --------------------------------------------------------------------------
+  const spatialFeed = await discoveryService.getFeed({
+    sectionLimit: 10,
+    latitude: 40.7128,
+    longitude: -74.006,
+    radiusKm: 50,
+  });
+
+  assert(
+    spatialFeed.nearbyProviders.length > 0,
+    'Scenario 27c.1: Spatial discovery feed returns nearby providers'
+  );
+
+  const allHaveDist = spatialFeed.nearbyProviders.every(
+    (p) => typeof p.distanceKm === 'number' && !isNaN(p.distanceKm)
+  );
+  assert(
+    allHaveDist,
+    'Scenario 27c.2: All returned nearby providers have dynamically calculated distanceKm'
+  );
+
+  let sortedAsc = true;
+  for (let i = 0; i < spatialFeed.nearbyProviders.length - 1; i++) {
+    const distCurr = spatialFeed.nearbyProviders[i].distanceKm!;
+    const distNext = spatialFeed.nearbyProviders[i + 1].distanceKm!;
+    if (distCurr > distNext) {
+      sortedAsc = false;
+      break;
+    }
+  }
+  assert(
+    sortedAsc,
+    'Scenario 27c.3: Nearby providers are sorted in ascending proximity order (nearest first)'
+  );
+
+  if (spatialFeed.eWasteRequests.length > 0) {
+    const eWasteHaveDist = spatialFeed.eWasteRequests.some(
+      (r) => typeof r.distanceKm === 'number'
+    );
+    assert(
+      eWasteHaveDist,
+      'Scenario 27c.4: E-waste requests attach spatial distanceKm when coordinates provided'
+    );
+  }
   console.log('\n--- Live HTTP Server Pipeline Integration Tests ---');
 
   const server = http.createServer(app);

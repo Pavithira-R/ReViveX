@@ -195,6 +195,40 @@ export interface DiscoveryFeedData {
 }
 
 /**
+ * Location origin source in the 3-tier fallback hierarchy
+ */
+export type LocationSource = 'GPS' | 'PROFILE' | 'MANUAL';
+
+/**
+ * Android runtime location permission status
+ */
+export type LocationPermissionStatus = 'GRANTED' | 'DENIED' | 'UNAVAILABLE' | 'PROMPT';
+
+/**
+ * Unified user location state consumed across Member 3 screens
+ */
+export interface UserLocationState {
+  coordinates: LocationCoordinates;
+  source: LocationSource;
+  cityName: string;
+  district?: string;
+  permissionStatus: LocationPermissionStatus;
+  isLiveGps: boolean;
+  error?: string | null;
+}
+
+/**
+ * Preset city/district definition for manual location selection
+ */
+export interface CityPreset {
+  id: string;
+  name: string;
+  district: string;
+  province: string;
+  coordinates: LocationCoordinates;
+}
+
+/**
  * Member 3 Navigation Screen Routes
  */
 export type Member3Route =

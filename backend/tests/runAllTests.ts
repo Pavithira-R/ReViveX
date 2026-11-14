@@ -23,6 +23,7 @@ async function main() {
     console.log('************************************************************');
     console.log('    ALL MEMBER 3 TEST SUITES PASSED SUCCESSFULLY (100%)    ');
     console.log('************************************************************\n');
+    process.exit(0);
   } catch (err: any) {
     console.error('Test execution failed with unhandled error:', err);
     process.exit(1);

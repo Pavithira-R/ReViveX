@@ -31,6 +31,9 @@ export interface DiscoverySourceStatus {
  */
 export interface DiscoveryQueryParams {
   sectionLimit?: string | number;
+  latitude?: string | number;
+  longitude?: string | number;
+  radiusKm?: string | number;
 }
 
 /**
@@ -38,6 +41,9 @@ export interface DiscoveryQueryParams {
  */
 export interface ValidatedDiscoveryQuery {
   sectionLimit: number;
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
 }
 
 /**
