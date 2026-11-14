@@ -8,10 +8,23 @@ import { authenticate } from '../middleware';
 import prisma from '../utils/prisma';
 import { AppError, sendSuccess } from '../utils';
 import { Prisma } from '@prisma/client';
+import { awardEcoPoints, notify } from '../services';
 
 const conditions = ['WORKING', 'DAMAGED', 'BROKEN'] as const;
 const actions = ['REPAIR', 'REUSE', 'SELL', 'DONATE', 'RECYCLE'] as const;
 const statuses = ['POSTED', 'MATCHED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED'] as const;
+const ecoCategories: Record<string, string> = {
+  'Mobile Phones': 'PHONE',
+  Laptops: 'LAPTOP',
+  Tablets: 'TABLET',
+  Desktops: 'DESKTOP',
+  Monitors: 'MONITOR',
+  Printers: 'PRINTER',
+  Headphones: 'HEADPHONES',
+  Keyboards: 'KEYBOARD',
+  Cameras: 'CAMERA',
+  'Batteries & Chargers': 'BATTERY_CHARGER',
+};
 const allowedTypes: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/png': '.png',
@@ -237,6 +250,18 @@ async function updateItem(req: Request, res: Response): Promise<Response> {
     data,
     include: { category: true, owner: { select: { id: true, name: true } } },
   });
+  if (item.status === 'COMPLETED' && current.status !== 'COMPLETED') {
+    await awardEcoPoints(
+      item.ownerId,
+      item.action as 'REPAIR' | 'REUSE' | 'SELL' | 'DONATE' | 'RECYCLE',
+      item.id,
+      item.category ? ecoCategories[item.category.name] : undefined,
+    );
+    await notify(item.ownerId, 'Item completed', `"${item.name}" has been given another life.`, {
+      type: 'LISTING',
+      refId: item.id,
+    });
+  }
   return sendSuccess(res, 'Item updated', item);
 }
 
