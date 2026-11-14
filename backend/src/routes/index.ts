@@ -4,6 +4,7 @@ import authRoutes from './auth.routes';
 import userRoutes from './user.routes';
 import adminRoutes from './admin.routes';
 import ecoRoutes from './eco.routes';
+import reuseRecycleRoutes from './reuseRecycle.routes';
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
 router.use('/eco', ecoRoutes);
+router.use('/', reuseRecycleRoutes);
 
 export default router;

@@ -7,10 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================================
-// Member 1 – Authentication & User Management
-// Shared foundation: other modules reference User.id as a FK.
-// ============================================================
+// ==========================================
+// ENUMS
+// ==========================================
 
 enum Role {
   ITEM_OWNER
@@ -19,6 +18,44 @@ enum Role {
   RECYCLER
   ADMIN
 }
+
+enum EcoActionType {
+  REPAIR
+  REUSE
+  SELL
+  DONATE
+  RECYCLE
+}
+
+enum ListingType {
+  REUSE
+  SELL
+  DONATE
+}
+
+enum ListingStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum RecyclingStatus {
+  REQUESTED
+  ACCEPTED
+  COLLECTED
+  COMPLETED
+  CANCELLED
+}
+
+// ==========================================
+// USER
+// ==========================================
 
 model User {
   id           String   @id @default(uuid())
@@ -34,26 +71,24 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  // Eco impact
   ecoActions EcoAction[]
+
+  // Member 5: Reuse, Sell, Donate and Recycle
+  listings             Listing[]          @relation("ListingOwner")
+  receivedOffers       Offer[]            @relation("OfferBuyer")
+  ownedRecycling       RecyclingRequest[] @relation("RecyclingOwner")
+  assignedRecycling    RecyclingRequest[] @relation("RecyclingRecycler")
+  sentTransactions     Transaction[]      @relation("TransactionFrom")
+  receivedTransactions Transaction[]      @relation("TransactionTo")
 
   @@index([role])
   @@map("users")
 }
 
-// ============================================================
-// Member 6 – Eco Impact
-// One row per completed sustainable action. Other modules record
-// them through awardEcoPoints() when a repair, sale, donation,
-// reuse or recycling request is completed.
-// ============================================================
-
-enum EcoActionType {
-  REPAIR
-  REUSE
-  SELL
-  DONATE
-  RECYCLE
-}
+// ==========================================
+// ECO ACTIONS
+// ==========================================
 
 model EcoAction {
   id        String        @id @default(uuid())
@@ -61,12 +96,130 @@ model EcoAction {
   user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      EcoActionType
   points    Int
-  /// Id of the completed record (repair request, listing, recycling request).
   refId     String        @map("ref_id")
   createdAt DateTime      @default(now()) @map("created_at")
 
-  /// The same completed activity can only earn points once.
   @@unique([type, refId])
   @@index([userId])
   @@map("eco_actions")
+}
+
+// ==========================================
+// MEMBER 5: LISTINGS
+// REUSE / SELL / DONATE
+// ==========================================
+
+model Listing {
+  id          String  @id @default(uuid())
+  itemId      String? @map("item_id")
+  title       String
+  description String?
+  category    String
+  condition   String?
+  imageUrl    String? @map("image_url")
+
+  ownerId String @map("owner_id")
+  owner   User   @relation("ListingOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  type   ListingType
+  price  Float?
+  status ListingStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  offers      Offer[]
+  transaction Transaction?
+
+  @@index([ownerId])
+  @@index([type, status])
+  @@map("listings")
+}
+
+// ==========================================
+// MEMBER 5: OFFERS
+// ==========================================
+
+model Offer {
+  id String @id @default(uuid())
+
+  listingId String  @map("listing_id")
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerId String @map("buyer_id")
+  buyer   User   @relation("OfferBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  amount  Float?
+  message String?
+  status  OfferStatus @default(PENDING)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  transaction Transaction?
+
+  @@index([listingId])
+  @@index([buyerId])
+  @@map("offers")
+}
+
+// ==========================================
+// MEMBER 5: RECYCLING REQUESTS
+// ==========================================
+
+model RecyclingRequest {
+  id       String  @id @default(uuid())
+  itemId   String? @map("item_id")
+  itemName String  @map("item_name")
+  category String
+  quantity Int     @default(1)
+
+  ownerId String @map("owner_id")
+  owner   User   @relation("RecyclingOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  recyclerId String? @map("recycler_id")
+  recycler   User?   @relation("RecyclingRecycler", fields: [recyclerId], references: [id])
+
+  pickupAddress String          @map("pickup_address")
+  notes         String?
+  status        RecyclingStatus @default(REQUESTED)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  transaction Transaction?
+
+  @@index([ownerId])
+  @@index([recyclerId])
+  @@index([status])
+  @@map("recycling_requests")
+}
+
+// ==========================================
+// MEMBER 5: TRANSACTIONS
+// ==========================================
+
+model Transaction {
+  id String @id @default(uuid())
+
+  listingId String?  @unique @map("listing_id")
+  listing   Listing? @relation(fields: [listingId], references: [id])
+
+  offerId String? @unique @map("offer_id")
+  offer   Offer?  @relation(fields: [offerId], references: [id])
+
+  recyclingRequestId String?           @unique @map("recycling_request_id")
+  recyclingRequest   RecyclingRequest? @relation(fields: [recyclingRequestId], references: [id])
+
+  fromUserId String @map("from_user_id")
+  fromUser   User   @relation("TransactionFrom", fields: [fromUserId], references: [id])
+
+  toUserId String? @map("to_user_id")
+  toUser   User?   @relation("TransactionTo", fields: [toUserId], references: [id])
+
+  completedAt DateTime @default(now()) @map("completed_at")
+
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@map("transactions")
 }

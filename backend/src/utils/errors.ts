@@ -21,5 +21,24 @@ export class AppError extends Error {
   }
 }
 
-export const validationError = (details: string[]): AppError =>
-  new AppError('Validation failed', 400, 'VALIDATION_ERROR', details);
+/**
+ * Accepts either:
+ * 1. An array of error messages.
+ * 2. An object containing field-specific error messages.
+ */
+export const validationError = (
+  details: string[] | Record<string, string>
+): AppError => {
+  const messages: string[] = Array.isArray(details)
+    ? details
+    : Object.entries(details).map(
+        ([field, message]) => `${field}: ${message}`
+      );
+
+  return new AppError(
+    'Validation failed',
+    400,
+    'VALIDATION_ERROR',
+    messages
+  );
+};
