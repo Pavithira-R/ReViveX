@@ -6,6 +6,7 @@
 **Mobile Directory:** `C:\Users\lenovo\Downloads\ReViveX\mobile`  
 **Backend Directory:** `C:\Users\lenovo\Downloads\ReViveX\backend`  
 **Target Emulator:** `Medium_Phone` (`emulator-5554`)  
+**Shared Database Configuration:** PostgreSQL via Prisma ORM (`datasource db { provider = "postgresql" }`)  
 **Status:** **RESOLVED, INTEGRATED AND VERIFIED**
 
 ---
@@ -19,14 +20,15 @@ The registration error (*"Cannot reach the server. Check your connection and tha
 
 ---
 
-### 2. Backend & Database Status
+### 2. Backend & Shared Database Architecture
 
 - **Express Server Status:** Running on port 5000 (`http://localhost:5000/api`).
 - **Health Endpoints:**
   - `GET /health` $\rightarrow$ `{"status":"ok","service":"ReViveX Backend API"}` (HTTP 200)
   - `GET /api/health` $\rightarrow$ `{"status":"ok","message":"ReViveX API is running"}` (HTTP 200)
-- **Database Engine & ORM:** SQLite database via Prisma ORM (`backend/prisma/dev.db`).
-- **Database Status:** Schema pushed and synchronized via `npx prisma db push`.
+- **Authoritative Shared Database:** PostgreSQL via Prisma ORM (`backend/prisma/schema.prisma`), enforcing Prisma `Role` and `EcoActionType` enums.
+- **Historical Local Testing Setup Note:** A temporary local SQLite database (`backend/prisma/dev.db`) was used solely for offline local development testing on Windows. Production and shared team integration branches target PostgreSQL.
+- **Database Status:** Shared PostgreSQL Prisma schema validated (`npx prisma validate`).
 - **Database Seed:** Initial admin and user accounts seeded via `npm run db:seed`.
 
 ---
@@ -44,11 +46,11 @@ The registration error (*"Cannot reach the server. Check your connection and tha
 ### 4. Files Modified
 
 1. **`backend/.env`:** Created server environment configuration (PORT=5000, JWT_SECRET, DATABASE_URL, ADMIN credentials).
-2. **`backend/prisma/schema.prisma`:** Configured SQLite datasource connector for zero-dependency local operation.
-3. **`backend/prisma/seed.ts`:** Updated role typing for admin seeding.
-4. **`backend/src/services/auth.service.ts`:** Corrected role type casting during user registration.
-5. **`backend/src/services/user.service.ts`:** Adjusted Prisma string query filter for SQLite compatibility.
-6. **`backend/src/services/eco.service.ts`:** Adjusted type mapping for EcoActionType summaries.
+2. **`backend/prisma/schema.prisma`:** Shared PostgreSQL datasource schema with Prisma `Role` and `EcoActionType` enums.
+3. **`backend/prisma/seed.ts`:** Updated role typing using `Role.ADMIN` enum for admin seeding.
+4. **`backend/src/services/auth.service.ts`:** Enforced Prisma `Role` enum for user registration.
+5. **`backend/src/services/user.service.ts`:** Enforced `Role` enum and PostgreSQL case-insensitive search (`mode: 'insensitive'`).
+6. **`backend/src/services/eco.service.ts`:** Enforced `EcoActionType` enum and Member 6 impact fields (`co2SavedKg`, `ewasteKg`, `deviceCategory`).
 7. **`mobile/src/constants/index.ts`:** Confirmed API base URL configuration with ADB reverse instructions.
 
 ---
@@ -60,7 +62,7 @@ The registration error (*"Cannot reach the server. Check your connection and tha
 - **Backend Eco Impact Suite (`src/__tests__/eco.test.ts`):**
   - **11 / 11 Passed**.
 - **Member 3 Master Test Suite (`tests/runAllTests.ts`):**
-  - **139 / 139 Passed** (100% pass rate maintained; decision rules, adapters, unified search, discovery feed, location utilities, health check diagnostics).
+  - **449 / 449 Passed** (100% pass rate maintained; decision rules, adapters, unified search, discovery feed, location utilities, health check diagnostics).
 
 ---
 
@@ -69,7 +71,7 @@ The registration error (*"Cannot reach the server. Check your connection and tha
 1. **Registration Workflow:**
    - Navigated to `Create account` screen on `Medium_Phone` emulator.
    - Submitted form with full name (*Perera Silva*), email (*pererasilva@example.com*), phone (*0779876543*), password, and role (*Item Owner*).
-   - Backend received request, hashed password with `bcryptjs`, persisted user to SQLite database, issued JWT token, and returned `201 Created`.
+   - Backend received request, hashed password with `bcryptjs`, persisted user to database, issued JWT token, and returned `201 Created`.
 
 2. **Login & Session Workflow:**
    - Logged in on Android emulator as `qatestuser@example.com` with password `Password123!`.
