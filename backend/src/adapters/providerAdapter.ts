@@ -46,6 +46,31 @@ export function normalizeProvider(raw: any): NormalizedProvider {
  */
 const SEEDED_MEMBER_4_PROVIDERS = [
   {
+    id: 'prov_colombo_004',
+    name: 'Apex Tech Repair',
+    businessName: 'Apex Tech Repair & Diagnostics',
+    profileImage: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758',
+    isVerified: true,
+    description: 'Certified repair workshop in Colombo specializing in MacBook, iPhone, and Android micro-soldering.',
+    servicesOffered: [
+      'Screen Replacement',
+      'Battery Replacement',
+      'Motherboard Micro-soldering',
+      'Laptop',
+      'Phone',
+    ],
+    availability: 'Mon - Sat: 9:00 AM - 6:00 PM',
+    location: '45 Galle Road, Colombo 03, Sri Lanka',
+    latitude: 6.9271,
+    longitude: 79.8612,
+    rating: 4.9,
+    reviewCount: 48,
+    startingPrice: 25.0,
+    currency: 'USD',
+    phoneNumber: '+94 11 234 5678',
+    email: 'info@apexrepair.lk',
+  },
+  {
     id: 'prov_fixit_001',
     name: 'Alex Tech Master',
     businessName: 'FixIt Pro Electronics',

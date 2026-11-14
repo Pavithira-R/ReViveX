@@ -1,4 +1,4 @@
-import { Prisma, Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { RegisterDTO, LoginDTO, AuthResult, UserRole } from '../types';
 import {
@@ -47,7 +47,7 @@ export class AuthService {
           name: input.name.trim(),
           email,
           passwordHash,
-          role: (input.role as Role) || Role.ITEM_OWNER,
+          role: (input.role as UserRole) || 'ITEM_OWNER',
           phone: input.phone?.trim() || null,
         },
       });

@@ -1,4 +1,4 @@
-import { Prisma, Role } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import {
   SafeUser,
@@ -6,6 +6,7 @@ import {
   UpdateProfileDTO,
   UserListQuery,
   Paginated,
+  UserRole,
 } from '../types';
 import {
   AppError,
@@ -84,7 +85,7 @@ export class UserService {
       if (!isValidRole(query.role)) {
         throw validationError([`Unknown role: ${query.role}`]);
       }
-      where.role = query.role as Role;
+      where.role = query.role;
     }
     if (query.isActive === 'true' || query.isActive === 'false') {
       where.isActive = query.isActive === 'true';
@@ -92,8 +93,8 @@ export class UserService {
     if (query.search && query.search.trim()) {
       const term = query.search.trim();
       where.OR = [
-        { name: { contains: term, mode: 'insensitive' } },
-        { email: { contains: term, mode: 'insensitive' } },
+        { name: { contains: term } },
+        { email: { contains: term } },
       ];
     }
 
@@ -127,7 +128,7 @@ export class UserService {
     if (adminId === userId) {
       throw new AppError('Admins cannot change their own role', 400, 'SELF_MODIFICATION');
     }
-    return this.updateAsAdmin(userId, { role: role as Role });
+    return this.updateAsAdmin(userId, { role: role as UserRole });
   }
 
   async setActive(adminId: string, userId: string, isActive: unknown): Promise<SafeUser> {

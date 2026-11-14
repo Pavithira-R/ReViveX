@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -12,20 +12,12 @@ datasource db {
 // Shared foundation: other modules reference User.id as a FK.
 // ============================================================
 
-enum Role {
-  ITEM_OWNER
-  SERVICE_PROVIDER
-  BUYER
-  RECYCLER
-  ADMIN
-}
-
 model User {
   id           String   @id @default(uuid())
   name         String
   email        String   @unique
   passwordHash String   @map("password_hash")
-  role         Role     @default(ITEM_OWNER)
+  role         String   @default("ITEM_OWNER")
   phone        String?
   profileImage String?  @map("profile_image")
   latitude     Float?
@@ -47,23 +39,15 @@ model User {
 // reuse or recycling request is completed.
 // ============================================================
 
-enum EcoActionType {
-  REPAIR
-  REUSE
-  SELL
-  DONATE
-  RECYCLE
-}
-
 model EcoAction {
-  id        String        @id @default(uuid())
-  userId    String        @map("user_id")
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      EcoActionType
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
   points    Int
   /// Id of the completed record (repair request, listing, recycling request).
-  refId     String        @map("ref_id")
-  createdAt DateTime      @default(now()) @map("created_at")
+  refId     String   @map("ref_id")
+  createdAt DateTime @default(now()) @map("created_at")
 
   /// The same completed activity can only earn points once.
   @@unique([type, refId])

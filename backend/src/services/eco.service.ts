@@ -78,7 +78,9 @@ export class EcoService {
     const counts = Object.fromEntries(ECO_ACTION_TYPES.map((t) => [t, 0])) as EcoSummary['counts'];
     let totalPoints = 0;
     for (const action of actions) {
-      counts[action.type] += 1;
+      if (action.type in counts) {
+        counts[action.type as EcoActionType] += 1;
+      }
       totalPoints += action.points;
     }
 
@@ -89,7 +91,7 @@ export class EcoService {
       counts,
       recent: actions.slice(0, RECENT_LIMIT).map(({ id, type, points, refId, createdAt }) => ({
         id,
-        type,
+        type: type as EcoActionType,
         points,
         refId,
         createdAt,
