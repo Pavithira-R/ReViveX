@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import prisma from '../utils/prisma';
 import { AppError } from '../utils';
+import { notify } from './notification.service';
 import {
   ECO_ACTION_TYPES,
   EcoActionType,
@@ -16,6 +17,15 @@ export const ECO_POINTS: Record<EcoActionType, number> = {
   SELL: 10,
   DONATE: 25,
   RECYCLE: 30,
+};
+
+/** Wording used in the "points earned" notification. */
+const ACTION_PHRASES: Record<EcoActionType, string> = {
+  REPAIR: 'repairing a device',
+  REUSE: 'giving a device a second use',
+  SELL: 'selling a used device',
+  DONATE: 'donating a device',
+  RECYCLE: 'recycling a device',
 };
 
 /** Minimum total points for each badge, lowest first. */
@@ -59,6 +69,10 @@ export class EcoService {
     const points = ECO_POINTS[type];
     try {
       await prisma.ecoAction.create({ data: { userId, type, points, refId } });
+      await notify(userId, 'Eco points earned', `+${points} points for ${ACTION_PHRASES[type]}.`, {
+        type: 'ECO',
+        refId,
+      });
       return { awarded: true, points };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {

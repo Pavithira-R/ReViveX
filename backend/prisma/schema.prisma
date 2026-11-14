@@ -35,6 +35,7 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   ecoActions EcoAction[]
+  notifications Notification[]
 
   @@index([role])
   @@map("users")
@@ -69,4 +70,27 @@ model EcoAction {
   @@unique([type, refId])
   @@index([userId])
   @@map("eco_actions")
+}
+
+// ============================================================
+// Member 6 – In-app notifications
+// Created by any module through notify() when something the
+// user should know about happens (status change, points earned).
+// ============================================================
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// ECO, REPAIR, LISTING, RECYCLING, REVIEW or GENERAL
+  type      String    @default("GENERAL")
+  title     String
+  message   String
+  /// Id of the related record (repair request, listing, eco action...), if any.
+  refId     String?   @map("ref_id")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
