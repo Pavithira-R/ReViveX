@@ -1,3 +1,6 @@
 export * from './auth.service';
 export * from './user.service';
 export * from './eco.service';
+export * from './discoveryService';
+export * from './recommendationService';
+export * from './searchService';
