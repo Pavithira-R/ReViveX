@@ -9,6 +9,7 @@ interface HomeScreenProps {
   onOpenProfile: () => void;
   onOpenEcoImpact: () => void;
   onOpenNotifications: () => void;
+  onOpenMessages: () => void;
   onOpenAdmin: () => void;
   onOpenDiscovery?: () => void;
 }
@@ -21,6 +22,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenProfile,
   onOpenEcoImpact,
   onOpenNotifications,
+  onOpenMessages,
   onOpenAdmin,
   onOpenDiscovery,
 }) => {
@@ -43,6 +45,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </View>
 
         <PrimaryButton title="My Profile" onPress={onOpenProfile} />
+        <PrimaryButton title="Messages" variant="outlined" onPress={onOpenMessages} />
         <PrimaryButton title="Notifications" variant="outlined" onPress={onOpenNotifications} />
         <PrimaryButton title="My Eco Impact" variant="outlined" onPress={onOpenEcoImpact} />
         {onOpenDiscovery && (
