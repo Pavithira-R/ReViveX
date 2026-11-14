@@ -64,6 +64,27 @@ model Item {
 …and the matching back-relation field (e.g. `items Item[]`) inside `model User`.
 IDs are **UUID strings**. Roles are the `Role` enum.
 
+### Backend – award eco points when something is completed
+
+When a repair, sale, donation, reuse or recycling request becomes **Completed**, record it:
+
+```ts
+import { awardEcoPoints } from '../services';
+
+await awardEcoPoints(request.ownerId, 'REPAIR', request.id);
+// type: 'REPAIR' | 'REUSE' | 'SELL' | 'DONATE' | 'RECYCLE'
+```
+
+| Activity | Points |
+|---|---|
+| Repair | 20 |
+| Reuse | 15 |
+| Sell | 10 |
+| Donate | 25 |
+| Recycle | 30 |
+
+Badges: Bronze at 50 points, Silver at 150, Gold at 300. Calling it twice for the same `refId` and type does nothing, so it is safe to call on every status update. The user sees their points on **My Eco Impact** (`GET /api/eco/me`).
+
 ### Mobile – call the API and read the user
 
 ```ts
@@ -75,6 +96,43 @@ const items = await apiRequest<Item[]>('GET', '/items');  // token added automat
 ```
 
 `apiRequest` unwraps `data` and throws an `ApiError` (with `.displayMessage`) on failure. A 401 automatically signs the user out.
+
+### Mobile – camera, location, sensors: check first, never crash
+
+Before using any hardware, ask the capability layer. It never throws.
+
+```ts
+import { requestCapability, useCapability, openAppSettings } from '../services';
+
+// When the user starts the feature (e.g. taps "Take photo"):
+const status = await requestCapability('camera');   // prompts if needed
+if (status === 'available') openCamera();
+else openGalleryInstead();                           // 'denied' or 'unsupported' → fallback
+
+// In a screen (re-checks when the user comes back from system settings):
+const { status, request } = useCapability('location');
+```
+
+| Status | Meaning | What your screen does |
+|---|---|---|
+| `available` | Hardware present, permission granted | Use the feature |
+| `denied` | Permission not granted (yet, or refused) | Explain why + fallback; `openAppSettings()` if refused for good |
+| `unsupported` | Hardware missing or the check failed | Fallback only |
+
+Capabilities: `camera`, `location`, `biometric`, `accelerometer`, `gyroscope`, `notifications`.
+Camera and location permissions are already declared in `AndroidManifest.xml` (camera marked optional, so phones without one can install the app).
+
+**Register your hardware check** once, in the module that owns the feature. Until a check is registered, `biometric`, `accelerometer` and `gyroscope` report `unsupported`:
+
+```ts
+import { registerCapability } from '../services';
+
+registerCapability('accelerometer', {
+  isSupported: async () => /* true if the sensor exists */,
+});
+```
+
+An unexpected error in any screen shows a "Something went wrong / Try again" screen (`ErrorBoundary`, wrapped around the navigator in `App.tsx`) instead of closing the app.
 
 ---
 
@@ -94,6 +152,7 @@ Base URL: `http://localhost:5000/api` (on Android, run `adb reverse tcp:5000 tcp
 | GET | `/admin/users/:id` | ADMIN | Full user details |
 | PATCH | `/admin/users/:id/role` | ADMIN | Body `{ role }` |
 | PATCH | `/admin/users/:id/status` | ADMIN | Body `{ isActive }` – activate/deactivate |
+| GET | `/eco/me` | Required | Own eco points, badge, activity counts and recent activity |
 
 Rules enforced:
 - Passwords: 8+ characters with letters and numbers; stored as bcrypt hashes only.
