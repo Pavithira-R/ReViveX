@@ -7,6 +7,7 @@ import { useAuth } from '../context';
 
 interface HomeScreenProps {
   onOpenProfile: () => void;
+  onOpenEcoImpact: () => void;
   onOpenAdmin: () => void;
 }
 
@@ -14,7 +15,7 @@ interface HomeScreenProps {
  * Signed-in landing screen.
  * Placeholder until Member 2 integrates the real Home (post item, quick actions, etc.).
  */
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenProfile, onOpenAdmin }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenProfile, onOpenEcoImpact, onOpenAdmin }) => {
   const { user, hasRole } = useAuth();
   if (!user) return null;
 
@@ -34,6 +35,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onOpenProfile, onOpenAdm
         </View>
 
         <PrimaryButton title="My Profile" onPress={onOpenProfile} />
+        <PrimaryButton title="My Eco Impact" variant="outlined" onPress={onOpenEcoImpact} />
         {hasRole('ADMIN') ? (
           <PrimaryButton title="Manage Users" variant="outlined" onPress={onOpenAdmin} />
         ) : null}

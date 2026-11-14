@@ -3,6 +3,7 @@ import { BackHandler } from 'react-native';
 import { useAuth } from '../context';
 import {
   AdminUsersScreen,
+  EcoImpactScreen,
   HomeScreen,
   LoginScreen,
   ProfileScreen,
@@ -10,7 +11,7 @@ import {
 } from '../screens';
 
 type AuthRoute = 'Login' | 'Register';
-type AppRoute = 'Home' | 'Profile' | 'AdminUsers';
+type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact';
 
 /**
  * Top-level navigator with protected screens:
@@ -60,6 +61,9 @@ export const AppNavigator: React.FC = () => {
   if (appRoute === 'Profile') {
     return <ProfileScreen onBack={goHome} />;
   }
+  if (appRoute === 'EcoImpact') {
+    return <EcoImpactScreen onBack={goHome} />;
+  }
   if (appRoute === 'AdminUsers' && hasRole('ADMIN')) {
     return <AdminUsersScreen onBack={goHome} />;
   }
@@ -67,6 +71,7 @@ export const AppNavigator: React.FC = () => {
   return (
     <HomeScreen
       onOpenProfile={() => setAppRoute('Profile')}
+      onOpenEcoImpact={() => setAppRoute('EcoImpact')}
       onOpenAdmin={() => setAppRoute('AdminUsers')}
     />
   );

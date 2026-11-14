@@ -34,6 +34,39 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  ecoActions EcoAction[]
+
   @@index([role])
   @@map("users")
+}
+
+// ============================================================
+// Member 6 – Eco Impact
+// One row per completed sustainable action. Other modules record
+// them through awardEcoPoints() when a repair, sale, donation,
+// reuse or recycling request is completed.
+// ============================================================
+
+enum EcoActionType {
+  REPAIR
+  REUSE
+  SELL
+  DONATE
+  RECYCLE
+}
+
+model EcoAction {
+  id        String        @id @default(uuid())
+  userId    String        @map("user_id")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      EcoActionType
+  points    Int
+  /// Id of the completed record (repair request, listing, recycling request).
+  refId     String        @map("ref_id")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  /// The same completed activity can only earn points once.
+  @@unique([type, refId])
+  @@index([userId])
+  @@map("eco_actions")
 }
