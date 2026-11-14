@@ -7,13 +7,14 @@ import {
   EcoImpactScreen,
   HomeScreen,
   LoginScreen,
+  NotificationsScreen,
   ProfileScreen,
   RegisterScreen,
 } from '../screens';
 import { Member3Navigator } from '../features/member3';
 
 type AuthRoute = 'Login' | 'Register';
-type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact' | 'Member3';
+type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact' | 'Notifications' | 'Member3';
 
 /**
  * Top-level navigator with protected screens:
@@ -71,6 +72,9 @@ export const AppNavigator: React.FC = () => {
   if (appRoute === 'Profile') {
     return <ProfileScreen onBack={goHome} />;
   }
+  if (appRoute === 'Notifications') {
+    return <NotificationsScreen onBack={goHome} />;
+  }
   if (appRoute === 'EcoImpact') {
     return <EcoImpactScreen onBack={goHome} />;
   }
@@ -107,6 +111,7 @@ export const AppNavigator: React.FC = () => {
     <HomeScreen
       onOpenProfile={() => setAppRoute('Profile')}
       onOpenEcoImpact={() => setAppRoute('EcoImpact')}
+      onOpenNotifications={() => setAppRoute('Notifications')}
       onOpenAdmin={() => setAppRoute('AdminUsers')}
       onOpenDiscovery={() => setAppRoute('Member3')}
     />
