@@ -8,6 +8,7 @@ import { useAuth } from '../context';
 interface HomeScreenProps {
   onOpenProfile: () => void;
   onOpenEcoImpact: () => void;
+  onOpenNotifications: () => void;
   onOpenAdmin: () => void;
   onOpenDiscovery?: () => void;
 }
@@ -19,6 +20,7 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenProfile,
   onOpenEcoImpact,
+  onOpenNotifications,
   onOpenAdmin,
   onOpenDiscovery,
 }) => {
@@ -41,6 +43,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </View>
 
         <PrimaryButton title="My Profile" onPress={onOpenProfile} />
+        <PrimaryButton title="Notifications" variant="outlined" onPress={onOpenNotifications} />
         <PrimaryButton title="My Eco Impact" variant="outlined" onPress={onOpenEcoImpact} />
         {onOpenDiscovery && (
           <PrimaryButton

@@ -64,26 +64,7 @@ model Item {
 …and the matching back-relation field (e.g. `items Item[]`) inside `model User`.
 IDs are **UUID strings**. Roles are the `Role` enum.
 
-### Backend – award eco points when something is completed
-
-When a repair, sale, donation, reuse or recycling request becomes **Completed**, record it:
-
-```ts
-import { awardEcoPoints } from '../services';
-
-await awardEcoPoints(request.ownerId, 'REPAIR', request.id);
-// type: 'REPAIR' | 'REUSE' | 'SELL' | 'DONATE' | 'RECYCLE'
-```
-
-| Activity | Points |
-|---|---|
-| Repair | 20 |
-| Reuse | 15 |
-| Sell | 10 |
-| Donate | 25 |
-| Recycle | 30 |
-
-Badges: Bronze at 50 points, Silver at 150, Gold at 300. Calling it twice for the same `refId` and type does nothing, so it is safe to call on every status update. The user sees their points on **My Eco Impact** (`GET /api/eco/me`).
+Eco points and notifications are Member 6 features: see [README_MEMBER_6.md](README_MEMBER_6.md).
 
 ### Mobile – call the API and read the user
 
@@ -152,7 +133,6 @@ Base URL: `http://localhost:5000/api` (on Android, run `adb reverse tcp:5000 tcp
 | GET | `/admin/users/:id` | ADMIN | Full user details |
 | PATCH | `/admin/users/:id/role` | ADMIN | Body `{ role }` |
 | PATCH | `/admin/users/:id/status` | ADMIN | Body `{ isActive }` – activate/deactivate |
-| GET | `/eco/me` | Required | Own eco points, badge, activity counts and recent activity |
 
 Rules enforced:
 - Passwords: 8+ characters with letters and numbers; stored as bcrypt hashes only.
@@ -160,6 +140,7 @@ Rules enforced:
 - Users cannot change their own role, email or password via `PUT /users/me`.
 - Admins cannot change their own role or deactivate themselves.
 - Login gives the same error for unknown email and wrong password.
+- 5 wrong passwords for the same email from the same device/network lock login for 15 minutes (`429 TOO_MANY_ATTEMPTS`, with a `Retry-After` header). A successful login resets the count.
 - Unexpected server errors return a generic 500 without internal details.
 
 ---
@@ -199,6 +180,8 @@ while testing; re-run `adb reverse` after reconnecting the phone.
 
 ## Status / open team decisions
 
-- Token is kept in memory on mobile (signing in again after an app restart). Persisting it needs AsyncStorage/Keychain, to be added once the team agrees on one mobile setup.
+- The login token is saved encrypted on the phone (`react-native-keychain`), so users stay signed in after the app restarts. An expired token (401) clears it and shows the login screen.
+- **Fingerprint login:** Profile → *Fingerprint login* switch (shown only when `checkCapability('biometric')` is `available`). After logging out, the Login screen offers *Log in with fingerprint*. No sensor, no fingerprint enrolled or a cancelled scan → normal email + password. On the emulator: Extended controls → Fingerprint.
+- `react-native-keychain` has native code: after pulling, run `npm install` in `mobile/` and rebuild once with `npm run android`.
 - Navigation is a small built-in navigator; switch to React Navigation together with the rest of the team.
 - **The team needs one shared mobile project.** Currently `feature/auth` uses React Native 0.87 (bare), `feature/repair` uses 0.73, and `feature/communication-impact` uses Expo 50.

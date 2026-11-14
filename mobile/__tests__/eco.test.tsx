@@ -78,8 +78,47 @@ beforeEach(() => {
   globalThis.fetch = jest.fn();
 });
 
-test('shows points, badge and counts from the server', async () => {
-  const root = await openEcoImpact(() => mockFetchResponse(200, {
+const community = {
+  co2SavedKg: 1234.5,
+  ewasteDivertedKg: 56.8,
+  drivingKmEquivalent: 7262,
+  devicesCount: 42,
+  contributors: 3,
+};
+
+test('shows points, badge, impact, counts and community totals from the server', async () => {
+  const root = await openEcoImpact(() => {
+    mockEcoSummary();
+    mockFetchResponse(200, { success: true, message: 'OK', data: community, error: null });
+  });
+
+  const [ecoUrl, ecoInit] = (globalThis.fetch as jest.Mock).mock.calls[1];
+  expect(ecoUrl).toMatch(/\/eco\/me$/);
+  expect(ecoInit.headers.Authorization).toBe('Bearer jwt-token-123');
+  expect((globalThis.fetch as jest.Mock).mock.calls[2][0]).toMatch(/\/eco\/community$/);
+
+  const text = allText(root);
+  expect(text).toContain('75');
+  expect(text).toContain('Bronze');
+  expect(text).toContain('75 points to Silver');
+  expect(text).toContain('+ 30');
+  expect(text).toContain('87.5 kg');
+  expect(text).toContain('Like not driving 515 km in a petrol car.');
+  expect(text).toContain('1.2 t');
+  expect(text).toContain('3 members have kept 56.8 kg of electronics out of landfill.');
+});
+
+test('still shows the personal impact when community totals fail to load', async () => {
+  const root = await openEcoImpact(() => {
+    mockEcoSummary();
+    (globalThis.fetch as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+  });
+
+  expect(allText(root)).toContain('87.5 kg');
+  expect(allText(root)).not.toContain('ReViveX community');
+});
+
+const mockEcoSummary = () => mockFetchResponse(200, {
     success: true,
     message: 'Eco impact retrieved',
     data: {
@@ -87,23 +126,21 @@ test('shows points, badge and counts from the server', async () => {
       badge: 'BRONZE',
       nextBadge: { badge: 'SILVER', pointsNeeded: 75 },
       counts: { REPAIR: 1, REUSE: 0, SELL: 0, DONATE: 1, RECYCLE: 1 },
+      impact: { co2SavedKg: 87.5, ewasteDivertedKg: 3, drivingKmEquivalent: 515 },
       recent: [
-        { id: 'e1', type: 'RECYCLE', points: 30, refId: 'r1', createdAt: '2026-11-03T00:00:00.000Z' },
+        {
+          id: 'e1',
+          type: 'RECYCLE',
+          points: 30,
+          refId: 'r1',
+          deviceCategory: 'OTHER',
+          co2SavedKg: 7.5,
+          createdAt: '2026-11-03T00:00:00.000Z',
+        },
       ],
     },
     error: null,
-  }));
-
-  const [ecoUrl, ecoInit] = (globalThis.fetch as jest.Mock).mock.calls[1];
-  expect(ecoUrl).toMatch(/\/eco\/me$/);
-  expect(ecoInit.headers.Authorization).toBe('Bearer jwt-token-123');
-
-  const text = allText(root);
-  expect(text).toContain('75');
-  expect(text).toContain('Bronze');
-  expect(text).toContain('75 points to Silver');
-  expect(text).toContain('+ 30');
-});
+  });
 
 test('shows an error with a retry button when the server cannot be reached', async () => {
   const root = await openEcoImpact(() =>

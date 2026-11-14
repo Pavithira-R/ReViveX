@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { BackHandler, Alert } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, StyleSheet, View } from 'react-native';
+import { COLORS } from '../constants';
 import { useAuth } from '../context';
 import {
   AdminUsersScreen,
   EcoImpactScreen,
   HomeScreen,
   LoginScreen,
+  NotificationsScreen,
   ProfileScreen,
   RegisterScreen,
 } from '../screens';
 import { Member3Navigator } from '../features/member3';
 
 type AuthRoute = 'Login' | 'Register';
-type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact' | 'Member3';
+type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact' | 'Notifications' | 'Member3';
 
 /**
  * Top-level navigator with protected screens:
@@ -23,7 +25,7 @@ type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact' | 'Member3';
  * agrees on the shared mobile project setup; the auth gating logic stays the same.
  */
 export const AppNavigator: React.FC = () => {
-  const { isAuthenticated, hasRole } = useAuth();
+  const { isAuthenticated, isRestoring, hasRole } = useAuth();
   const [authRoute, setAuthRoute] = useState<AuthRoute>('Login');
   const [appRoute, setAppRoute] = useState<AppRoute>('Home');
 
@@ -49,6 +51,14 @@ export const AppNavigator: React.FC = () => {
     return () => subscription.remove();
   }, [isAuthenticated, appRoute, authRoute]);
 
+  if (isRestoring) {
+    return (
+      <View style={styles.splash}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
   if (!isAuthenticated) {
     return authRoute === 'Login' ? (
       <LoginScreen onNavigateToRegister={() => setAuthRoute('Register')} />
@@ -61,6 +71,9 @@ export const AppNavigator: React.FC = () => {
 
   if (appRoute === 'Profile') {
     return <ProfileScreen onBack={goHome} />;
+  }
+  if (appRoute === 'Notifications') {
+    return <NotificationsScreen onBack={goHome} />;
   }
   if (appRoute === 'EcoImpact') {
     return <EcoImpactScreen onBack={goHome} />;
@@ -98,8 +111,18 @@ export const AppNavigator: React.FC = () => {
     <HomeScreen
       onOpenProfile={() => setAppRoute('Profile')}
       onOpenEcoImpact={() => setAppRoute('EcoImpact')}
+      onOpenNotifications={() => setAppRoute('Notifications')}
       onOpenAdmin={() => setAppRoute('AdminUsers')}
       onOpenDiscovery={() => setAppRoute('Member3')}
     />
   );
 };
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+});

@@ -5,3 +5,4 @@ export * from './eco.controller';
 export * from './discoveryController';
 export * from './recommendationController';
 export * from './searchController';
+export * from './notification.controller';
