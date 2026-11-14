@@ -6,7 +6,7 @@
 **Working Branch:** `feature/recommendation`  
 **Target Integration Branch:** `develop`  
 **Pull Request Link:** [https://github.com/Pavithira-R/ReViveX/pull/14](https://github.com/Pavithira-R/ReViveX/pull/14)  
-**Latest Commit Hash:** `a0acff5`  
+**Latest Commit Hash:** `3e21550`  
 **Status:** **REVIEW & CORRECTIONS COMPLETED – PR #14 OPEN & READY FOR HUMAN REVIEW**
 
 ---
@@ -55,7 +55,7 @@
 
 ## 4. Prisma / PostgreSQL Verification Results
 
-- **Schema Provider:** PostgreSQL (`datasource db { provider = "postgresql", url = env("DATABASE_URL") }`).
+- **Schema Provider:** PostgreSQL (`datasource db { provider = "postgresql" }`).
 - **Prisma Enums Enforced:** `enum Role` and `enum EcoActionType` preserved.
 - **Member 6 Compatibility:** `Notification` model and `EcoAction` impact fields (`co2SavedKg`, `ewasteKg`, `deviceCategory`) intact.
 - **Backend Services:** `auth.service.ts`, `user.service.ts`, `eco.service.ts`, and `seed.ts` use Prisma enums and PostgreSQL query filters (`mode: 'insensitive'`).
@@ -87,8 +87,8 @@
 
 ## 7. Commit ID & Push Confirmation
 
-- **Pushed Commit Hash:** `a0acff5` (Updated: `a0acff5`)
-- **Commit Message:** `docs(member3): update PR #14 final review report with commit hash`
+- **Pushed Commit Hash:** `3e21550`
+- **Commit Message:** `docs(member3): add PR #14 pre-merge audit report`
 - **Branch:** `feature/recommendation`
 - **Push Target:** `origin/feature/recommendation`
 - **PR #14 Status:** Open at [https://github.com/Pavithira-R/ReViveX/pull/14](https://github.com/Pavithira-R/ReViveX/pull/14). Automatically updated with all latest commits and merges cleanly into `develop` with **0 conflicts**.

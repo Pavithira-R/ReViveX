@@ -6,7 +6,7 @@
 **Working Branch:** `feature/recommendation`  
 **Target Branch:** `develop`  
 **Existing Pull Request:** PR #14 ([https://github.com/Pavithira-R/ReViveX/pull/14](https://github.com/Pavithira-R/ReViveX/pull/14))  
-**Latest Commit Hash:** `bb86871`  
+**Latest Commit Hash:** `3e21550`  
 **Status:** **PRE-MERGE AUDIT COMPLETED – PR #14 READY FOR HUMAN REVIEW**
 
 ---
@@ -16,7 +16,7 @@
 1. **`docs/member1-auth-integration-report.md`**  
    - Updated database architecture description to state PostgreSQL via Prisma ORM (`datasource db { provider = "postgresql" }`) with `Role` and `EcoActionType` enums as the authoritative shared database. Clarified that local SQLite (`dev.db`) was used solely as a temporary local offline testing setup during development.
 2. **`docs/member3-second-pr-preparation-report.md`**  
-   - Updated outdated statements regarding PR creation readiness to reflect that PR #14 is open on GitHub (`https://github.com/Pavithira-R/ReViveX/pull/14`) and automatically includes all latest commits (`bb86871`).
+   - Updated outdated statements regarding PR creation readiness to reflect that PR #14 is open on GitHub (`https://github.com/Pavithira-R/ReViveX/pull/14`) and automatically includes all latest commits (`3e21550`).
 3. **`agent_summary.md`**  
    - Aligned database descriptions with PostgreSQL shared schema and updated completion status label.
 4. **`docs/member3-completion-report.md`**  
@@ -29,7 +29,7 @@
 - **Database Alignment:** Ensured `backend/prisma/schema.prisma` retains `provider = "postgresql"` with `enum Role` and `enum EcoActionType`. Preserved Member 1 `User` model, Member 6 `EcoAction` impact fields (`deviceCategory`, `co2SavedKg`, `ewasteKg`), and `Notification` model.
 - **Backend Service Alignment:** `auth.service.ts`, `user.service.ts`, `eco.service.ts`, and `seed.ts` use Prisma enums and PostgreSQL query filters (`mode: 'insensitive'`).
 - **Mobile Routing Preservation:** `mobile/src/features/member3/services/apiClient.ts` imports `API_BASE_URL` (`http://localhost:5000/api`) directly from `../../../constants`.
-- **Regional Sri Lankan Seeds:** `providerAdapter.ts` and `listingAdapter.ts` preserve regional Sri Lankan seed records to support Sri Lankan city presets (Colombo, Kandy, Galle) with local Haversine proximity calculations.
+- **Regional Sri Lankan Seeds:** `providerAdapter.ts` and `listingAdapter.ts` preserve regional Sri Lankan seed records to support Sri Lankan city presets (Colombo, Kandy, Galle, Gampaha) with local Haversine proximity calculations.
 
 ---
 
@@ -65,6 +65,6 @@
 
 ## 6. Latest Commit Hash & PR #14 Status
 
-- **Latest Commit Hash:** `bb86871`
+- **Latest Commit Hash:** `3e21550`
 - **Branch:** `feature/recommendation`
 - **Pull Request:** [https://github.com/Pavithira-R/ReViveX/pull/14](https://github.com/Pavithira-R/ReViveX/pull/14) (Open & ready for human review, merging into `develop` with 0 conflicts).
