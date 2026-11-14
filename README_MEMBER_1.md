@@ -64,6 +64,27 @@ model Item {
 …and the matching back-relation field (e.g. `items Item[]`) inside `model User`.
 IDs are **UUID strings**. Roles are the `Role` enum.
 
+### Backend – award eco points when something is completed
+
+When a repair, sale, donation, reuse or recycling request becomes **Completed**, record it:
+
+```ts
+import { awardEcoPoints } from '../services';
+
+await awardEcoPoints(request.ownerId, 'REPAIR', request.id);
+// type: 'REPAIR' | 'REUSE' | 'SELL' | 'DONATE' | 'RECYCLE'
+```
+
+| Activity | Points |
+|---|---|
+| Repair | 20 |
+| Reuse | 15 |
+| Sell | 10 |
+| Donate | 25 |
+| Recycle | 30 |
+
+Badges: Bronze at 50 points, Silver at 150, Gold at 300. Calling it twice for the same `refId` and type does nothing, so it is safe to call on every status update. The user sees their points on **My Eco Impact** (`GET /api/eco/me`).
+
 ### Mobile – call the API and read the user
 
 ```ts
@@ -131,6 +152,7 @@ Base URL: `http://localhost:5000/api` (on Android, run `adb reverse tcp:5000 tcp
 | GET | `/admin/users/:id` | ADMIN | Full user details |
 | PATCH | `/admin/users/:id/role` | ADMIN | Body `{ role }` |
 | PATCH | `/admin/users/:id/status` | ADMIN | Body `{ isActive }` – activate/deactivate |
+| GET | `/eco/me` | Required | Own eco points, badge, activity counts and recent activity |
 
 Rules enforced:
 - Passwords: 8+ characters with letters and numbers; stored as bcrypt hashes only.
