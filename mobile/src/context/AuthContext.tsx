@@ -1,14 +1,33 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { authService, setAuthToken, setUnauthorizedHandler } from '../services';
+import {
+  ApiError,
+  authService,
+  clearSessionToken,
+  disableBiometricLogin,
+  enableBiometricLogin,
+  isBiometricLoginEnabled,
+  loadSessionToken,
+  saveSessionToken,
+  setAuthToken,
+  setUnauthorizedHandler,
+  unlockWithBiometrics,
+} from '../services';
 import { LoginCredentials, RegisterData, UpdateProfileData, User, UserRole } from '../types';
 
 interface AuthContextValue {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  /** True while a saved session is being restored at app start. */
+  isRestoring: boolean;
+  /** True when a fingerprint-protected token is saved on this phone. */
+  isBiometricEnabled: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
+  /** Returns false if the scan was cancelled or failed (show the password form). */
+  loginWithBiometrics: () => Promise<boolean>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  setBiometricEnabled: (enabled: boolean) => Promise<boolean>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
   refreshProfile: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
@@ -18,30 +37,69 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 /**
  * Holds the signed-in user and token for the whole app.
- * The token is kept in memory for now; persisting it across app restarts
- * (AsyncStorage / Keychain) will be added once the team fixes the shared mobile setup.
+ * The token is saved in encrypted storage, so the user stays signed in after the
+ * app restarts. Optionally a fingerprint-protected copy allows fingerprint login.
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState(true);
+  const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
 
   const clearSession = useCallback(() => {
     setAuthToken(null);
     setToken(null);
     setUser(null);
+    clearSessionToken();
   }, []);
 
   const startSession = useCallback((newToken: string, newUser: User) => {
     setAuthToken(newToken);
     setToken(newToken);
     setUser(newUser);
+    saveSessionToken(newToken);
   }, []);
 
-  // Any 401 from the API (expired token, account removed) signs the user out.
+  /** Load the user for a saved token; on 401 the token is no longer valid. */
+  const resumeSession = useCallback(
+    async (savedToken: string) => {
+      setAuthToken(savedToken);
+      startSession(savedToken, await authService.getMe());
+    },
+    [startSession]
+  );
+
+  // An expired or invalid token (401 from any API call) signs the user out everywhere,
+  // and the saved fingerprint copy is useless too.
   useEffect(() => {
-    setUnauthorizedHandler(clearSession);
+    setUnauthorizedHandler(() => {
+      clearSession();
+      disableBiometricLogin();
+      setIsBiometricEnabled(false);
+    });
     return () => setUnauthorizedHandler(null);
   }, [clearSession]);
+
+  // App start: restore a saved session, if any.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsBiometricEnabled(await isBiometricLoginEnabled());
+      const savedToken = await loadSessionToken();
+      if (savedToken) {
+        try {
+          await resumeSession(savedToken);
+        } catch {
+          // Offline or expired: show the login screen. A 401 already cleared storage.
+          setAuthToken(null);
+        }
+      }
+      if (!cancelled) setIsRestoring(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [resumeSession]);
 
   const login = useCallback(
     async (credentials: LoginCredentials) => {
@@ -50,6 +108,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
     [startSession]
   );
+
+  const loginWithBiometrics = useCallback(async () => {
+    const savedToken = await unlockWithBiometrics();
+    if (!savedToken) return false;
+    try {
+      await resumeSession(savedToken);
+      return true;
+    } catch (error) {
+      setAuthToken(null);
+      if (error instanceof ApiError && error.status === 401) {
+        throw new ApiError(
+          'Fingerprint login has expired. Please sign in with your password.',
+          401,
+          'BIOMETRIC_EXPIRED'
+        );
+      }
+      throw error;
+    }
+  }, [resumeSession]);
 
   const register = useCallback(
     async (data: RegisterData) => {
@@ -67,6 +144,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     clearSession();
   }, [clearSession]);
+
+  const setBiometricEnabled = useCallback(
+    async (enabled: boolean) => {
+      if (!enabled) {
+        await disableBiometricLogin();
+        setIsBiometricEnabled(false);
+        return true;
+      }
+      if (!token) return false;
+      const saved = await enableBiometricLogin(token);
+      setIsBiometricEnabled(saved);
+      return saved;
+    },
+    [token]
+  );
 
   const updateProfile = useCallback(async (data: UpdateProfileData) => {
     setUser(await authService.updateMe(data));
@@ -86,14 +178,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       token,
       isAuthenticated: !!token && !!user,
+      isRestoring,
+      isBiometricEnabled,
       login,
+      loginWithBiometrics,
       register,
       logout,
+      setBiometricEnabled,
       updateProfile,
       refreshProfile,
       hasRole,
     }),
-    [user, token, login, register, logout, updateProfile, refreshProfile, hasRole]
+    [
+      user,
+      token,
+      isRestoring,
+      isBiometricEnabled,
+      login,
+      loginWithBiometrics,
+      register,
+      logout,
+      setBiometricEnabled,
+      updateProfile,
+      refreshProfile,
+      hasRole,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
