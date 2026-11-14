@@ -6,3 +6,4 @@ export * from './discoveryController';
 export * from './recommendationController';
 export * from './searchController';
 export * from './notification.controller';
+export * from './chat.controller';
