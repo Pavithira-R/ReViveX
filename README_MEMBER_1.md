@@ -160,6 +160,7 @@ Rules enforced:
 - Users cannot change their own role, email or password via `PUT /users/me`.
 - Admins cannot change their own role or deactivate themselves.
 - Login gives the same error for unknown email and wrong password.
+- 5 wrong passwords for the same email from the same device/network lock login for 15 minutes (`429 TOO_MANY_ATTEMPTS`, with a `Retry-After` header). A successful login resets the count.
 - Unexpected server errors return a generic 500 without internal details.
 
 ---
