@@ -199,6 +199,8 @@ while testing; re-run `adb reverse` after reconnecting the phone.
 
 ## Status / open team decisions
 
-- Token is kept in memory on mobile (signing in again after an app restart). Persisting it needs AsyncStorage/Keychain, to be added once the team agrees on one mobile setup.
+- The login token is saved encrypted on the phone (`react-native-keychain`), so users stay signed in after the app restarts. An expired token (401) clears it and shows the login screen.
+- **Fingerprint login:** Profile → *Fingerprint login* switch (shown only when `checkCapability('biometric')` is `available`). After logging out, the Login screen offers *Log in with fingerprint*. No sensor, no fingerprint enrolled or a cancelled scan → normal email + password. On the emulator: Extended controls → Fingerprint.
+- `react-native-keychain` has native code: after pulling, run `npm install` in `mobile/` and rebuild once with `npm run android`.
 - Navigation is a small built-in navigator; switch to React Navigation together with the rest of the team.
 - **The team needs one shared mobile project.** Currently `feature/auth` uses React Native 0.87 (bare), `feature/repair` uses 0.73, and `feature/communication-impact` uses Expo 50.
