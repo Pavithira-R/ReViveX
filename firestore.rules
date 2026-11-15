@@ -67,6 +67,18 @@ service cloud.firestore {
       }
     }
 
+    // ---------- Member 6 – Ratings and reviews ----------
+    // Id `TYPE_refId_reviewerId`: one review per person per completed activity, never edited.
+    match /reviews/{reviewId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && request.resource.data.reviewerId == uid()
+                    && request.resource.data.revieweeId != uid()
+                    && request.resource.data.rating is int
+                    && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+                    && reviewId == request.resource.data.refType + '_' + request.resource.data.refId + '_' + uid();
+    }
+
     // ---------- Other modules: add your blocks below ----------
   }
 }

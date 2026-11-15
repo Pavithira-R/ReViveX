@@ -8,3 +8,5 @@ export * from './ChipSelector';
 export * from './ItemCard';
 export * from './ReportProblemModal';
 export * from './OfflineBanner';
+export * from './RatingStars';
+export * from './ReviewCard';
