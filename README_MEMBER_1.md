@@ -1,82 +1,80 @@
 # Member 1 – Authentication & User Management
 
-Branch: `feature/auth` · Covers FR-01, FR-02 · User stories US-01 to US-04, US-37
+Covers FR-01, FR-02 · User stories US-01 to US-04, US-37 · Also: Firebase setup and integration for the team
 
-This module is the shared foundation: the `User` model, login tokens and role checks that every other module uses. **Please build on these instead of creating your own `User` model or auth middleware.**
+This module is the shared foundation: Firebase setup, the `users` collection, sign-in and roles that every other module uses. **Please build on these instead of creating your own user collection or login.**
 
 ---
 
-## For other members: how to use auth in your module
+## For other members: how to use Firebase in your module
 
-### Backend – protect a route
-
-```ts
-import { authenticate, requireRole } from '../middleware';
-
-// Any signed-in user
-router.post('/items', authenticate, itemController.create);
-
-// Only certain roles
-router.patch('/repair-requests/:id/status',
-  authenticate, requireRole('SERVICE_PROVIDER'), repairController.updateStatus);
-```
-
-After `authenticate`, `req.user` is available everywhere:
+### Read and write data
 
 ```ts
-req.user.id     // the User.id – use this as ownerId / customerId / reviewerId
-req.user.role   // 'ITEM_OWNER' | 'SERVICE_PROVIDER' | 'BUYER' | 'RECYCLER' | 'ADMIN'
-req.user.name
-req.user.email
+import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { auth, db } from '../services/firebase';
+import { fsCall, nowIso, withId } from '../services/firebaseHelpers';
+
+// Wrap every Firebase call in fsCall: errors become the ApiError the screens already show
+// ("Cannot reach the server" when offline, "You are not allowed to do this" for a rules refusal).
+const mine = await fsCall(async () => {
+  const snapshot = await getDocs(query(collection(db, 'items'), where('ownerId', '==', auth.currentUser!.uid)));
+  return snapshot.docs.map((d) => withId<Item>(d)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+});
+
+await fsCall(() => addDoc(collection(db, 'items'), { ...data, ownerId: uid, createdAt: nowIso(), updatedAt: nowIso() }));
 ```
 
-`authenticate` also re-checks the database, so deactivated or deleted accounts are rejected immediately.
+| Helper | What it does |
+|---|---|
+| `fsCall(fn)` | Runs a Firebase call and converts errors to `ApiError` (`NETWORK_ERROR`, `FORBIDDEN`, `NOT_FOUND`) |
+| `withId(snapshot)` | `{ id, ...data }`; throws a 404 `ApiError` if the document doesn't exist |
+| `nowIso()` | Current time as ISO text. **Store all dates this way.** |
 
-### Backend – respond in the standard format
+Conventions that keep things simple and avoid Firestore index errors:
+- Filter with **one** `where(...)`, then sort and filter the rest in the app.
+- Keep the same service function names your screens already use; only their insides change.
+- Store the names you need to display (e.g. `ownerName`, `categoryName`) in the document, so lists don't need extra reads.
 
-Use the helpers in `src/utils/apiResponse.ts` (same as the API Documentation §4):
+### The signed-in user
 
 ```ts
-sendSuccess(res, 'Item created', item, 201);
-// → { success: true, message, data, error: null }
+import { useAuth } from '../context';
+
+const { user, hasRole } = useAuth();      // in screens: user.id, user.name, user.role
+if (hasRole('SERVICE_PROVIDER')) { ... }
 ```
 
-For errors, throw an `AppError` from your service and let the global error handler format it:
+In services use `auth.currentUser?.uid` (from `../services/firebase`). Roles: `ITEM_OWNER`, `SERVICE_PROVIDER`, `BUYER`, `RECYCLER`, `ADMIN`.
 
-```ts
-throw new AppError('Item not found', 404, 'NOT_FOUND');
-// → { success: false, message, data: null, error: { code, details } }
-```
+### Security rules for your collections
 
-### Database – link to a user
+Add your block to [firestore.rules](firestore.rules) under *"Other modules"*, using the shared helpers:
 
-Add a relation to `User` in `prisma/schema.prisma`:
-
-```prisma
-model Item {
-  id      String @id @default(uuid())
-  ownerId String
-  owner   User   @relation(fields: [ownerId], references: [id])
-  // ...
+```js
+match /items/{id} {
+  allow read: if signedIn();
+  allow create: if signedIn() && request.resource.data.ownerId == uid();
+  allow update, delete: if signedIn() && (resource.data.ownerId == uid() || isAdmin());
 }
 ```
 
-…and the matching back-relation field (e.g. `items Item[]`) inside `model User`.
-IDs are **UUID strings**. Roles are the `Role` enum.
+Helpers: `signedIn()`, `uid()`, `me()` (the caller's user document), `isAdmin()`, `hasRole('RECYCLER')`. After the merge, the rules are published in the Firebase console.
 
-Eco points and notifications are Member 6 features: see [README_MEMBER_6.md](README_MEMBER_6.md).
+### Tests: in-memory Firebase
 
-### Mobile – call the API and read the user
+Tests never touch the real Firebase. `mobile/jest.firebase.js` replaces it automatically:
 
 ```ts
-import { apiRequest } from '../services';
-import { useAuth } from '../context';
+const { __fake } = require('../jest.firebase');
 
-const { user, hasRole } = useAuth();          // signed-in user
-const items = await apiRequest<Item[]>('GET', '/items');  // token added automatically
+__fake.addAccount(user, 'Password123');            // account + users/{id} document
+__fake.setDoc('items/i1', { ownerId: 'user-1', ... }); // seed data
+__fake.docsIn('items');                             // check what your code saved
+__fake.setOffline(true);                            // simulate no internet
 ```
 
-`apiRequest` unwraps `data` and throws an `ApiError` (with `.displayMessage`) on failure. A 401 automatically signs the user out.
+Everything is cleared before each test.
 
 ### Mobile – camera, location, sensors: check first, never crash
 
@@ -101,7 +99,7 @@ const { status, request } = useCapability('location');
 | `unsupported` | Hardware missing or the check failed | Fallback only |
 
 Capabilities: `camera`, `location`, `biometric`, `accelerometer`, `gyroscope`, `notifications`.
-Camera and location permissions are already declared in `AndroidManifest.xml` (camera marked optional, so phones without one can install the app).
+Camera and location permissions are declared in `AndroidManifest.xml` (camera marked optional, so phones without one can install the app).
 
 **Register your hardware check** once, in the module that owns the feature. Until a check is registered, `biometric`, `accelerometer` and `gyroscope` report `unsupported`:
 
@@ -115,84 +113,65 @@ registerCapability('accelerometer', {
 
 An unexpected error in any screen shows a "Something went wrong / Try again" screen (`ErrorBoundary`, wrapped around the navigator in `App.tsx`) instead of closing the app.
 
+Notifications, eco points, chat and reviews are Member 6 features: see [README_MEMBER_6.md](README_MEMBER_6.md).
+
 ---
 
-### Mobile – report a problem (shake the phone)
+## Accounts
 
-While signed in, **shaking the phone on any screen** opens *Report a problem* (accelerometer, via `react-native-shake`). The report includes the screen the user was on. Phones without an accelerometer simply never trigger it; **Profile → Report a problem** is the fallback. Admins read and resolve reports in **Home → Problem Reports**.
+| Feature | How it works |
+|---|---|
+| Register | Firebase Authentication account + `users/{uid}` profile (name, email, role, phone, location, `isActive`) |
+| Login / logout | Email + password through Firebase. Same message for unknown email and wrong password. |
+| Stay signed in | Firebase keeps the session after the app restarts. Without internet, the app opens with the last saved profile. |
+| Forgot password | Login → *Forgot password?* emails a reset link to the typed address. The message is the same whether or not the email is registered. |
+| Fingerprint login | Profile → *Fingerprint login* switch (only when `checkCapability('biometric')` is `available`). Saves the email and password behind the fingerprint. Login → *Log in with fingerprint*. Expires if the password changes. Turning it on after an app restart needs one password sign-in first. |
+| Profile | Edit name, phone, photo and location. Role, email and active flag can't be changed by the user. |
+| Admin | List users with search, role filter and paging; change roles; activate / deactivate. Admins can't change or deactivate themselves. |
+
+Rules enforced (in the app and in `firestore.rules`):
+- Passwords: 8+ characters with letters and numbers.
+- Public registration cannot choose `ADMIN`. The first admin is set in the Firebase console (`users` → `role: "ADMIN"`).
+- Deactivated accounts can't sign in and are signed out at the next app start.
+- Too many wrong passwords: Firebase blocks further attempts for a while ("Too many failed login attempts. Try again later.").
+
+## Report a problem (shake the phone)
+
+While signed in, **shaking the phone on any screen** opens *Report a problem* (accelerometer, via `react-native-shake`). The report is saved in `problemReports` with the screen the user was on. Phones without an accelerometer never trigger it; **Profile → Report a problem** is the fallback. Admins read and resolve reports in **Home → Problem Reports**.
 
 To open the sheet from your own screen: `const { openReport } = useProblemReport(); openReport();`
 
-> In **debug** builds, shaking also opens React Native's developer menu. For the demo, install a **release** build (`cd mobile/android && gradlew.bat app:installRelease`), which has no developer menu and does not need Metro.
+> In **debug** builds, shaking also opens React Native's developer menu. For the demo, install the **release** APK, which has no developer menu and doesn't need the bundler.
 
-## API endpoints
+## Firestore data (Member 1)
 
-Base URL: `http://localhost:5000/api` (on Android, run `adb reverse tcp:5000 tcp:5000` first – see Running it)
+| Collection | Fields |
+|---|---|
+| `users/{uid}` | `name`, `email`, `role`, `phone`, `profileImage`, `latitude`, `longitude`, `isActive`, `createdAt`, `updatedAt` |
+| `problemReports` | `userId`, `reporter {id, name, email}`, `message` (5–1000 characters), `screen`, `status` (`OPEN` / `RESOLVED`), `resolvedAt`, `createdAt` |
 
-| Method | Endpoint | Auth | Purpose |
-|---|---|---|---|
-| POST | `/auth/register` | Public | Create account → returns `{ token, user }` |
-| POST | `/auth/login` | Public | Sign in → returns `{ token, user }` |
-| POST | `/auth/logout` | Required | Acknowledge logout (client discards token) |
-| GET | `/users/me` | Required | Own profile |
-| PUT | `/users/me` | Required | Update name, phone, profileImage, latitude/longitude |
-| GET | `/users/:id` | Required | Public profile of another user (no email/phone/location) |
-| GET | `/admin/users` | ADMIN | List users (`?role=&search=&isActive=&page=&limit=`) |
-| GET | `/admin/users/:id` | ADMIN | Full user details |
-| PATCH | `/admin/users/:id/role` | ADMIN | Body `{ role }` |
-| PATCH | `/admin/users/:id/status` | ADMIN | Body `{ isActive }` – activate/deactivate |
-| POST | `/reports` | Required | Report a problem. Body `{ message, screen? }` (message 5–1000 characters) |
-| GET | `/admin/reports` | ADMIN | Problem reports, newest first (`?status=OPEN` or `RESOLVED`) |
-| PATCH | `/admin/reports/:id/resolve` | ADMIN | Mark a report as resolved |
+## Services (mobile)
 
-Rules enforced:
-- Passwords: 8+ characters with letters and numbers; stored as bcrypt hashes only.
-- Public registration cannot choose `ADMIN`. The first admin is created with `npm run db:seed`.
-- Users cannot change their own role, email or password via `PUT /users/me`.
-- Admins cannot change their own role or deactivate themselves.
-- Login gives the same error for unknown email and wrong password.
-- 5 wrong passwords for the same email from the same device/network lock login for 15 minutes (`429 TOO_MANY_ATTEMPTS`, with a `Retry-After` header). A successful login resets the count.
-- Unexpected server errors return a generic 500 without internal details.
+| Function | Purpose |
+|---|---|
+| `authService.register / login / logout / getMe / updateMe / sendPasswordReset` | Accounts |
+| `adminService.listUsers({ role, search, page, limit }) / changeRole / setActive` | Admin user management |
+| `reportService.send / adminList / adminResolve` | Problem reports |
 
 ---
 
 ## Running it
 
-### Backend
-
-```bash
-cd backend
-npm install
-cp .env.example .env          # then fill in DATABASE_URL, JWT_SECRET, ADMIN_* values
-npx prisma migrate dev --name init
-npm run db:seed               # creates the admin account from .env
-npm run dev                   # http://localhost:5000/api/health
-npm test                      # 43 tests, no database needed (Prisma is mocked)
-```
-
-### Mobile
-
 ```bash
 cd mobile
 npm install
-adb reverse tcp:5000 tcp:5000 # lets the phone/emulator reach the backend on your PC
-npm run android               # backend must be running
-npm test                      # auth flow tests with a mocked server
+adb reverse tcp:8081 tcp:8081
+npm start                     # keep running
+npm run android               # or: cd android && gradlew.bat app:installDebug
+npm test                      # uses the in-memory Firebase
 ```
 
-Works on a real Android phone over USB (enable Developer options → USB debugging),
-which is much lighter than an emulator on 8 GB RAM laptops. Keep the cable connected
-while testing; re-run `adb reverse` after reconnecting the phone.
+Works on a real Android phone over USB (Developer options → USB debugging), which is much lighter than an emulator on 8 GB RAM laptops. On the emulator, use Extended controls → Fingerprint to test fingerprint login.
 
 > On Windows, keep the project in a short path outside OneDrive (e.g. `C:\dev\ReViveX`).
 > Deep paths break the Android C++ build ("Filename longer than 260 characters").
-
----
-
-## Status / open team decisions
-
-- The login token is saved encrypted on the phone (`react-native-keychain`), so users stay signed in after the app restarts. An expired token (401) clears it and shows the login screen.
-- **Fingerprint login:** Profile → *Fingerprint login* switch (shown only when `checkCapability('biometric')` is `available`). After logging out, the Login screen offers *Log in with fingerprint*. No sensor, no fingerprint enrolled or a cancelled scan → normal email + password. On the emulator: Extended controls → Fingerprint.
-- `react-native-keychain` has native code: after pulling, run `npm install` in `mobile/` and rebuild once with `npm run android`.
-- Navigation is a small built-in navigator; switch to React Navigation together with the rest of the team.
-- **The team needs one shared mobile project.** Currently `feature/auth` uses React Native 0.87 (bare), `feature/repair` uses 0.73, and `feature/communication-impact` uses Expo 50.
