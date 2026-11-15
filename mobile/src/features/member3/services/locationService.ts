@@ -1,10 +1,9 @@
 // ============================================================================
 // Member 3 - Location Service
 // Implements 3-tier location hierarchy: GPS (Live) -> Profile (Saved) -> Manual City
-// Handles runtime Android location permissions on-demand
+// Handles runtime Android location permissions via shared capability layer
 // ============================================================================
 
-import { Platform, PermissionsAndroid } from 'react-native';
 import {
   LocationCoordinates,
   UserLocationState,
@@ -16,6 +15,7 @@ import {
   SRI_LANKA_CITY_PRESETS,
   findNearestCityPreset,
 } from '../utils/location';
+import { requestCapability } from '../../../services/capabilities';
 
 // Active in-memory location state
 let currentLocationState: UserLocationState = {
@@ -42,40 +42,20 @@ function notifyListeners(): void {
 }
 
 /**
- * Requests Android fine & coarse location runtime permissions on-demand
+ * Requests Android fine & coarse location runtime permissions via shared capability layer
  */
 export async function requestAndroidLocationPermission(): Promise<LocationPermissionStatus> {
-  if (Platform.OS !== 'android') {
-    return 'GRANTED';
-  }
-
   try {
-    const granted = await PermissionsAndroid.requestMultiple([
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-    ]);
-
-    const fineGranted =
-      granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] ===
-      PermissionsAndroid.RESULTS.GRANTED;
-    const coarseGranted =
-      granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] ===
-      PermissionsAndroid.RESULTS.GRANTED;
-
-    if (fineGranted || coarseGranted) {
+    const status = await requestCapability('location');
+    if (status === 'available' || status === 'unsupported') {
       return 'GRANTED';
-    }
-
-    const fineDenied =
-      granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] ===
-      PermissionsAndroid.RESULTS.DENIED;
-    if (fineDenied) {
+    } else if (status === 'denied') {
       return 'DENIED';
+    } else {
+      return 'UNAVAILABLE';
     }
-
-    return 'UNAVAILABLE';
   } catch (err) {
-    console.warn('Failed to request location permission:', err);
+    console.warn('Failed to request location permission via capability layer:', err);
     return 'UNAVAILABLE';
   }
 }

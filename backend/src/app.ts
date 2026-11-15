@@ -7,15 +7,19 @@ import { resolve } from 'node:path';
 import apiRoutes from './routes';
 import { errorHandler, notFoundHandler } from './middleware';
 
-// Member 3 - Smart Recommendation, Search & Discovery Routes
+// Member 3 - Smart Recommendation, Search & Discovery Routes & Adapters Setup
 import recommendationRoutes from './routes/recommendationRoutes';
 import searchRoutes from './routes/searchRoutes';
 import discoveryRoutes from './routes/discoveryRoutes';
+import { setupAdapters } from './adapters';
 
 dotenv.config();
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
+
+// Initialize Member 3 integration adapters with live Prisma delegates
+setupAdapters();
 
 // Middleware
 app.use(cors());

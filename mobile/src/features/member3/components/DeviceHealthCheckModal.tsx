@@ -51,9 +51,7 @@ export const DeviceHealthCheckModal: React.FC<DeviceHealthCheckModalProps> = ({
     bottomLeft: false,
     bottomRight: false,
   });
-  const [batteryHoldsCharge, setBatteryHoldsCharge] = useState<boolean>(true);
   const [report, setReport] = useState<DeviceHealthReport | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
 
   const resetState = () => {
     setStep('INTRO');
@@ -63,7 +61,6 @@ export const DeviceHealthCheckModal: React.FC<DeviceHealthCheckModalProps> = ({
       bottomLeft: false,
       bottomRight: false,
     });
-    setBatteryHoldsCharge(true);
     setReport(null);
   };
 
@@ -84,9 +81,7 @@ export const DeviceHealthCheckModal: React.FC<DeviceHealthCheckModalProps> = ({
   };
 
   const handleBatteryAnswer = async (holdsCharge: boolean) => {
-    setBatteryHoldsCharge(holdsCharge);
     setStep('RUNNING_PROBES');
-    setLoading(true);
 
     try {
       // 1. Evaluate touch test

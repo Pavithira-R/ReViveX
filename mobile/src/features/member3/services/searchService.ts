@@ -6,7 +6,6 @@
 import { SearchFilters, UnifiedSearchResults } from '../types';
 import { requestApi } from './apiClient';
 import { MOCK_PROVIDERS, MOCK_LISTINGS, MOCK_RECYCLE_POINTS } from '../utils/mockData';
-import { calculateHaversineDistanceKm } from '../utils/location';
 
 export async function searchUnified(
   filters: SearchFilters

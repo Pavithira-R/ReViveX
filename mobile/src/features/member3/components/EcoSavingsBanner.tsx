@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 
 interface EcoSavingsBannerProps {
   co2SavingsKg: number;

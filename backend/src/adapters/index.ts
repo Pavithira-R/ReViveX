@@ -7,3 +7,4 @@ export * from './itemAdapter';
 export * from './providerAdapter';
 export * from './listingAdapter';
 export * from './recyclingAdapter';
+export * from './setup';

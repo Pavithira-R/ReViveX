@@ -131,7 +131,7 @@ Member 3 owns the user-facing decision guidance and cross-cutting discovery laye
 
 | Test Action | Observed Emulator Behavior | Status |
 |:---|:---|:---:|
-| **App Launch & Auth** | Registered `qatestuser@example.com` / `Password123!`, logged in, loaded Home screen | `PASS` |
+| **App Launch & Auth** | Logged in using dedicated QA test account, loaded Home screen | `PASS` |
 | **Profile Navigation** | Tapped "My Profile": executed `GET /api/users/me` using Bearer JWT token | `PASS` |
 | **Discovery Screen Load** | Loaded `GET /api/discovery/feed`: yellow preview banner automatically disappeared | `PASS` |
 | **Search & Multi-Facet Filters** | Executed search `ThinkPad`, opened filter modal (`⚙️ 1`), applied category filter | `PASS` |
@@ -221,7 +221,7 @@ Executing `npm run test:member3 --prefix backend`:
 ## 17. Final Demonstration Checklist
 
 1. **Step 1:** Open ReViveX mobile app on `emulator-5554`.
-2. **Step 2:** Log in as `qatestuser@example.com` / `Password123!` $\rightarrow$ Home screen displays *"Hello, QA 👋"*.
+2. **Step 2:** Log in using dedicated QA test account $\rightarrow$ Home screen displays *"Hello, QA 👋"*.
 3. **Step 3:** Tap **`Explore Discovery & Recommendations`** $\rightarrow$ Opens Discovery Home screen; yellow preview banner disappears.
 4. **Step 4:** Inspect **Hero Teaser Card** ("Evaluate Your Old Tech in 60 Seconds").
 5. **Step 5:** Inspect **Location Badge** ("Colombo • Manual") $\rightarrow$ Tap "Change" $\rightarrow$ Select "Kandy" in `LocationSelectorModal` $\rightarrow$ Distance badges update dynamically.

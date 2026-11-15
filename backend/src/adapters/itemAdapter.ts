@@ -141,7 +141,11 @@ export const ItemAdapter = {
 
     if (externalQueryDelegate) {
       const rawList = await externalQueryDelegate(params);
-      results = rawList.map(normalizeItem);
+      if (Array.isArray(rawList) && rawList.length > 0) {
+        results = rawList.map(normalizeItem);
+      } else {
+        results = SEEDED_MEMBER_2_ITEMS.map(normalizeItem);
+      }
     } else {
       results = SEEDED_MEMBER_2_ITEMS.map(normalizeItem);
     }

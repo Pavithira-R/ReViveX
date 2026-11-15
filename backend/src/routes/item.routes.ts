@@ -112,7 +112,7 @@ function hasValidImageSignature(mimetype: string, buffer: Buffer): boolean {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 5 },
-  fileFilter: (_req, file, callback) => {
+  fileFilter: (_req: any, file: Express.Multer.File, callback: multer.FileFilterCallback) => {
     if (!allowedTypes[file.mimetype]) {
       callback(new AppError('Only JPEG, PNG, and WebP images are supported', 400, 'INVALID_UPLOAD'));
       return;
@@ -124,6 +124,10 @@ const upload = multer({
 const parseImages: RequestHandler = (req, res, next) => {
   upload.array('images', 5)(req, res, (error: unknown) => {
     if (error instanceof multer.MulterError) {
+      next(new AppError(error.message, 400, 'INVALID_UPLOAD'));
+      return;
+    }
+    if (error instanceof Error) {
       next(new AppError(error.message, 400, 'INVALID_UPLOAD'));
       return;
     }
@@ -292,7 +296,7 @@ async function uploadItemImages(req: Request, res: Response): Promise<Response> 
   if (current.ownerId !== req.user!.id) {
     throw new AppError('You cannot upload images to this item', 403, 'FORBIDDEN');
   }
-  const files = req.files;
+  const files = (req as any).files;
   if (!Array.isArray(files) || files.length === 0) {
     throw new AppError('Select at least one image', 400, 'FILE_REQUIRED');
   }
