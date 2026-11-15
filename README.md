@@ -33,6 +33,7 @@ Built for the Mobile Application Development (INTE 22283) group project.
 | Reviews | Ratings and reviews after completed services | 🔄 Being integrated |
 | Reuse / Sell / Donate / Recycle | Listings, offers, donations, recycling requests | 🔄 Being integrated |
 | Communication | In-app notifications, chat between users | ✅ Done |
+| Offline mode | Notifications, chats and eco impact viewable without internet; app opens offline | ✅ Done |
 | Communication | Push notifications (phone notifications when the app is closed) | ⏳ Planned |
 
 ## Device features and fallbacks
@@ -43,6 +44,7 @@ The app uses the phone's hardware, and **never crashes when hardware is missing 
 |---|---|---|
 | Fingerprint login | Fingerprint / face sensor | Email and password |
 | Report a problem | Accelerometer (shake) | *Report a problem* button on Profile |
+| Notifications, chats, eco impact | Internet connection | Saved copy on the phone + "You're offline" banner |
 | Nearby providers | GPS location | Choose a district from a list |
 | Device Health Check | Accelerometer, gyroscope, battery | Missing sensors shown as "Not available on this device" |
 | Item photos *(with the Items module)* | Camera | Gallery, then post without a photo |
