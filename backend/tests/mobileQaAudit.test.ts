@@ -33,6 +33,8 @@ Module.prototype.require = function (id: string) {
         }),
         request: async () => 'granted',
       },
+      AppState: { addEventListener: (_event: string, _listener: any) => ({ remove: () => {} }) },
+      Linking: { openSettings: async () => {} },
       View: () => null,
       Text: () => null,
       TouchableOpacity: () => null,
@@ -72,21 +74,21 @@ import {
   findNearestCityPreset,
   formatLocationSourceLabel,
 } from '../../mobile/src/features/member3/utils/location';
-import {
+const {
   resolveUserLocation,
   setManualCity,
   getLocationState,
   subscribeToLocation,
   requestAndroidLocationPermission,
-} from '../../mobile/src/features/member3/services/locationService';
-import {
+} = require('../../mobile/src/features/member3/services/locationService');
+const {
   evaluateTouchTest,
   probeCameraCapability,
   probeBatteryCapability,
   probeAccelerometer,
   probeGyroscope,
   compileHealthReport,
-} from '../../mobile/src/features/member3/services/healthCheckService';
+} = require('../../mobile/src/features/member3/services/healthCheckService');
 import {
   FourCornerTouchState,
   HealthTestId,
@@ -499,6 +501,12 @@ export async function runMobileQaAudit(): Promise<void> {
   assert(formatLocationSourceLabel('MANUAL') === 'Manual', 'Source Formatter: MANUAL -> Manual');
 
   // 5.4 Tier 1: Real-Time GPS Acquisition with Mocked Geolocation
+  const { registerCapability: registerCap } = require('../../mobile/src/services/capabilities');
+  registerCap('location', {
+    permissions: [],
+    isSupported: async () => true,
+  });
+
   Object.defineProperty(globalThis, 'navigator', {
     value: {
       geolocation: {
@@ -522,6 +530,10 @@ export async function runMobileQaAudit(): Promise<void> {
   assert(gpsResolved.coordinates.latitude === 6.9271, 'Tier 1 GPS: Correct live latitude acquired');
 
   // 5.5 Tier 2: Saved Profile Fallback (when GPS unavailable/denied)
+  registerCap('location', {
+    permissions: [],
+    isSupported: async () => false,
+  });
   Object.defineProperty(globalThis, 'navigator', {
     value: {},
     configurable: true,
@@ -540,7 +552,7 @@ export async function runMobileQaAudit(): Promise<void> {
 
   // 5.6 Tier 3: Manual City Selection Fallback
   let listenerTriggered: boolean = false;
-  const unsubscribeLoc = subscribeToLocation((newLoc) => {
+  const unsubscribeLoc = subscribeToLocation((newLoc: any) => {
     if (newLoc.source === 'MANUAL' && newLoc.cityName === 'Galle') {
       listenerTriggered = true;
     }

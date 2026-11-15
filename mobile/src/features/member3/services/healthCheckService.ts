@@ -19,15 +19,12 @@ import {
   registerCapability,
 } from '../../../services/capabilities';
 
-// Register Member 3 sensor capability presence checks for React Native Android hardware
+// Register Member 3 sensor capability presence checks for hardware motion sensors
 registerCapability('accelerometer', {
   isSupported: async () => {
     try {
       const g = globalThis as any;
       if (typeof g.DeviceMotionEvent !== 'undefined' || typeof g.DeviceOrientationEvent !== 'undefined') {
-        return true;
-      }
-      if (typeof g.nativeCallSyncHook !== 'undefined' || (g.navigator && g.navigator.userAgent)) {
         return true;
       }
       return false;
@@ -42,9 +39,6 @@ registerCapability('gyroscope', {
     try {
       const g = globalThis as any;
       if (typeof g.DeviceOrientationEvent !== 'undefined') {
-        return true;
-      }
-      if (typeof g.nativeCallSyncHook !== 'undefined' || (g.navigator && g.navigator.userAgent)) {
         return true;
       }
       return false;
@@ -253,7 +247,7 @@ export async function probeAccelerometer(): Promise<HealthTestResult> {
     status: 'UNSUPPORTED',
     maxScore: 15,
     earnedScore: 0,
-    details: 'Accelerometer hardware sensor unsupported or unavailable.',
+    details: 'Accelerometer hardware sensor unsupported or unverified.',
     defect: null,
   };
 }
@@ -288,7 +282,7 @@ export async function probeGyroscope(): Promise<HealthTestResult> {
     status: 'UNSUPPORTED',
     maxScore: 15,
     earnedScore: 0,
-    details: 'Gyroscope orientation sensor unsupported or unavailable.',
+    details: 'Gyroscope orientation sensor unsupported or unverified.',
     defect: null,
   };
 }

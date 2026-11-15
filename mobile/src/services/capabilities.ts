@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import * as RN from 'react-native';
-
-const { AppState, Linking, PermissionsAndroid, Platform } = RN as any;
-type Permission = any;
+import { AppState, Linking, Permission, PermissionsAndroid, Platform } from 'react-native';
 
 /**
  * Capability layer shared by every module.
@@ -136,7 +133,7 @@ export const useCapability = (name: CapabilityName) => {
 
   useEffect(() => {
     refresh();
-    const subscription = AppState.addEventListener('change', (state: any) => {
+    const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') refresh();
     });
     return () => subscription.remove();

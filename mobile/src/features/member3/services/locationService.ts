@@ -52,10 +52,6 @@ export async function requestAndroidLocationPermission(): Promise<LocationPermis
     } else if (status === 'denied') {
       return 'DENIED';
     } else {
-      // Allow mock geolocation test environment to resolve mock GPS position when injected
-      if ((globalThis as any).navigator?.geolocation) {
-        return 'GRANTED';
-      }
       return 'UNAVAILABLE';
     }
   } catch (err) {
