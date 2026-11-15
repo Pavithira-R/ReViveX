@@ -1,5 +1,6 @@
 /**
- * Member 6 – Messages list and chat screen with a mocked backend.
+ * Member 6 – Messages list and chat screen on the fake Firestore
+ * (`conversations/{uidA_uidB}` + `messages` subcollection).
  */
 import React from 'react';
 import ReactTestRenderer, { ReactTestInstance } from 'react-test-renderer';
@@ -8,11 +9,11 @@ import App from '../App';
 
 const { __fake } = require('../jest.firebase');
 
-const user = {
-  id: 'a-owner',
-  name: 'Nimal Perera',
-  email: 'nimal@example.com',
-  role: 'ITEM_OWNER',
+const profile = (id: string, name: string, email: string, role: string) => ({
+  id,
+  name,
+  email,
+  role,
   phone: null,
   profileImage: null,
   latitude: null,
@@ -20,24 +21,30 @@ const user = {
   isActive: true,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
-};
+});
 
-const conversation = {
-  id: 'c1',
-  otherUser: { id: 'b-tech', name: 'Kasun Repairs', role: 'SERVICE_PROVIDER' },
-  lastMessage: { body: 'Your laptop is ready.', senderId: 'b-tech', createdAt: '2026-11-14T10:00:00.000Z' },
-  unreadCount: 1,
-  updatedAt: '2026-11-14T10:00:00.000Z',
-};
+const user = profile('a-owner', 'Nimal Perera', 'nimal@example.com', 'ITEM_OWNER');
+const tech = profile('b-tech', 'Kasun Repairs', 'kasun@example.com', 'SERVICE_PROVIDER');
+const chatId = 'a-owner_b-tech';
 
-const ok = (data: unknown) => ({ success: true, message: 'OK', data, error: null });
-
-const mockFetchResponse = (status: number, body: unknown) =>
-  (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
+const seedChat = () => {
+  __fake.setDoc(`conversations/${chatId}`, {
+    participants: ['a-owner', 'b-tech'],
+    participantInfo: {
+      'a-owner': { name: user.name, role: user.role },
+      'b-tech': { name: tech.name, role: tech.role },
+    },
+    lastMessage: { body: 'Your laptop is ready.', senderId: 'b-tech', createdAt: '2026-11-14T10:00:00.000Z' },
+    unread: { 'a-owner': 1, 'b-tech': 0 },
+    updatedAt: '2026-11-14T10:00:00.000Z',
   });
+  __fake.setDoc(`conversations/${chatId}/messages/m1`, {
+    senderId: 'b-tech',
+    body: 'Your laptop is ready.',
+    readAt: null,
+    createdAt: '2026-11-14T10:00:00.000Z',
+  });
+};
 
 const allText = (root: ReactTestInstance): string =>
   root
@@ -70,33 +77,25 @@ const type = async (root: ReactTestInstance, label: string, value: string) => {
   });
 };
 
-const lastCall = () => {
-  const calls = (globalThis.fetch as jest.Mock).mock.calls;
-  const [url, init] = calls[calls.length - 1];
-  return { url: url as string, method: init.method as string, body: init.body && JSON.parse(init.body) };
-};
-
 let renderer: ReactTestRenderer.ReactTestRenderer;
 
-/** Signs in, then opens Messages; `mockList` queues the GET /conversations reply. */
-const openMessages = async (mockList: () => void) => {
+const openMessages = async () => {
   await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(<App />);
   });
   const root = renderer.root;
 
-  __fake.addAccount(user, 'Password123');
   await type(root, 'Email address', user.email);
   await type(root, 'Password', 'Password123');
   await press(root, 'Sign In');
 
-  mockList();
   await press(root, 'Messages');
   return root;
 };
 
 beforeEach(() => {
-  globalThis.fetch = jest.fn();
+  __fake.addAccount(user, 'Password123');
+  __fake.addAccount(tech, 'Password123');
 });
 
 afterEach(async () => {
@@ -107,76 +106,79 @@ afterEach(async () => {
 });
 
 test('lists chats with the last message and unread count', async () => {
-  const root = await openMessages(() => mockFetchResponse(200, ok([conversation])));
+  seedChat();
+  const root = await openMessages();
 
-  expect(lastCall()).toMatchObject({ url: expect.stringMatching(/\/conversations$/), method: 'GET' });
   expect(allText(root)).toContain('Kasun Repairs');
-  expect(allText(root)).toContain('Your laptop is ready.');
   expect(allText(root)).toMatch(/Your laptop is ready\. 1/); // unread badge
 });
 
-test('opens a chat, shows the messages and sends a new one', async () => {
-  const root = await openMessages(() => mockFetchResponse(200, ok([conversation])));
+test('opens a chat, marks it read and sends a new message', async () => {
+  seedChat();
+  const root = await openMessages();
 
-  mockFetchResponse(
-    200,
-    ok({
-      conversation: { ...conversation, unreadCount: 0 },
-      messages: [
-        { id: 'm1', senderId: 'b-tech', body: 'Your laptop is ready.', isMine: false, readAt: null, createdAt: '2026-11-14T10:00:00.000Z' },
-      ],
-    })
-  );
   await press(root, 'Kasun Repairs');
-  expect(lastCall()).toMatchObject({ url: expect.stringMatching(/\/conversations\/c1\/messages$/), method: 'GET' });
   expect(allText(root)).toContain('Your laptop is ready.');
+  expect(__fake.getDoc(`conversations/${chatId}/messages/m1`).readAt).toEqual(expect.any(String));
+  expect(__fake.getDoc(`conversations/${chatId}`).unread['a-owner']).toBe(0);
 
   await type(root, 'Message', 'When can I collect it?');
-  mockFetchResponse(
-    201,
-    ok({ id: 'm2', senderId: user.id, body: 'When can I collect it?', isMine: true, readAt: null, createdAt: '2026-11-14T10:05:00.000Z' })
-  );
   await press(root, 'Send');
 
-  expect(lastCall()).toEqual({
-    url: expect.stringMatching(/\/conversations\/c1\/messages$/),
-    method: 'POST',
-    body: { body: 'When can I collect it?' },
-  });
   expect(allText(root)).toContain('When can I collect it?');
+  expect(__fake.docsIn(`conversations/${chatId}/messages`)).toHaveLength(2);
+  expect(__fake.getDoc(`conversations/${chatId}`)).toMatchObject({
+    lastMessage: { body: 'When can I collect it?', senderId: 'a-owner' },
+    unread: { 'b-tech': 1 },
+  });
+  // The other person is notified.
+  expect(__fake.docsIn('notifications')).toEqual([
+    expect.objectContaining({ userId: 'b-tech', type: 'MESSAGE', title: 'New message from Nimal Perera' }),
+  ]);
 });
 
 test('starts a new chat by email', async () => {
-  const root = await openMessages(() => mockFetchResponse(200, ok([])));
+  const root = await openMessages();
   expect(allText(root)).toContain('No chats yet');
 
-  await type(root, 'Start a new chat', 'kasun@example.com');
-  mockFetchResponse(200, ok({ ...conversation, lastMessage: null, unreadCount: 0 })); // POST /conversations
-  mockFetchResponse(200, ok({ conversation, messages: [] })); // GET messages of the new chat
+  await type(root, 'Start a new chat', 'Kasun@Example.com');
   await press(root, 'Start chat');
 
-  const calls = (globalThis.fetch as jest.Mock).mock.calls;
-  const [startUrl, startInit] = calls[calls.length - 2];
-  expect(startUrl).toMatch(/\/conversations$/);
-  expect(JSON.parse(startInit.body)).toEqual({ email: 'kasun@example.com' });
+  expect(__fake.getDoc(`conversations/${chatId}`)).toMatchObject({ participants: ['a-owner', 'b-tech'] });
   expect(allText(root)).toMatch(/Say hello to\s+Kasun Repairs/);
 });
 
-test('an invalid email is rejected without calling the server', async () => {
-  const root = await openMessages(() => mockFetchResponse(200, ok([])));
-  const callsBefore = (globalThis.fetch as jest.Mock).mock.calls.length;
+test('an unknown email shows "User not found"', async () => {
+  const root = await openMessages();
+
+  await type(root, 'Start a new chat', 'nobody@example.com');
+  await press(root, 'Start chat');
+
+  expect(allText(root)).toContain('User not found');
+  expect(__fake.docsIn('conversations')).toEqual([]);
+});
+
+test('an invalid email is rejected without creating a chat', async () => {
+  const root = await openMessages();
 
   await type(root, 'Start a new chat', 'not-an-email');
   await press(root, 'Start chat');
 
   expect(allText(root)).toContain('Enter the email address');
-  expect((globalThis.fetch as jest.Mock).mock.calls.length).toBe(callsBefore);
+  expect(__fake.docsIn('conversations')).toEqual([]);
 });
 
 test('shows an error with a retry button when offline', async () => {
-  const root = await openMessages(() =>
-    (globalThis.fetch as jest.Mock).mockRejectedValueOnce(new Error('offline'))
-  );
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<App />);
+  });
+  const root = renderer.root;
+  await type(root, 'Email address', user.email);
+  await type(root, 'Password', 'Password123');
+  await press(root, 'Sign In');
+
+  __fake.setOffline(true);
+  await press(root, 'Messages');
 
   expect(allText(root)).toContain('Cannot reach the server');
   expect(button(root, 'Try again')).toBeDefined();
