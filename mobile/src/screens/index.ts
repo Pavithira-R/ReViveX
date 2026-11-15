@@ -5,6 +5,8 @@ export * from './ProfileScreen';
 export * from './AdminUsersScreen';
 export * from './EcoImpactScreen';
 export * from './NotificationsScreen';
+export * from './ConversationsScreen';
+export * from './ChatScreen';
 export * from './PostItemScreen';
 export * from './MyItemsScreen';
 export * from './BrowseItemsScreen';

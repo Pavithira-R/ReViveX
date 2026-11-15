@@ -5,6 +5,8 @@ import { useAuth } from '../context';
 import {
   AdminUsersScreen,
   BrowseItemsScreen,
+  ChatScreen,
+  ConversationsScreen,
   EcoImpactScreen,
   HomeScreen,
   ItemDetailsScreen,
@@ -16,6 +18,7 @@ import {
   RegisterScreen,
 } from '../screens';
 import { Member3Navigator } from '../features/member3';
+import { Conversation } from '../types';
 
 type AuthRoute = 'Login' | 'Register';
 type AppRoute =
@@ -24,6 +27,8 @@ type AppRoute =
   | 'AdminUsers'
   | 'EcoImpact'
   | 'Notifications'
+  | 'Conversations'
+  | 'Chat'
   | 'Member3'
   | 'PostItem'
   | 'MyItems'
@@ -42,6 +47,7 @@ export const AppNavigator: React.FC = () => {
   const { isAuthenticated, isRestoring, hasRole } = useAuth();
   const [authRoute, setAuthRoute] = useState<AuthRoute>('Login');
   const [appRoute, setAppRoute] = useState<AppRoute>('Home');
+  const [openConversation, setOpenConversation] = useState<Conversation | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   // Always land on the right first screen after sign-in / sign-out.
@@ -53,6 +59,10 @@ export const AppNavigator: React.FC = () => {
   // Android hardware back: go back to Home/Login instead of exiting the app.
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isAuthenticated && appRoute === 'Chat') {
+        setAppRoute('Conversations');
+        return true;
+      }
       if (isAuthenticated && appRoute !== 'Home') {
         setAppRoute('Home');
         return true;
@@ -90,6 +100,25 @@ export const AppNavigator: React.FC = () => {
 
   if (appRoute === 'Profile') {
     return <ProfileScreen onBack={goHome} />;
+  }
+  if (appRoute === 'Conversations') {
+    return (
+      <ConversationsScreen
+        onBack={goHome}
+        onOpenConversation={(conversation) => {
+          setOpenConversation(conversation);
+          setAppRoute('Chat');
+        }}
+      />
+    );
+  }
+  if (appRoute === 'Chat' && openConversation) {
+    return (
+      <ChatScreen
+        conversation={openConversation}
+        onBack={() => setAppRoute('Conversations')}
+      />
+    );
   }
   if (appRoute === 'Notifications') {
     return <NotificationsScreen onBack={goHome} />;
@@ -149,6 +178,7 @@ export const AppNavigator: React.FC = () => {
       onOpenProfile={() => setAppRoute('Profile')}
       onOpenEcoImpact={() => setAppRoute('EcoImpact')}
       onOpenNotifications={() => setAppRoute('Notifications')}
+      onOpenMessages={() => setAppRoute('Conversations')}
       onOpenAdmin={() => setAppRoute('AdminUsers')}
       onOpenDiscovery={() => setAppRoute('Member3')}
       onOpenPostItem={() => setAppRoute('PostItem')}

@@ -36,6 +36,9 @@ model User {
 
   ecoActions    EcoAction[]
   notifications Notification[]
+  conversationsAsA Conversation[] @relation("ConversationUserA")
+  conversationsAsB Conversation[] @relation("ConversationUserB")
+  messages         Message[]
   items Item[]
 
   @@index([role])
@@ -137,4 +140,40 @@ model Notification {
 
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// ============================================================
+// Member 6 – Chat
+// One conversation per pair of users (userA has the smaller id),
+// holding the messages they send each other.
+// ============================================================
+
+model Conversation {
+  id        String    @id @default(uuid())
+  userAId   String    @map("user_a_id")
+  userA     User      @relation("ConversationUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userBId   String    @map("user_b_id")
+  userB     User      @relation("ConversationUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime  @default(now()) @map("created_at")
+  /// Bumped on every new message, so the newest chats list first.
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@unique([userAId, userBId])
+  @@index([userBId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String       @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String       @map("sender_id")
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body           String
+  readAt         DateTime?    @map("read_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }

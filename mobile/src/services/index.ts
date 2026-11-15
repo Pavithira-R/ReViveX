@@ -4,4 +4,5 @@ export * from './capabilities';
 export * from './eco.service';
 export * from './secureStorage';
 export * from './notification.service';
+export * from './chat.service';
 export * from './item.service';

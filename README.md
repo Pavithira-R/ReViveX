@@ -31,7 +31,8 @@ Built for the Mobile Application Development (INTE 22283) group project.
 | Repair | Provider profiles, repair requests, quotations, booking, status tracking | 🔄 Being integrated |
 | Reviews | Ratings and reviews after completed services | 🔄 Being integrated |
 | Reuse / Sell / Donate / Recycle | Listings, offers, donations, recycling requests | 🔄 Being integrated |
-| Communication | Push notifications, chat | ⏳ Planned |
+| Communication | In-app notifications, chat between users | ✅ Done |
+| Communication | Push notifications (phone notifications when the app is closed) | ⏳ Planned |
 
 ## Device features and fallbacks
 

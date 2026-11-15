@@ -5,3 +5,4 @@ export * from './discoveryService';
 export * from './recommendationService';
 export * from './searchService';
 export * from './notification.service';
+export * from './chat.service';
