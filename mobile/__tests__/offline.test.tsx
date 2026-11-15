@@ -23,30 +23,15 @@ const user = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
-const notifications = {
-  items: [
-    {
-      id: 'n1',
-      type: 'ECO',
-      title: 'Eco points earned',
-      message: '+30 points for recycling a device.',
-      refId: 'r1',
-      isRead: false,
-      createdAt: '2026-11-15T10:00:00.000Z',
-    },
-  ],
-  unreadCount: 1,
+const notification = {
+  userId: 'user-1',
+  type: 'ECO',
+  title: 'Eco points earned',
+  message: '+30 points for recycling a device.',
+  refId: 'r1',
+  isRead: false,
+  createdAt: '2026-11-15T10:00:00.000Z',
 };
-
-const ok = (data: unknown) => ({ success: true, message: 'OK', data, error: null });
-
-const mockFetchResponse = (status: number, body: unknown) =>
-  (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  });
-const mockOffline = () => (globalThis.fetch as jest.Mock).mockRejectedValueOnce(new Error('offline'));
 
 const allText = (root: ReactTestInstance): string =>
   root
@@ -86,8 +71,8 @@ const signIn = async (root: ReactTestInstance) => {
 };
 
 beforeEach(() => {
-  globalThis.fetch = jest.fn();
   __fake.addAccount(user, 'Password123');
+  __fake.setDoc('notifications/n1', notification);
 });
 
 afterEach(async () => {
@@ -99,14 +84,13 @@ test('without internet, Notifications shows the saved copy with an offline banne
   await signIn(root);
 
   // Online: loads and saves a copy.
-  mockFetchResponse(200, ok(notifications));
   await press(root, 'Notifications');
   expect(allText(root)).toContain('Eco points earned');
   expect(allText(root)).not.toContain("You're offline");
   await press(root, '‹ Back');
 
   // Offline: the saved copy is shown.
-  mockOffline();
+  __fake.setOffline(true);
   await press(root, 'Notifications');
   expect(allText(root)).toContain('Eco points earned');
   expect(allText(root)).toContain("You're offline");
@@ -127,7 +111,6 @@ test('opening the app without internet keeps the user signed in with saved data'
 test('logging out deletes the saved copies', async () => {
   const root = await renderApp();
   await signIn(root);
-  mockFetchResponse(200, ok(notifications));
   await press(root, 'Notifications');
   await press(root, '‹ Back');
 
@@ -136,7 +119,7 @@ test('logging out deletes the saved copies', async () => {
 
   // Sign in again, then go offline: nothing saved any more → normal error.
   await signIn(root);
-  mockOffline();
+  __fake.setOffline(true);
   await press(root, 'Notifications');
 
   expect(allText(root)).not.toContain('Eco points earned');

@@ -12,3 +12,5 @@ export * from './MyItemsScreen';
 export * from './BrowseItemsScreen';
 export * from './ItemDetailsScreen';
 export * from './ProblemReportsScreen';
+export * from './WriteReviewScreen';
+export * from './ReviewsScreen';

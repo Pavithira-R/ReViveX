@@ -7,6 +7,7 @@
  *   const { __fake } = require('../jest.firebase');
  *   __fake.addAccount({ ...profile }, 'Password123')  → account + users/{uid} document
  *   __fake.setOffline(true)                          → every call fails like "no internet"
+ *   __fake.goOfflineAfter(1)                         → one more Firestore call works, then offline
  *   __fake.getDoc('problemReports/abc') / __fake.docsIn('notifications')
  *   __fake.setDoc('users/u1', data)
  */
@@ -25,6 +26,8 @@ const state = {
   currentUser: null,
   listeners: new Set(),
   offline: false,
+  /** Number of Firestore calls still allowed before going offline (null = off). */
+  offlineAfter: null,
   nextId: 1,
 };
 
@@ -32,6 +35,10 @@ const newId = () => `id${state.nextId++}`;
 const clone = (data) => (data === undefined ? undefined : { ...data });
 
 const offlineCheck = (auth) => {
+  if (!auth && state.offlineAfter !== null) {
+    if (state.offlineAfter === 0) state.offline = true;
+    else state.offlineAfter -= 1;
+  }
   if (state.offline) {
     throw new FirebaseError(auth ? 'auth/network-request-failed' : 'unavailable');
   }
@@ -119,13 +126,28 @@ const matches = (data, { field, op, value }) => {
   }
 };
 
-const applyChanges = (existing, changes) => {
+const applyValue = (target, key, value) => {
+  if (value && value.__op === 'increment') target[key] = (target[key] || 0) + value.by;
+  else if (value && value.__op === 'serverTimestamp') target[key] = new Date().toISOString();
+  else if (value && value.__op === 'delete') delete target[key];
+  else target[key] = value;
+};
+
+/** updateDoc treats 'a.b' as a nested field path (setDoc does not). */
+const applyChanges = (existing, changes, dottedPaths = false) => {
   const next = { ...existing };
   Object.entries(changes).forEach(([key, value]) => {
-    if (value && value.__op === 'increment') next[key] = (next[key] || 0) + value.by;
-    else if (value && value.__op === 'serverTimestamp') next[key] = new Date().toISOString();
-    else if (value && value.__op === 'delete') delete next[key];
-    else next[key] = value;
+    if (dottedPaths && key.includes('.')) {
+      const parts = key.split('.');
+      let target = next;
+      parts.slice(0, -1).forEach((part) => {
+        target[part] = { ...(target[part] || {}) };
+        target = target[part];
+      });
+      applyValue(target, parts[parts.length - 1], value);
+    } else {
+      applyValue(next, key, value);
+    }
   });
   return next;
 };
@@ -137,7 +159,7 @@ const write = {
   },
   update: (ref, changes) => {
     if (!state.docs.has(ref.path)) throw new FirebaseError('not-found', `No document ${ref.path}`);
-    state.docs.set(ref.path, applyChanges(state.docs.get(ref.path), changes));
+    state.docs.set(ref.path, applyChanges(state.docs.get(ref.path), changes, true));
   },
   delete: (ref) => {
     state.docs.delete(ref.path);
@@ -251,10 +273,16 @@ const __fake = {
     state.listeners.clear();
     state.currentUser = null;
     state.offline = false;
+    state.offlineAfter = null;
     state.nextId = 1;
   },
   setOffline: (offline) => {
     state.offline = offline;
+    state.offlineAfter = null;
+  },
+  /** The next `count` Firestore calls work, then every call fails like "no internet". */
+  goOfflineAfter: (count) => {
+    state.offlineAfter = count;
   },
   /** Creates a sign-in account and its `users/{id}` profile. */
   addAccount: (profile, password) => {

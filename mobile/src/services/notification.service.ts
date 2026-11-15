@@ -1,9 +1,12 @@
-// Member 6 – In-app notifications
-import { addDoc, collection } from 'firebase/firestore';
-import { apiRequest } from './api';
-import { db } from './firebase';
-import { nowIso } from './firebaseHelpers';
+// Member 6 – In-app notifications (Firestore `notifications` collection)
+import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { ApiError } from './api';
+import { auth, db } from './firebase';
+import { fsCall, nowIso, withId } from './firebaseHelpers';
 import { AppNotification, NotificationList } from '../types';
+
+const LIST_LIMIT = 50;
+const notifications = collection(db, 'notifications');
 
 export interface NotifyOptions {
   /** ECO / REPAIR / LISTING / RECYCLING / REVIEW / MESSAGE / GENERAL */
@@ -23,7 +26,7 @@ export const notify = async (
   options: NotifyOptions = {}
 ): Promise<boolean> => {
   try {
-    await addDoc(collection(db, 'notifications'), {
+    await addDoc(notifications, {
       userId,
       title,
       message,
@@ -38,11 +41,51 @@ export const notify = async (
   }
 };
 
-// The list below moves to Firestore in Phase 2.
+const currentUid = (): string => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+  return uid;
+};
+
+type StoredNotification = AppNotification & { userId: string };
+
+const toView = ({ userId: _userId, ...view }: StoredNotification): AppNotification => view;
+
+const mine = async (uid: string) =>
+  (await getDocs(query(notifications, where('userId', '==', uid)))).docs.map((d) =>
+    withId<StoredNotification>(d)
+  );
+
 export const notificationService = {
-  list: () => apiRequest<NotificationList>('GET', '/notifications'),
+  /** The signed-in user's latest notifications, newest first, with the unread count. */
+  list: (): Promise<NotificationList> =>
+    fsCall(async () => {
+      const all = (await mine(currentUid())).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      return {
+        items: all.slice(0, LIST_LIMIT).map(toView),
+        unreadCount: all.filter((n) => !n.isRead).length,
+      };
+    }),
 
-  markRead: (id: string) => apiRequest<AppNotification>('PATCH', `/notifications/${id}/read`),
+  markRead: (id: string): Promise<AppNotification> =>
+    fsCall(async () => {
+      const ref = doc(db, 'notifications', id);
+      const snapshot = await getDoc(ref);
+      if (!snapshot.exists() || snapshot.data().userId !== currentUid()) {
+        throw new ApiError('Notification not found', 404, 'NOT_FOUND');
+      }
+      await updateDoc(ref, { isRead: true });
+      return toView({ ...withId<StoredNotification>(snapshot), isRead: true });
+    }),
 
-  markAllRead: () => apiRequest<{ updated: number }>('PATCH', '/notifications/read-all'),
+  markAllRead: (): Promise<{ updated: number }> =>
+    fsCall(async () => {
+      const unread = (await mine(currentUid())).filter((n) => !n.isRead);
+      if (unread.length) {
+        const batch = writeBatch(db);
+        unread.forEach((n) => batch.update(doc(db, 'notifications', n.id), { isRead: true }));
+        await batch.commit();
+      }
+      return { updated: unread.length };
+    }),
 };

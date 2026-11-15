@@ -45,6 +45,40 @@ service cloud.firestore {
       allow create: if signedIn();
     }
 
+    // ---------- Member 6 – Chat ----------
+    // Conversation id = both user ids sorted ("uidA_uidB"); only those two can use it.
+    function inChat(chatId) {
+      return uid() in get(/databases/$(database)/documents/conversations/$(chatId)).data.participants;
+    }
+    match /conversations/{chatId} {
+      // `resource == null`: lets "start a chat" check whether the chat already exists.
+      allow read: if signedIn() && (resource == null || uid() in resource.data.participants);
+      allow create: if signedIn() && uid() in request.resource.data.participants
+                    && request.resource.data.participants.size() == 2;
+      allow update: if signedIn() && uid() in resource.data.participants
+                    && request.resource.data.participants == resource.data.participants;
+
+      match /messages/{messageId} {
+        allow read: if signedIn() && inChat(chatId);
+        allow create: if signedIn() && inChat(chatId) && request.resource.data.senderId == uid();
+        // Only marking the other person's messages as read.
+        allow update: if signedIn() && inChat(chatId)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt']);
+      }
+    }
+
+    // ---------- Member 6 – Ratings and reviews ----------
+    // Id `TYPE_refId_reviewerId`: one review per person per completed activity, never edited.
+    match /reviews/{reviewId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && request.resource.data.reviewerId == uid()
+                    && request.resource.data.revieweeId != uid()
+                    && request.resource.data.rating is int
+                    && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+                    && reviewId == request.resource.data.refType + '_' + request.resource.data.refId + '_' + uid();
+    }
+
     // ---------- Other modules: add your blocks below ----------
   }
 }

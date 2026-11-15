@@ -18,9 +18,11 @@ import { getErrorMessage } from '../utils';
 
 interface ProfileScreenProps {
   onBack: () => void;
+  /** Member 6 – opens the reviews this user has received. */
+  onOpenReviews?: () => void;
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenReviews }) => {
   const { user, updateProfile, logout, isBiometricEnabled, setBiometricEnabled } = useAuth();
   const { status: biometricStatus } = useCapability('biometric');
   const { openReport } = useProblemReport();
@@ -170,6 +172,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
                 </View>
               </View>
               <PrimaryButton title="Edit Profile" onPress={startEditing} />
+              {onOpenReviews ? (
+                <PrimaryButton title="My reviews" variant="outlined" onPress={onOpenReviews} />
+              ) : null}
               <PrimaryButton title="Report a problem" variant="outlined" onPress={openReport} />
               <Text style={styles.hint}>Tip: you can also shake your phone on any screen.</Text>
               <PrimaryButton title="Log Out" variant="danger" onPress={logout} />

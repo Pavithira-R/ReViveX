@@ -1,5 +1,5 @@
 /**
- * Member 6 – My Eco Impact screen with a mocked backend.
+ * Member 6 – My Eco Impact screen on the fake Firestore (`ecoActions` collection).
  */
 import React from 'react';
 import ReactTestRenderer, { ReactTestInstance } from 'react-test-renderer';
@@ -22,13 +22,6 @@ const user = {
   updatedAt: '2026-01-01T00:00:00.000Z',
 };
 
-const mockFetchResponse = (status: number, body: unknown) =>
-  (globalThis.fetch as jest.Mock).mockResolvedValueOnce({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  });
-
 const allText = (root: ReactTestInstance): string =>
   root
     .findAllByType(Text)
@@ -48,15 +41,15 @@ const button = (root: ReactTestInstance, title: string) =>
       allText(node) === title
   )[0];
 
-/** Signs in, then opens My Eco Impact; `mockEcoResponse` queues the /eco/me reply after login's. */
-const openEcoImpact = async (mockEcoResponse: () => void) => {
-  let renderer!: ReactTestRenderer.ReactTestRenderer;
+let renderer: ReactTestRenderer.ReactTestRenderer;
+
+/** Signs in, then opens My Eco Impact. `beforeOpen` can e.g. take the connection away. */
+const openEcoImpact = async (beforeOpen: () => void = () => undefined) => {
   await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(<App />);
   });
   const root = renderer.root;
 
-  __fake.addAccount(user, 'Password123');
   await ReactTestRenderer.act(async () => {
     input(root, 'Email address').props.onChangeText(user.email);
     input(root, 'Password').props.onChangeText('Password123');
@@ -64,34 +57,45 @@ const openEcoImpact = async (mockEcoResponse: () => void) => {
   await ReactTestRenderer.act(async () => {
     button(root, 'Sign In').props.onPress();
   });
-  mockEcoResponse();
+  beforeOpen();
   await ReactTestRenderer.act(async () => {
     button(root, 'My Eco Impact').props.onPress();
   });
   return root;
 };
 
-beforeEach(() => {
-  globalThis.fetch = jest.fn();
-});
-
-const community = {
-  co2SavedKg: 1234.5,
-  ewasteDivertedKg: 56.8,
-  drivingKmEquivalent: 7262,
-  devicesCount: 42,
-  contributors: 3,
-};
-
-test('shows points, badge, impact, counts and community totals from the server', async () => {
-  const root = await openEcoImpact(() => {
-    mockEcoSummary();
-    mockFetchResponse(200, { success: true, message: 'OK', data: community, error: null });
+const action = (userId: string, type: string, refId: string, category: string, points: number, co2: number, ewaste: number, day: string) =>
+  __fake.setDoc(`ecoActions/${type}_${refId}`, {
+    userId,
+    type,
+    points,
+    refId,
+    deviceCategory: category,
+    co2SavedKg: co2,
+    ewasteKg: ewaste,
+    createdAt: `2026-11-${day}T00:00:00.000Z`,
   });
 
-  const [ecoUrl] = (globalThis.fetch as jest.Mock).mock.calls[0];
-  expect(ecoUrl).toMatch(/\/eco\/me$/);
-  expect((globalThis.fetch as jest.Mock).mock.calls[1][0]).toMatch(/\/eco\/community$/);
+/** Nimal: 75 points, 87.5 kg CO2. Two other members add to the community totals. */
+const seedActions = () => {
+  action('user-1', 'REPAIR', 'p1', 'OTHER', 20, 40, 1, '01');
+  action('user-1', 'DONATE', 'l1', 'OTHER', 25, 40, 1, '02');
+  action('user-1', 'RECYCLE', 'r1', 'OTHER', 30, 7.5, 1, '03');
+  ['d1', 'd2', 'd3', 'd4'].forEach((id) => action('user-2', 'REPAIR', id, 'DESKTOP', 20, 280, 8, '04'));
+  action('user-3', 'RECYCLE', 'r2', 'PRINTER', 30, 22.5, 6, '05');
+};
+
+beforeEach(() => {
+  __fake.addAccount(user, 'Password123');
+});
+
+afterEach(async () => {
+  await ReactTestRenderer.act(async () => renderer?.unmount());
+});
+
+test('shows points, badge, impact, counts and community totals', async () => {
+  seedActions();
+  const root = await openEcoImpact();
 
   const text = allText(root);
   expect(text).toContain('75');
@@ -100,48 +104,20 @@ test('shows points, badge, impact, counts and community totals from the server',
   expect(text).toContain('+ 30');
   expect(text).toContain('87.5 kg');
   expect(text).toContain('Like not driving 515 km in a petrol car.');
-  expect(text).toContain('1.2 t');
-  expect(text).toContain('3 members have kept 56.8 kg of electronics out of landfill.');
+  expect(text).toContain('1.2 t'); // 87.5 + 1120 + 22.5 = 1230 kg
+  expect(text).toContain('3 members have kept 41 kg of electronics out of landfill.');
 });
 
 test('still shows the personal impact when community totals fail to load', async () => {
-  const root = await openEcoImpact(() => {
-    mockEcoSummary();
-    (globalThis.fetch as jest.Mock).mockRejectedValueOnce(new Error('offline'));
-  });
+  seedActions();
+  const root = await openEcoImpact(() => __fake.goOfflineAfter(1));
 
   expect(allText(root)).toContain('87.5 kg');
   expect(allText(root)).not.toContain('ReViveX community');
 });
 
-const mockEcoSummary = () => mockFetchResponse(200, {
-    success: true,
-    message: 'Eco impact retrieved',
-    data: {
-      totalPoints: 75,
-      badge: 'BRONZE',
-      nextBadge: { badge: 'SILVER', pointsNeeded: 75 },
-      counts: { REPAIR: 1, REUSE: 0, SELL: 0, DONATE: 1, RECYCLE: 1 },
-      impact: { co2SavedKg: 87.5, ewasteDivertedKg: 3, drivingKmEquivalent: 515 },
-      recent: [
-        {
-          id: 'e1',
-          type: 'RECYCLE',
-          points: 30,
-          refId: 'r1',
-          deviceCategory: 'OTHER',
-          co2SavedKg: 7.5,
-          createdAt: '2026-11-03T00:00:00.000Z',
-        },
-      ],
-    },
-    error: null,
-  });
-
-test('shows an error with a retry button when the server cannot be reached', async () => {
-  const root = await openEcoImpact(() =>
-    (globalThis.fetch as jest.Mock).mockRejectedValueOnce(new Error('offline'))
-  );
+test('shows an error with a retry button when there is no connection', async () => {
+  const root = await openEcoImpact(() => __fake.setOffline(true));
 
   expect(allText(root)).toContain('Cannot reach the server');
   expect(button(root, 'Try again')).toBeDefined();
