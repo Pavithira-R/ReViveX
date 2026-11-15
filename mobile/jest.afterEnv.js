@@ -10,3 +10,8 @@ beforeEach(() => {
 beforeEach(async () => {
   await require('@react-native-async-storage/async-storage').default.clear();
 });
+
+// Each test starts with no Firebase accounts, documents or signed-in user, and online.
+beforeEach(() => {
+  require('./jest.firebase').__fake.reset();
+});

@@ -66,3 +66,8 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
   return { __esModule: true, default: storage };
 });
+
+// In-memory Firebase (Auth + Firestore). See jest.firebase.js for the test helpers.
+jest.mock('firebase/app', () => require('./jest.firebase').app);
+jest.mock('firebase/auth', () => require('./jest.firebase').auth);
+jest.mock('firebase/firestore', () => require('./jest.firebase').firestore);
