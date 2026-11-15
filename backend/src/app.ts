@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { resolve } from 'node:path';
 
 // Member 1 - Auth & User Routes
 import apiRoutes from './routes';
@@ -20,6 +21,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(resolve(process.cwd(), 'uploads')));
 
 // Health Check Endpoints (Supports both Member 1 & Member 3 contracts)
 app.get('/health', (_req: Request, res: Response) => {

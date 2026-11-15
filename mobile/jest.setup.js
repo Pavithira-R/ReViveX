@@ -4,6 +4,11 @@ jest.mock('react-native-safe-area-context', () =>
   require('react-native-safe-area-context/jest/mock').default,
 );
 
+jest.mock('react-native-image-picker', () => ({
+  launchCamera: jest.fn(async () => ({ didCancel: true })),
+  launchImageLibrary: jest.fn(async () => ({ didCancel: true })),
+}));
+
 // In-memory stand-in for the encrypted keychain. No biometric sensor by default;
 // tests opt in with `require('react-native-keychain').getSupportedBiometryType.mockResolvedValue(...)`.
 jest.mock('react-native-keychain', () => {

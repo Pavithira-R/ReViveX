@@ -4,17 +4,31 @@ import { COLORS } from '../constants';
 import { useAuth } from '../context';
 import {
   AdminUsersScreen,
+  BrowseItemsScreen,
   EcoImpactScreen,
   HomeScreen,
+  ItemDetailsScreen,
   LoginScreen,
+  MyItemsScreen,
   NotificationsScreen,
+  PostItemScreen,
   ProfileScreen,
   RegisterScreen,
 } from '../screens';
 import { Member3Navigator } from '../features/member3';
 
 type AuthRoute = 'Login' | 'Register';
-type AppRoute = 'Home' | 'Profile' | 'AdminUsers' | 'EcoImpact' | 'Notifications' | 'Member3';
+type AppRoute =
+  | 'Home'
+  | 'Profile'
+  | 'AdminUsers'
+  | 'EcoImpact'
+  | 'Notifications'
+  | 'Member3'
+  | 'PostItem'
+  | 'MyItems'
+  | 'BrowseItems'
+  | 'ItemDetails';
 
 /**
  * Top-level navigator with protected screens:
@@ -28,6 +42,7 @@ export const AppNavigator: React.FC = () => {
   const { isAuthenticated, isRestoring, hasRole } = useAuth();
   const [authRoute, setAuthRoute] = useState<AuthRoute>('Login');
   const [appRoute, setAppRoute] = useState<AppRoute>('Home');
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
   // Always land on the right first screen after sign-in / sign-out.
   useEffect(() => {
@@ -68,6 +83,10 @@ export const AppNavigator: React.FC = () => {
   }
 
   const goHome = () => setAppRoute('Home');
+  const openItem = (id: string) => {
+    setSelectedItemId(id);
+    setAppRoute('ItemDetails');
+  };
 
   if (appRoute === 'Profile') {
     return <ProfileScreen onBack={goHome} />;
@@ -80,6 +99,24 @@ export const AppNavigator: React.FC = () => {
   }
   if (appRoute === 'AdminUsers' && hasRole('ADMIN')) {
     return <AdminUsersScreen onBack={goHome} />;
+  }
+  if (appRoute === 'PostItem') {
+    return <PostItemScreen onBack={goHome} onPosted={openItem} />;
+  }
+  if (appRoute === 'MyItems') {
+    return (
+      <MyItemsScreen
+        onBack={goHome}
+        onCreateItem={() => setAppRoute('PostItem')}
+        onOpenItem={openItem}
+      />
+    );
+  }
+  if (appRoute === 'BrowseItems') {
+    return <BrowseItemsScreen onBack={goHome} onOpenItem={openItem} />;
+  }
+  if (appRoute === 'ItemDetails' && selectedItemId) {
+    return <ItemDetailsScreen itemId={selectedItemId} onBack={goHome} />;
   }
   if (appRoute === 'Member3') {
     return (
@@ -114,6 +151,9 @@ export const AppNavigator: React.FC = () => {
       onOpenNotifications={() => setAppRoute('Notifications')}
       onOpenAdmin={() => setAppRoute('AdminUsers')}
       onOpenDiscovery={() => setAppRoute('Member3')}
+      onOpenPostItem={() => setAppRoute('PostItem')}
+      onOpenMyItems={() => setAppRoute('MyItems')}
+      onOpenBrowseItems={() => setAppRoute('BrowseItems')}
     />
   );
 };

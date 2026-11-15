@@ -8,6 +8,8 @@ import notificationRoutes from './notification.routes';
 import discoveryRoutes from './discoveryRoutes';
 import recommendationRoutes from './recommendationRoutes';
 import searchRoutes from './searchRoutes';
+import itemRoutes from './item.routes';
+import categoryRoutes from './category.routes';
 
 const router = Router();
 
@@ -20,5 +22,7 @@ router.use('/notifications', notificationRoutes);
 router.use('/discovery', discoveryRoutes);
 router.use('/recommendations', recommendationRoutes);
 router.use('/search', searchRoutes);
+router.use('/items', itemRoutes);
+router.use('/categories', categoryRoutes);
 
 export default router;

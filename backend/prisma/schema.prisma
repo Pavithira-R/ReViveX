@@ -36,9 +36,47 @@ model User {
 
   ecoActions EcoAction[]
   notifications Notification[]
+  items Item[]
 
   @@index([role])
   @@map("users")
+}
+
+// ============================================================
+// Member 2 – Item Management
+// ============================================================
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  items       Item[]
+
+  @@map("categories")
+}
+
+model Item {
+  id          String   @id @default(uuid())
+  name        String
+  brand       String?
+  condition   String
+  action      String
+  description String?
+  location    Json?
+  status      String   @default("POSTED")
+  images      String[] @default([])
+  ownerId     String
+  categoryId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([ownerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([action])
+  @@map("items")
 }
 
 // ============================================================
