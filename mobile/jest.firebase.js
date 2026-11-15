@@ -28,6 +28,8 @@ const state = {
   offline: false,
   /** Number of Firestore calls still allowed before going offline (null = off). */
   offlineAfter: null,
+  /** Emails a password-reset link was sent to. */
+  resetEmails: [],
   nextId: 1,
 };
 
@@ -91,6 +93,11 @@ const auth = {
   },
   signOut: async () => {
     setCurrentUser(null);
+  },
+  sendPasswordResetEmail: async (_auth, email) => {
+    offlineCheck(true);
+    if (!state.accounts.has(email)) throw new FirebaseError('auth/user-not-found');
+    state.resetEmails.push(email);
   },
 };
 
@@ -274,6 +281,7 @@ const __fake = {
     state.currentUser = null;
     state.offline = false;
     state.offlineAfter = null;
+    state.resetEmails = [];
     state.nextId = 1;
   },
   setOffline: (offline) => {
@@ -291,6 +299,8 @@ const __fake = {
     state.docs.set(`users/${id}`, data);
   },
   currentUser: () => state.currentUser,
+  /** Emails a password-reset link was sent to. */
+  resetEmailsSent: () => [...state.resetEmails],
   getDoc: (path) => clone(state.docs.get(path)),
   setDoc: (path, data) => state.docs.set(path, { ...data }),
   /** `{ id, ...data }` of every document directly inside a collection. */
