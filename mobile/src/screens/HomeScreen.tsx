@@ -11,6 +11,7 @@ interface HomeScreenProps {
   onOpenNotifications: () => void;
   onOpenMessages: () => void;
   onOpenAdmin: () => void;
+  onOpenProblemReports: () => void;
   onOpenDiscovery?: () => void;
   onOpenPostItem: () => void;
   onOpenMyItems: () => void;
@@ -27,6 +28,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenNotifications,
   onOpenMessages,
   onOpenAdmin,
+  onOpenProblemReports,
   onOpenDiscovery,
   onOpenPostItem,
   onOpenMyItems,
@@ -64,7 +66,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           />
         )}
         {hasRole('ADMIN') ? (
-          <PrimaryButton title="Manage Users" variant="outlined" onPress={onOpenAdmin} />
+          <>
+            <PrimaryButton title="Manage Users" variant="outlined" onPress={onOpenAdmin} />
+            <PrimaryButton title="Problem Reports" variant="outlined" onPress={onOpenProblemReports} />
+          </>
         ) : null}
       </ScrollView>
     </SafeAreaView>

@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormInput, MessageBanner, PrimaryButton } from '../components';
 import { COLORS, ROLE_LABELS } from '../constants';
-import { useAuth } from '../context';
+import { useAuth, useProblemReport } from '../context';
 import { useCapability } from '../services';
 import { getErrorMessage } from '../utils';
 
@@ -23,6 +23,7 @@ interface ProfileScreenProps {
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
   const { user, updateProfile, logout, isBiometricEnabled, setBiometricEnabled } = useAuth();
   const { status: biometricStatus } = useCapability('biometric');
+  const { openReport } = useProblemReport();
   const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
@@ -162,6 +163,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
                 </View>
               </View>
               <PrimaryButton title="Edit Profile" onPress={startEditing} />
+              <PrimaryButton title="Report a problem" variant="outlined" onPress={openReport} />
+              <Text style={styles.hint}>Tip: you can also shake your phone on any screen.</Text>
               <PrimaryButton title="Log Out" variant="danger" onPress={logout} />
             </View>
           )}
