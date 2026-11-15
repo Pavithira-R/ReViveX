@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MessageBanner, PrimaryButton } from '../components';
+import { MessageBanner, OfflineBanner, PrimaryButton } from '../components';
 import { COLORS } from '../constants';
-import { ecoService } from '../services';
+import { ecoService, withOfflineCache } from '../services';
 import { CommunityImpact, EcoActionType, EcoBadge, EcoSummary } from '../types';
 import { getErrorMessage } from '../utils';
 
@@ -52,19 +52,23 @@ export const EcoImpactScreen: React.FC<EcoImpactScreenProps> = ({ onBack }) => {
   const [community, setCommunity] = useState<CommunityImpact | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  /** When showing data saved on the phone (offline), the time it was saved. */
+  const [offlineSince, setOfflineSince] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      setSummary(await ecoService.getMine());
+      const mine = await withOfflineCache('eco.me', ecoService.getMine);
+      setSummary(mine.data);
+      setOfflineSince(mine.fromCache ? mine.savedAt : null);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Could not load your eco impact.'));
       setIsLoading(false);
       return;
     }
     try {
-      setCommunity(await ecoService.getCommunity());
+      setCommunity((await withOfflineCache('eco.community', ecoService.getCommunity)).data);
     } catch {
       // Community totals are extra: the screen works without them.
       setCommunity(null);
@@ -95,6 +99,7 @@ export const EcoImpactScreen: React.FC<EcoImpactScreenProps> = ({ onBack }) => {
 
       <ScrollView contentContainerStyle={styles.content}>
         {isLoading ? <ActivityIndicator color={COLORS.primary} style={styles.loader} /> : null}
+        <OfflineBanner savedAt={offlineSince} />
 
         {!isLoading && errorMessage ? (
           <>

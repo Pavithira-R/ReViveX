@@ -10,9 +10,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MessageBanner, PrimaryButton } from '../components';
+import { MessageBanner, OfflineBanner, PrimaryButton } from '../components';
 import { COLORS } from '../constants';
-import { notificationService } from '../services';
+import { notificationService, withOfflineCache } from '../services';
 import { AppNotification } from '../types';
 import { getErrorMessage } from '../utils';
 
@@ -35,15 +35,18 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onBack
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  /** When showing data saved on the phone (offline), the time it was saved. */
+  const [offlineSince, setOfflineSince] = useState<string | null>(null);
 
   const load = useCallback(async (refreshing = false) => {
     if (refreshing) setIsRefreshing(true);
     else setIsLoading(true);
     setErrorMessage(null);
     try {
-      const result = await notificationService.list();
-      setItems(result.items);
-      setUnreadCount(result.unreadCount);
+      const result = await withOfflineCache('notifications', notificationService.list);
+      setItems(result.data.items);
+      setUnreadCount(result.data.unreadCount);
+      setOfflineSince(result.fromCache ? result.savedAt : null);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Could not load notifications.'));
     } finally {
@@ -95,6 +98,7 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onBack
       >
         {isLoading ? <ActivityIndicator color={COLORS.primary} style={styles.loader} /> : null}
 
+        <OfflineBanner savedAt={offlineSince} />
         <MessageBanner message={errorMessage} />
         {!isLoading && errorMessage && items.length === 0 ? (
           <PrimaryButton title="Try again" variant="outlined" onPress={() => load()} />
