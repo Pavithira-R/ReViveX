@@ -8,6 +8,7 @@ Covers FR-17 (communication), FR-19 (eco impact), FR-20 (eco points / badges) an
 | In-app notifications | ✅ Done |
 | Reviews & ratings | Being integrated |
 | Chat | ✅ Done |
+| Offline mode | ✅ Done |
 
 ---
 
@@ -72,6 +73,26 @@ const conversation = await chatService.startWithUser(providerUserId); // same ch
 - The chat screen refreshes every 5 seconds while open; a failed send keeps the typed text.
 
 ---
+
+### Offline mode
+
+Notifications, Messages, each chat and My Eco Impact work **offline-first**:
+
+1. Every successful load saves a copy on the phone (AsyncStorage, per signed-in user).
+2. Without internet, the screen shows the saved copy with a yellow banner: *"You're offline – showing data saved at 10:42"*. Pull down to refresh when back online.
+3. Opening the app without internet keeps the user signed in with their saved profile (instead of the login screen).
+4. Sending a message or marking a notification read while offline shows an error and keeps what was typed.
+5. Saved copies are deleted on logout or when the session expires.
+
+Use it in your own screen:
+
+```ts
+import { withOfflineCache } from '../services';
+
+const result = await withOfflineCache('my-items', itemService.mine);
+setItems(result.data);
+setOfflineSince(result.fromCache ? result.savedAt : null);   // show <OfflineBanner savedAt={offlineSince} />
+```
 
 ## API endpoints
 

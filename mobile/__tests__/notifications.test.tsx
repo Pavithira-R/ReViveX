@@ -6,6 +6,8 @@ import ReactTestRenderer, { ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
 import App from '../App';
 
+const { __fake } = require('../jest.firebase');
+
 const user = {
   id: 'user-1',
   name: 'Nimal Perera',
@@ -68,7 +70,7 @@ const openNotifications = async (mockList: () => void) => {
   });
   const root = renderer.root;
 
-  mockFetchResponse(200, ok({ token: 'jwt-token-123', user }));
+  __fake.addAccount(user, 'Password123');
   await ReactTestRenderer.act(async () => {
     input(root, 'Email address').props.onChangeText(user.email);
     input(root, 'Password').props.onChangeText('Password123');

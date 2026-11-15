@@ -10,9 +10,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FormInput, MessageBanner, PrimaryButton } from '../components';
+import { FormInput, MessageBanner, OfflineBanner, PrimaryButton } from '../components';
 import { COLORS, ROLE_LABELS } from '../constants';
-import { chatService } from '../services';
+import { chatService, withOfflineCache } from '../services';
 import { Conversation } from '../types';
 import { getErrorMessage, isValidEmail } from '../utils';
 
@@ -30,6 +30,8 @@ export const ConversationsScreen: React.FC<ConversationsScreenProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  /** When showing data saved on the phone (offline), the time it was saved. */
+  const [offlineSince, setOfflineSince] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [isStarting, setIsStarting] = useState(false);
 
@@ -38,7 +40,9 @@ export const ConversationsScreen: React.FC<ConversationsScreenProps> = ({
     else setIsLoading(true);
     setErrorMessage(null);
     try {
-      setConversations(await chatService.list());
+      const result = await withOfflineCache('conversations', chatService.list);
+      setConversations(result.data);
+      setOfflineSince(result.fromCache ? result.savedAt : null);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Could not load your chats.'));
     } finally {
@@ -84,6 +88,7 @@ export const ConversationsScreen: React.FC<ConversationsScreenProps> = ({
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => load(true)} />}
       >
+        <OfflineBanner savedAt={offlineSince} />
         <MessageBanner message={errorMessage} />
 
         <View style={styles.card}>
