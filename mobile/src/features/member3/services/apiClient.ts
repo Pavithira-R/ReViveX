@@ -4,12 +4,9 @@
 // ============================================================================
 
 import { Platform } from 'react-native';
+import { API_BASE_URL } from '../../../constants';
 
-const DEFAULT_ANDROID_BASE = 'http://10.0.2.2:5000/api';
-const DEFAULT_IOS_BASE = 'http://localhost:5000/api';
-
-let activeBaseUrl =
-  Platform.OS === 'android' ? DEFAULT_ANDROID_BASE : DEFAULT_IOS_BASE;
+let activeBaseUrl = API_BASE_URL;
 
 export function setApiBaseUrl(url: string) {
   activeBaseUrl = url.replace(/\/$/, '');

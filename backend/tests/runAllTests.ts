@@ -3,6 +3,8 @@
 // Runs all Recommendation and Integration Adapter test suites sequentially
 // ============================================================================
 
+process.env.NODE_ENV = 'test';
+
 import { runRecommendationTests } from './recommendation.test';
 import { runAdapterTests } from './adapters.test';
 import { runSearchTests } from './search.test';

@@ -34,14 +34,52 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  ecoActions EcoAction[]
+  ecoActions    EcoAction[]
   notifications Notification[]
   conversationsAsA Conversation[] @relation("ConversationUserA")
   conversationsAsB Conversation[] @relation("ConversationUserB")
   messages         Message[]
+  items Item[]
 
   @@index([role])
   @@map("users")
+}
+
+// ============================================================
+// Member 2 – Item Management
+// ============================================================
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  items       Item[]
+
+  @@map("categories")
+}
+
+model Item {
+  id          String   @id @default(uuid())
+  name        String
+  brand       String?
+  condition   String
+  action      String
+  description String?
+  location    Json?
+  status      String   @default("POSTED")
+  images      String[] @default([])
+  ownerId     String
+  categoryId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@index([ownerId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([action])
+  @@map("items")
 }
 
 // ============================================================
@@ -60,14 +98,20 @@ enum EcoActionType {
 }
 
 model EcoAction {
-  id        String        @id @default(uuid())
-  userId    String        @map("user_id")
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      EcoActionType
-  points    Int
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           EcoActionType
+  points         Int
   /// Id of the completed record (repair request, listing, recycling request).
-  refId     String        @map("ref_id")
-  createdAt DateTime      @default(now()) @map("created_at")
+  refId          String        @map("ref_id")
+  /// PHONE, LAPTOP, TABLET, DESKTOP, MONITOR, PRINTER, HEADPHONES, KEYBOARD, CAMERA, BATTERY_CHARGER or OTHER
+  deviceCategory String        @default("OTHER") @map("device_category")
+  /// Estimated CO2 emissions avoided by this activity, in kg.
+  co2SavedKg     Float         @default(0) @map("co2_saved_kg")
+  /// Estimated weight of electronics kept out of landfill, in kg.
+  ewasteKg       Float         @default(0) @map("ewaste_kg")
+  createdAt      DateTime      @default(now()) @map("created_at")
 
   /// The same completed activity can only earn points once.
   @@unique([type, refId])

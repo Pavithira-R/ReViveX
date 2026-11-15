@@ -57,6 +57,21 @@ export function normalizeListing(
  */
 const SEEDED_MEMBER_5_SELL = [
   {
+    id: 'sell_thinkpad_lk_01',
+    userId: 'usr_seller_lk',
+    title: 'Lenovo ThinkPad T480 - i7 / 16GB / 512GB SSD',
+    description: '14-inch IPS, Intel i7 8th Gen, 16GB RAM, 512GB NVMe. Clean condition with original charger.',
+    category: 'Laptops',
+    condition: 'Optimal',
+    price: 320.0,
+    imageUrl: 'https://images.unsplash.com/photo-1588872657578-7efd1f1555ed',
+    location: 'Colombo 03, Sri Lanka',
+    latitude: 6.9271,
+    longitude: 79.8612,
+    status: 'AVAILABLE',
+    createdAt: '2026-09-28T10:00:00.000Z',
+  },
+  {
     id: 'sell_macbook_01',
     userId: 'usr_seller_01',
     title: 'Apple MacBook Air M1 (2020)',

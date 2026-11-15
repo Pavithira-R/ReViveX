@@ -12,6 +12,9 @@ interface HomeScreenProps {
   onOpenMessages: () => void;
   onOpenAdmin: () => void;
   onOpenDiscovery?: () => void;
+  onOpenPostItem: () => void;
+  onOpenMyItems: () => void;
+  onOpenBrowseItems: () => void;
 }
 
 /**
@@ -25,6 +28,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenMessages,
   onOpenAdmin,
   onOpenDiscovery,
+  onOpenPostItem,
+  onOpenMyItems,
+  onOpenBrowseItems,
 }) => {
   const { user, hasRole } = useAuth();
   if (!user) return null;
@@ -39,11 +45,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <Text style={styles.greeting}>Hello, {user.name.split(' ')[0]} 👋</Text>
           <Text style={styles.meta}>Signed in as {ROLE_LABELS[user.role]}</Text>
           <Text style={styles.body}>
-            The rest of the app (posting items, repair, reuse and recycling) will appear here as
-            each module is integrated.
+            Post a device, manage your items, or browse what the community has shared.
           </Text>
         </View>
 
+        <PrimaryButton title="Post an Item" onPress={onOpenPostItem} />
+        <PrimaryButton title="My Items" variant="outlined" onPress={onOpenMyItems} />
+        <PrimaryButton title="Browse Items" variant="outlined" onPress={onOpenBrowseItems} />
         <PrimaryButton title="My Profile" onPress={onOpenProfile} />
         <PrimaryButton title="Messages" variant="outlined" onPress={onOpenMessages} />
         <PrimaryButton title="Notifications" variant="outlined" onPress={onOpenNotifications} />

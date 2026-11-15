@@ -7,19 +7,19 @@ import { Prisma } from '@prisma/client';
 import app from '../app';
 import prisma from '../utils/prisma';
 import { generateToken } from '../utils';
-import { awardEcoPoints, badgeFor, ECO_POINTS } from '../services';
+import { awardEcoPoints, badgeFor, ECO_POINTS, impactFor, normalizeDeviceCategory } from '../services';
 
 jest.mock('../utils/prisma', () => ({
   __esModule: true,
   default: {
     user: { findUnique: jest.fn() },
-    ecoAction: { create: jest.fn(), findMany: jest.fn() },
+    ecoAction: { create: jest.fn(), findMany: jest.fn(), aggregate: jest.fn(), groupBy: jest.fn() },
   },
 }));
 
 const db = prisma as unknown as {
   user: { findUnique: jest.Mock };
-  ecoAction: { create: jest.Mock; findMany: jest.Mock };
+  ecoAction: { create: jest.Mock; findMany: jest.Mock; aggregate: jest.Mock; groupBy: jest.Mock };
 };
 
 const owner = {
@@ -36,6 +36,8 @@ const action = (type: keyof typeof ECO_POINTS, refId: string, createdAt: string)
   type,
   points: ECO_POINTS[type],
   refId,
+  deviceCategory: 'OTHER',
+  ...impactFor(type, 'OTHER'),
   createdAt: new Date(createdAt),
 });
 
@@ -53,7 +55,15 @@ describe('awardEcoPoints', () => {
 
     expect(result).toEqual({ awarded: true, points: 30 });
     expect(db.ecoAction.create).toHaveBeenCalledWith({
-      data: { userId: owner.id, type: 'RECYCLE', points: 30, refId: 'recycle-1' },
+      data: {
+        userId: owner.id,
+        type: 'RECYCLE',
+        points: 30,
+        refId: 'recycle-1',
+        deviceCategory: 'OTHER',
+        co2SavedKg: 7.5,
+        ewasteKg: 1,
+      },
     });
   });
 
@@ -117,6 +127,8 @@ describe('GET /api/eco/me', () => {
       badge: 'BRONZE',
       nextBadge: { badge: 'SILVER', pointsNeeded: 75 },
       counts: { REPAIR: 1, REUSE: 0, SELL: 0, DONATE: 1, RECYCLE: 1 },
+      // OTHER device: repair 40 + donate 40 + recycle 7.5 kg CO2; 1 kg each kept from landfill.
+      impact: { co2SavedKg: 87.5, ewasteDivertedKg: 3, drivingKmEquivalent: 515 },
     });
     expect(res.body.data.recent).toHaveLength(3);
   });
@@ -132,5 +144,69 @@ describe('GET /api/eco/me', () => {
       nextBadge: { badge: 'BRONZE', pointsNeeded: 50 },
       recent: [],
     });
+  });
+});
+
+describe('estimated environmental impact', () => {
+  it('uses the device category: repairing a laptop avoids most of a new laptop', async () => {
+    db.ecoAction.create.mockResolvedValue({});
+
+    await awardEcoPoints(owner.id, 'REPAIR', 'repair-9', 'laptop');
+
+    expect(db.ecoAction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ deviceCategory: 'LAPTOP', co2SavedKg: 240, ewasteKg: 2 }),
+    });
+  });
+
+  it('recycling saves less CO2 than reuse, but still keeps the device out of landfill', () => {
+    expect(impactFor('RECYCLE', 'PHONE')).toEqual({ co2SavedKg: 9, ewasteKg: 0.2 });
+    expect(impactFor('REUSE', 'PHONE')).toEqual({ co2SavedKg: 48, ewasteKg: 0.2 });
+  });
+
+  it.each([
+    ['laptop', 'LAPTOP'],
+    ['Battery charger', 'BATTERY_CHARGER'],
+    ['DESKTOP', 'DESKTOP'],
+    ['toaster', 'OTHER'],
+    [undefined, 'OTHER'],
+  ])('category %p counts as %s', (input, expected) => {
+    expect(normalizeDeviceCategory(input as string | undefined)).toBe(expected);
+  });
+});
+
+describe('GET /api/eco/community', () => {
+  const token = () =>
+    generateToken({ id: owner.id, role: 'ITEM_OWNER', email: owner.email, name: owner.name });
+
+  it('requires login', async () => {
+    expect((await request(app).get('/api/eco/community')).status).toBe(401);
+  });
+
+  it('returns totals for all users', async () => {
+    db.ecoAction.aggregate.mockResolvedValue({
+      _sum: { co2SavedKg: 1234.5, ewasteKg: 56.78 },
+      _count: { _all: 42 },
+    });
+    db.ecoAction.groupBy.mockResolvedValue([{ userId: 'a' }, { userId: 'b' }, { userId: 'c' }]);
+
+    const res = await request(app).get('/api/eco/community').set('Authorization', `Bearer ${token()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({
+      co2SavedKg: 1234.5,
+      ewasteDivertedKg: 56.8,
+      drivingKmEquivalent: 7262,
+      devicesCount: 42,
+      contributors: 3,
+    });
+  });
+
+  it('returns zeros before anyone has earned points', async () => {
+    db.ecoAction.aggregate.mockResolvedValue({ _sum: { co2SavedKg: null, ewasteKg: null }, _count: { _all: 0 } });
+    db.ecoAction.groupBy.mockResolvedValue([]);
+
+    const res = await request(app).get('/api/eco/community').set('Authorization', `Bearer ${token()}`);
+
+    expect(res.body.data).toMatchObject({ co2SavedKg: 0, devicesCount: 0, contributors: 0 });
   });
 });

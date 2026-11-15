@@ -95,7 +95,7 @@ describe('notify()', () => {
         userId: owner.id,
         type: 'ECO',
         title: 'Eco points earned',
-        message: '+30 points for recycling a device.',
+        message: '+30 points for recycling a device. About 7.5 kg CO2 saved.',
         refId: 'r1',
       }),
     });

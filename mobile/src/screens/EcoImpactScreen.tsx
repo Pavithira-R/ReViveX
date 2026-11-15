@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageBanner, PrimaryButton } from '../components';
 import { COLORS } from '../constants';
 import { ecoService } from '../services';
-import { EcoActionType, EcoBadge, EcoSummary } from '../types';
+import { CommunityImpact, EcoActionType, EcoBadge, EcoSummary } from '../types';
 import { getErrorMessage } from '../utils';
 
 interface EcoImpactScreenProps {
@@ -35,9 +35,21 @@ const BADGE_COLORS: Record<EcoBadge, string> = {
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString();
 
-/** "My Eco Impact": points, badge and completed sustainable actions (Member 6). */
+/** 1234.5 → "1,234.5"; values of a tonne or more → "1.2 t". */
+const formatKg = (kg: number) =>
+  kg >= 1000 ? `${(kg / 1000).toFixed(1)} t` : `${kg.toLocaleString()} kg`;
+
+const ImpactStat: React.FC<{ value: string; label: string }> = ({ value, label }) => (
+  <View style={styles.stat}>
+    <Text style={styles.statValue}>{value}</Text>
+    <Text style={styles.statLabel}>{label}</Text>
+  </View>
+);
+
+/** "My Eco Impact" (Member 6): points, badge, estimated environmental impact and community totals. */
 export const EcoImpactScreen: React.FC<EcoImpactScreenProps> = ({ onBack }) => {
   const [summary, setSummary] = useState<EcoSummary | null>(null);
+  const [community, setCommunity] = useState<CommunityImpact | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -48,6 +60,14 @@ export const EcoImpactScreen: React.FC<EcoImpactScreenProps> = ({ onBack }) => {
       setSummary(await ecoService.getMine());
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Could not load your eco impact.'));
+      setIsLoading(false);
+      return;
+    }
+    try {
+      setCommunity(await ecoService.getCommunity());
+    } catch {
+      // Community totals are extra: the screen works without them.
+      setCommunity(null);
     } finally {
       setIsLoading(false);
     }
@@ -102,6 +122,23 @@ export const EcoImpactScreen: React.FC<EcoImpactScreenProps> = ({ onBack }) => {
               </Text>
             </View>
 
+            <Text style={styles.sectionTitle}>Your environmental impact</Text>
+            <View style={styles.card}>
+              <View style={styles.statsRow}>
+                <ImpactStat value={formatKg(summary.impact.co2SavedKg)} label="CO2 saved" />
+                <ImpactStat
+                  value={formatKg(summary.impact.ewasteDivertedKg)}
+                  label="e-waste kept out of landfill"
+                />
+              </View>
+              <Text style={styles.meta}>
+                {summary.impact.drivingKmEquivalent > 0
+                  ? `Like not driving ${summary.impact.drivingKmEquivalent.toLocaleString()} km in a petrol car.`
+                  : 'Give a device another life to start saving CO2.'}
+              </Text>
+              <Text style={styles.footnote}>Estimated from typical values for each type of device.</Text>
+            </View>
+
             <Text style={styles.sectionTitle}>Devices given another life</Text>
             <View style={styles.card}>
               {(Object.keys(ACTION_LABELS) as EcoActionType[]).map((type) => (
@@ -129,6 +166,23 @@ export const EcoImpactScreen: React.FC<EcoImpactScreenProps> = ({ onBack }) => {
                 ))
               )}
             </View>
+
+            {community ? (
+              <>
+                <Text style={styles.sectionTitle}>ReViveX community</Text>
+                <View style={styles.card}>
+                  <View style={styles.statsRow}>
+                    <ImpactStat value={formatKg(community.co2SavedKg)} label="CO2 saved together" />
+                    <ImpactStat value={community.devicesCount.toLocaleString()} label="devices given another life" />
+                  </View>
+                  <Text style={styles.meta}>
+                    {`${community.contributors.toLocaleString()} ${
+                      community.contributors === 1 ? 'member has' : 'members have'
+                    } kept ${formatKg(community.ewasteDivertedKg)} of electronics out of landfill.`}
+                  </Text>
+                </View>
+              </>
+            ) : null}
           </>
         ) : null}
       </ScrollView>
@@ -182,4 +236,9 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 15, color: COLORS.text },
   rowValue: { fontSize: 15, fontWeight: '700', color: COLORS.text },
   rowPoints: { fontSize: 15, fontWeight: '700', color: COLORS.primary },
+  statsRow: { flexDirection: 'row' },
+  stat: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
+  statValue: { fontSize: 24, fontWeight: '800', color: COLORS.primary },
+  statLabel: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginTop: 2 },
+  footnote: { fontSize: 12, color: COLORS.textMuted, marginTop: 8, fontStyle: 'italic' },
 });

@@ -10,6 +10,20 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 
+const itemCategories = [
+  'Mobile Phones',
+  'Laptops',
+  'Tablets',
+  'Desktops',
+  'Monitors',
+  'Printers',
+  'Headphones',
+  'Keyboards',
+  'Cameras',
+  'Batteries & Chargers',
+  'Other',
+];
+
 async function main(): Promise<void> {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
@@ -27,6 +41,16 @@ async function main(): Promise<void> {
   });
 
   console.log(`[seed] Admin account ready: ${admin.email}`);
+
+  await prisma.$transaction(
+    itemCategories.map((name) =>
+      prisma.category.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      })
+    )
+  );
 }
 
 main()
