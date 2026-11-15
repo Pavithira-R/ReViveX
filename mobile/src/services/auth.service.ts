@@ -2,6 +2,7 @@
 import { FirebaseError } from 'firebase/app';
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
@@ -138,6 +139,24 @@ export const authService = {
       throw new ApiError('Account has been deactivated', 403, 'ACCOUNT_DEACTIVATED');
     }
     return { token: uid, user };
+  },
+
+  /**
+   * Email a password-reset link (sent by Firebase). For privacy the app shows the same
+   * message whether or not the email has an account.
+   */
+  sendPasswordReset: async (email: string): Promise<void> => {
+    if (!isValidEmail(email ?? '')) throw validation(['A valid email address is required']);
+    try {
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
+    } catch (error) {
+      const code = error instanceof FirebaseError ? error.code : '';
+      if (code === 'auth/user-not-found') return; // don't reveal which emails are registered
+      if (code === 'auth/too-many-requests') {
+        throw new ApiError('Too many reset requests. Try again later.', 429, 'TOO_MANY_ATTEMPTS');
+      }
+      throw authError(error);
+    }
   },
 
   logout: async (): Promise<null> => {

@@ -122,6 +122,41 @@ describe('login screen', () => {
   });
 });
 
+describe('forgot password', () => {
+  const tapForgot = async (root: ReactTestInstance, email: string) => {
+    await ReactTestRenderer.act(async () => {
+      input(root, 'Email address').props.onChangeText(email);
+    });
+    await ReactTestRenderer.act(async () => {
+      button(root, 'Forgot password?').props.onPress();
+    });
+  };
+
+  test('emails a reset link to the typed address', async () => {
+    const root = await renderApp();
+    await tapForgot(root, ' Nimal@Example.com ');
+
+    expect(__fake.resetEmailsSent()).toEqual(['nimal@example.com']);
+    expect(allText(root)).toContain('a link to reset your password has been sent');
+  });
+
+  test('shows the same message for an unknown email (does not reveal accounts)', async () => {
+    const root = await renderApp();
+    await tapForgot(root, 'nobody@example.com');
+
+    expect(__fake.resetEmailsSent()).toEqual([]);
+    expect(allText(root)).toContain('If nobody@example.com has a ReViveX account');
+  });
+
+  test('asks for the email first when the field is empty', async () => {
+    const root = await renderApp();
+    await tapForgot(root, '');
+
+    expect(allText(root)).toContain('Enter your email address above');
+    expect(__fake.resetEmailsSent()).toEqual([]);
+  });
+});
+
 describe('authService', () => {
   test('register creates the account and a users/{uid} profile', async () => {
     const result = await authService.register({
