@@ -1,34 +1,19 @@
 // ============================================================================
-// Member 3 - Recommendation API Service
-// Calls POST /api/recommendations/evaluate with resilient local rule fallback
+// Member 3 - Smart Recommendation Service
+// Runs client-side deterministic rule engine (ruleEngine.ts) directly in the app.
+// Does not depend on backend HTTP endpoint or Firebase.
 // ============================================================================
 
 import { RecommendationInput, RecommendationResult } from '../types';
-import { requestApi } from './apiClient';
 import { evaluateLocalRecommendation } from '../utils/ruleEngine';
 
 export async function evaluateRecommendation(
   input: RecommendationInput
 ): Promise<{ result: RecommendationResult; isOfflineFallback: boolean }> {
-  try {
-    const data = await requestApi<RecommendationResult>('/recommendations/evaluate', {
-      method: 'POST',
-      body: input,
-      timeoutMs: 5000,
-    });
-
-    return {
-      result: data,
-      isOfflineFallback: false,
-    };
-  } catch (err: any) {
-    console.warn(
-      `[RecommendationService] Live API unavailable (${err.message}). Using local deterministic rule engine.`
-    );
-    const localResult = evaluateLocalRecommendation(input);
-    return {
-      result: localResult,
-      isOfflineFallback: true,
-    };
-  }
+  // Evaluates 11 deterministic rules locally in React Native, maintaining RecommendationResult shape
+  const result = evaluateLocalRecommendation(input);
+  return {
+    result,
+    isOfflineFallback: false,
+  };
 }

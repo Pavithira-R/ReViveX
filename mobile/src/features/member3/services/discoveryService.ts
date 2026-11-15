@@ -1,17 +1,17 @@
 // ============================================================================
-// Member 3 - Discovery Feed API Service
-// Calls GET /api/discovery/feed with mock data fallback
+// Member 3 - Discovery Feed Service
+// Uses buildDiscoveryFeed pure function fitted for array feeds (getDocs)
 // ============================================================================
 
 import { DiscoveryFeedData, LocationCoordinates } from '../types';
 import { requestApi } from './apiClient';
 import {
-  MOCK_HERO_BANNER,
   MOCK_PROVIDERS,
   MOCK_LISTINGS,
   MOCK_RECYCLE_POINTS,
   MOCK_URGENT_DONATIONS,
 } from '../utils/mockData';
+import { buildDiscoveryFeed } from './pureSearchAndDiscovery';
 
 export async function fetchDiscoveryFeed(
   coords?: LocationCoordinates
@@ -30,19 +30,6 @@ export async function fetchDiscoveryFeed(
       method: 'GET',
       timeoutMs: 5000,
     });
-
-    const rawHero = data.heroBanner || data.recommendationPrompt;
-    const heroBanner = rawHero
-      ? {
-          id: rawHero.id || 'banner_rec_01',
-          title: rawHero.title || 'Unsure what to do with your unused gadget?',
-          subtitle:
-            rawHero.subtitle ||
-            'Take our 60-second assessment to discover the best eco-friendly path: Repair, Reuse, Sell, Donate, or Recycle.',
-          ctaAction: 'NAVIGATE_QUESTIONNAIRE' as const,
-          badgeText: rawHero.badgeText || '60s SMART GUIDE',
-        }
-      : MOCK_HERO_BANNER;
 
     const mappedDonations = (data.urgentDonations || []).map((d: any) => ({
       id: d.id,
@@ -71,7 +58,13 @@ export async function fetchDiscoveryFeed(
 
     return {
       feed: {
-        heroBanner,
+        heroBanner: data.heroBanner || {
+          id: 'banner_rec_01',
+          title: 'Evaluate Your Old Tech in 60 Seconds',
+          subtitle: 'Unsure whether to repair, sell, donate, or recycle? Take the 4-step wizard.',
+          ctaAction: 'NAVIGATE_QUESTIONNAIRE' as const,
+          badgeText: '60s SMART GUIDE',
+        },
         nearbyProviders: data.nearbyProviders || [],
         featuredListings: data.featuredListings || [],
         urgentDonations: mappedDonations.length > 0 ? mappedDonations : MOCK_URGENT_DONATIONS,
@@ -86,23 +79,22 @@ export async function fetchDiscoveryFeed(
     };
   } catch (err: any) {
     console.warn(
-      `[DiscoveryService] Live discovery feed unavailable (${err.message}). Using local mock feed.`
+      `[DiscoveryService] Live feed query unavailable (${err?.message || err}). Building feed from pure array aggregator.`
     );
 
+    const feed = buildDiscoveryFeed({
+      providers: MOCK_PROVIDERS,
+      listings: MOCK_LISTINGS,
+      recyclingRequests: MOCK_RECYCLE_POINTS,
+      userLocation: coords,
+      sectionLimit: 4,
+    });
+
     return {
-      feed: {
-        heroBanner: MOCK_HERO_BANNER,
-        nearbyProviders: MOCK_PROVIDERS.slice(0, 4),
-        featuredListings: MOCK_LISTINGS.slice(0, 4),
-        urgentDonations: MOCK_URGENT_DONATIONS,
-        nearestRecyclePoint: MOCK_RECYCLE_POINTS[0] || null,
-        sourceStatus: {
-          providers: 'OK',
-          listings: 'OK',
-          recycling: 'OK',
-        },
-      },
+      feed,
       isOfflineFallback: true,
     };
   }
 }
+
+export { buildDiscoveryFeed };

@@ -11,7 +11,7 @@ import {
   Text,
   StyleSheet,
 } from 'react-native';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { COLORS, RADIUS, SPACING } from '../constants/theme';
 
 interface SearchBarHeaderProps {
   value: string;

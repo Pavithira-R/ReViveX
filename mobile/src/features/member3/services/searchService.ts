@@ -1,12 +1,17 @@
 // ============================================================================
 // Member 3 - Unified Search & Browse Service
-// Calls GET /api/search with query string serialization & mock fallback
+// Uses pure array filtering functions fitted for Firestore getDocs array feeds
 // ============================================================================
 
 import { SearchFilters, UnifiedSearchResults } from '../types';
 import { requestApi } from './apiClient';
 import { MOCK_PROVIDERS, MOCK_LISTINGS, MOCK_RECYCLE_POINTS } from '../utils/mockData';
-import { calculateHaversineDistanceKm } from '../utils/location';
+import {
+  rankProvidersByDistance,
+  filterListings,
+  filterRecyclingRequests,
+  filterItems,
+} from './pureSearchAndDiscovery';
 
 export async function searchUnified(
   filters: SearchFilters
@@ -70,97 +75,27 @@ export async function searchUnified(
     };
   } catch (err: any) {
     console.warn(
-      `[SearchService] Backend search unavailable (${err.message}). Using local mock dataset.`
+      `[SearchService] Live API query unavailable (${err?.message || err}). Processing through pure array filter functions.`
     );
 
-    // Perform local client-side search over mock data
-    const qLower = filters.query?.toLowerCase() || '';
-
-    let providers = [...MOCK_PROVIDERS];
-    let listings = [...MOCK_LISTINGS];
-    let recyclePoints = [...MOCK_RECYCLE_POINTS];
-
-    if (qLower) {
-      providers = providers.filter(
-        (p) =>
-          p.businessName.toLowerCase().includes(qLower) ||
-          p.servicesOffered.some((s) => s.toLowerCase().includes(qLower)) ||
-          p.location.toLowerCase().includes(qLower)
-      );
-      listings = listings.filter(
-        (l) =>
-          l.title.toLowerCase().includes(qLower) ||
-          l.category.toLowerCase().includes(qLower) ||
-          l.location.toLowerCase().includes(qLower)
-      );
-      recyclePoints = recyclePoints.filter(
-        (r) =>
-          r.name.toLowerCase().includes(qLower) ||
-          r.address.toLowerCase().includes(qLower) ||
-          r.acceptedCategories.some((c) => c.toLowerCase().includes(qLower))
-      );
-    }
-
-    if (filters.category) {
-      listings = listings.filter((l) => l.category === filters.category);
-      recyclePoints = recyclePoints.filter((r) =>
-        r.acceptedCategories.includes(filters.category!)
-      );
-    }
-
-    if (filters.condition) {
-      listings = listings.filter((l) => l.condition === filters.condition);
-    }
+    // Filter candidate arrays using pure functions (prepared for Firestore getDocs input)
+    let filteredProviders = rankProvidersByDistance(MOCK_PROVIDERS, null, filters);
+    let filteredListings = filterListings(MOCK_LISTINGS, filters);
+    let filteredRecycle = filterRecyclingRequests(MOCK_RECYCLE_POINTS, filters);
 
     if (filters.actionType && filters.actionType !== 'ALL') {
-      listings = listings.filter((l) => l.actionType === filters.actionType);
-      if (filters.actionType !== 'REPAIR') {
-        providers = [];
-      }
-      if (filters.actionType !== 'RECYCLE') {
-        recyclePoints = [];
-      }
+      if (filters.actionType !== 'REPAIR') filteredProviders = [];
+      if (filters.actionType !== 'RECYCLE') filteredRecycle = [];
     }
 
-    if (typeof filters.minRating === 'number') {
-      providers = providers.filter((p) => p.rating >= filters.minRating!);
-    }
-
-    if (typeof filters.minPrice === 'number') {
-      listings = listings.filter((l) => (l.price ?? 0) >= filters.minPrice!);
-      providers = providers.filter((p) => (p.startingPrice ?? 0) >= filters.minPrice!);
-    }
-
-    if (typeof filters.maxPrice === 'number') {
-      listings = listings.filter((l) => (l.price ?? 0) <= filters.maxPrice!);
-      providers = providers.filter((p) => (p.startingPrice ?? 0) <= filters.maxPrice!);
-    }
-
-    if (
-      typeof filters.latitude === 'number' &&
-      typeof filters.longitude === 'number' &&
-      typeof filters.radiusKm === 'number'
-    ) {
-      providers = providers.filter(
-        (p) => p.distanceKm === null || p.distanceKm === undefined || p.distanceKm <= filters.radiusKm!
-      );
-      listings = listings.filter(
-        (l) => l.distanceKm === null || l.distanceKm === undefined || l.distanceKm <= filters.radiusKm!
-      );
-      recyclePoints = recyclePoints.filter(
-        (r) => r.distanceKm === null || r.distanceKm === undefined || r.distanceKm <= filters.radiusKm!
-      );
-    }
-
-    const totalCount = providers.length + listings.length + recyclePoints.length;
+    const totalCount = filteredProviders.length + filteredListings.length + filteredRecycle.length;
     const page = filters.page || 1;
     const limit = filters.limit || 10;
     const startIndex = (page - 1) * limit;
 
-    // Simple slice for mock results
-    const slicedProviders = providers.slice(startIndex, startIndex + limit);
-    const slicedListings = listings.slice(startIndex, startIndex + limit);
-    const slicedRecycle = recyclePoints.slice(startIndex, startIndex + limit);
+    const slicedProviders = filteredProviders.slice(startIndex, startIndex + limit);
+    const slicedListings = filteredListings.slice(startIndex, startIndex + limit);
+    const slicedRecycle = filteredRecycle.slice(startIndex, startIndex + limit);
 
     return {
       data: {
@@ -177,3 +112,5 @@ export async function searchUnified(
     };
   }
 }
+
+export { filterItems, filterListings, rankProvidersByDistance, filterRecyclingRequests };
