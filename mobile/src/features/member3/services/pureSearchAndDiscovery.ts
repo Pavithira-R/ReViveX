@@ -1,6 +1,6 @@
 // ============================================================================
 // Member 3 - Pure Array Filtering & Discovery Feed Aggregation Functions
-// Prepared for Firestore data feeds (getDocs). Operates strictly on array inputs.
+// Integrates Cloud Firestore getDocs snapshots wrapped in fsCall & withId
 // ============================================================================
 
 import {
@@ -11,6 +11,31 @@ import {
 } from '../types';
 import { calculateHaversineDistanceKm } from '../utils/location';
 
+let getFirestoreDocs: any = null;
+let getFirestoreCollection: any = null;
+let firestoreDb: any = null;
+let fsCallHelper: any = null;
+let withIdHelper: any = null;
+
+try {
+  const firestoreModule = require('firebase/firestore');
+  getFirestoreDocs = firestoreModule.getDocs;
+  getFirestoreCollection = firestoreModule.collection;
+
+  const fb = require('../../../services/firebase');
+  firestoreDb = fb.db;
+
+  const fbHelpers = require('../../../services/firebaseHelpers');
+  fsCallHelper = fbHelpers.fsCall;
+  withIdHelper = fbHelpers.withId;
+} catch {
+  // Gracefully fallback when executed in backend test environment without mobile node_modules
+}
+
+export function isFirestoreAvailable(): boolean {
+  return Boolean(getFirestoreDocs && getFirestoreCollection && firestoreDb && fsCallHelper);
+}
+
 export const MOCK_HERO_BANNER: HeroBannerData = {
   id: 'banner_rec_01',
   title: 'Evaluate Your Old Tech in 60 Seconds',
@@ -18,6 +43,78 @@ export const MOCK_HERO_BANNER: HeroBannerData = {
   ctaAction: 'NAVIGATE_QUESTIONNAIRE',
   badgeText: '60s SMART GUIDE',
 };
+
+/**
+ * Firestore Fetcher: Items collection (Member 2 schema)
+ */
+export async function fetchFirestoreItems(): Promise<any[]> {
+  if (!isFirestoreAvailable()) {
+    return [];
+  }
+  try {
+    return await fsCallHelper(async () => {
+      const snap = await getFirestoreDocs(getFirestoreCollection(firestoreDb, 'items'));
+      return snap.docs.map((doc: any) => (withIdHelper ? withIdHelper(doc) : { id: doc.id, ...doc.data() }));
+    });
+  } catch (err) {
+    console.warn('[Firestore] Failed to fetch items collection:', err);
+    return [];
+  }
+}
+
+/**
+ * Firestore Fetcher: Providers collection (Member 4 schema)
+ */
+export async function fetchFirestoreProviders(): Promise<any[]> {
+  if (!isFirestoreAvailable()) {
+    return [];
+  }
+  try {
+    return await fsCallHelper(async () => {
+      const snap = await getFirestoreDocs(getFirestoreCollection(firestoreDb, 'providers'));
+      return snap.docs.map((doc: any) => (withIdHelper ? withIdHelper(doc) : { id: doc.id, ...doc.data() }));
+    });
+  } catch (err) {
+    console.warn('[Firestore] Failed to fetch providers collection:', err);
+    return [];
+  }
+}
+
+/**
+ * Firestore Fetcher: Listings collection (Member 5 schema)
+ */
+export async function fetchFirestoreListings(): Promise<any[]> {
+  if (!isFirestoreAvailable()) {
+    return [];
+  }
+  try {
+    return await fsCallHelper(async () => {
+      const snap = await getFirestoreDocs(getFirestoreCollection(firestoreDb, 'listings'));
+      return snap.docs.map((doc: any) => (withIdHelper ? withIdHelper(doc) : { id: doc.id, ...doc.data() }));
+    });
+  } catch (err) {
+    console.warn('[Firestore] Failed to fetch listings collection:', err);
+    return [];
+  }
+}
+
+/**
+ * Firestore Fetcher: Recycling requests collection (Member 5 schema)
+ */
+export async function fetchFirestoreRecyclingRequests(): Promise<any[]> {
+  if (!isFirestoreAvailable()) {
+    return [];
+  }
+  try {
+    return await fsCallHelper(async () => {
+      const snap = await getFirestoreDocs(getFirestoreCollection(firestoreDb, 'recycling_requests'));
+      return snap.docs.map((doc: any) => (withIdHelper ? withIdHelper(doc) : { id: doc.id, ...doc.data() }));
+    });
+  } catch (err) {
+    console.warn('[Firestore] Failed to fetch recycling_requests collection:', err);
+    return [];
+  }
+}
 
 /**
  * Pure function: Filters array of items (Member 2 schema) by search criteria
@@ -355,4 +452,32 @@ export function buildDiscoveryFeed(data: {
       items: Array.isArray(data.items) ? 'OK' : 'UNAVAILABLE',
     },
   };
+}
+
+/**
+ * Firestore Feed Aggregator: Builds Discovery Feed using live Firestore collections
+ */
+export async function fetchFirestoreDiscoveryFeed(
+  userLocation?: LocationCoordinates | null
+): Promise<DiscoveryFeedData> {
+  const [itemsRes, providersRes, listingsRes, recyclingRes] = await Promise.allSettled([
+    fetchFirestoreItems(),
+    fetchFirestoreProviders(),
+    fetchFirestoreListings(),
+    fetchFirestoreRecyclingRequests(),
+  ]);
+
+  const items = itemsRes.status === 'fulfilled' ? itemsRes.value : [];
+  const providers = providersRes.status === 'fulfilled' ? providersRes.value : [];
+  const listings = listingsRes.status === 'fulfilled' ? listingsRes.value : [];
+  const recyclingRequests = recyclingRes.status === 'fulfilled' ? recyclingRes.value : [];
+
+  return buildDiscoveryFeed({
+    items,
+    providers,
+    listings,
+    recyclingRequests,
+    userLocation,
+    sectionLimit: 4,
+  });
 }
