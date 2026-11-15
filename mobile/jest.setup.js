@@ -48,3 +48,21 @@ jest.mock('react-native-shake', () => {
     __shake: () => listeners.forEach((callback) => callback()),
   };
 });
+
+// In-memory stand-in for AsyncStorage (offline copies). Cleared before every test.
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const store = new Map();
+  const storage = {
+    getItem: async (key) => (store.has(key) ? store.get(key) : null),
+    setItem: async (key, value) => {
+      store.set(key, value);
+    },
+    removeItem: async (key) => {
+      store.delete(key);
+    },
+    getAllKeys: async () => Array.from(store.keys()),
+    removeMany: async (keys) => keys.forEach((key) => store.delete(key)),
+    clear: async () => store.clear(),
+  };
+  return { __esModule: true, default: storage };
+});
