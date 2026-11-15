@@ -40,6 +40,7 @@ model User {
   conversationsAsB Conversation[] @relation("ConversationUserB")
   messages         Message[]
   items Item[]
+  problemReports ProblemReport[]
 
   @@index([role])
   @@map("users")
@@ -176,4 +177,26 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@map("messages")
+}
+
+// ============================================================
+// Member 1 – Problem reports
+// Sent from the app (shake the phone, or Profile → Report a problem)
+// and handled by admins.
+// ============================================================
+
+model ProblemReport {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Screen the user was on when reporting, e.g. "PostItem".
+  screen     String?
+  message    String
+  /// OPEN or RESOLVED
+  status     String    @default("OPEN")
+  resolvedAt DateTime? @map("resolved_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@map("problem_reports")
 }

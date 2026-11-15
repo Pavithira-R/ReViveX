@@ -6,3 +6,5 @@ export * from './secureStorage';
 export * from './notification.service';
 export * from './chat.service';
 export * from './item.service';
+export * from './report.service';
+export * from './shake';

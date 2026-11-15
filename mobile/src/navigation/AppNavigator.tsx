@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, BackHandler, StyleSheet, View } from 'react-native';
 import { COLORS } from '../constants';
-import { useAuth } from '../context';
+import { useAuth, useProblemReport } from '../context';
 import {
   AdminUsersScreen,
   BrowseItemsScreen,
@@ -14,6 +14,7 @@ import {
   MyItemsScreen,
   NotificationsScreen,
   PostItemScreen,
+  ProblemReportsScreen,
   ProfileScreen,
   RegisterScreen,
 } from '../screens';
@@ -33,7 +34,8 @@ type AppRoute =
   | 'PostItem'
   | 'MyItems'
   | 'BrowseItems'
-  | 'ItemDetails';
+  | 'ItemDetails'
+  | 'ProblemReports';
 
 /**
  * Top-level navigator with protected screens:
@@ -45,6 +47,7 @@ type AppRoute =
  */
 export const AppNavigator: React.FC = () => {
   const { isAuthenticated, isRestoring, hasRole } = useAuth();
+  const { setCurrentScreen } = useProblemReport();
   const [authRoute, setAuthRoute] = useState<AuthRoute>('Login');
   const [appRoute, setAppRoute] = useState<AppRoute>('Home');
   const [openConversation, setOpenConversation] = useState<Conversation | null>(null);
@@ -55,6 +58,11 @@ export const AppNavigator: React.FC = () => {
     setAuthRoute('Login');
     setAppRoute('Home');
   }, [isAuthenticated]);
+
+  // Reports sent by shaking the phone include the screen the user is on.
+  useEffect(() => {
+    setCurrentScreen(isAuthenticated ? appRoute : authRoute);
+  }, [isAuthenticated, appRoute, authRoute, setCurrentScreen]);
 
   // Android hardware back: go back to Home/Login instead of exiting the app.
   useEffect(() => {
@@ -129,6 +137,9 @@ export const AppNavigator: React.FC = () => {
   if (appRoute === 'AdminUsers' && hasRole('ADMIN')) {
     return <AdminUsersScreen onBack={goHome} />;
   }
+  if (appRoute === 'ProblemReports' && hasRole('ADMIN')) {
+    return <ProblemReportsScreen onBack={goHome} />;
+  }
   if (appRoute === 'PostItem') {
     return <PostItemScreen onBack={goHome} onPosted={openItem} />;
   }
@@ -180,6 +191,7 @@ export const AppNavigator: React.FC = () => {
       onOpenNotifications={() => setAppRoute('Notifications')}
       onOpenMessages={() => setAppRoute('Conversations')}
       onOpenAdmin={() => setAppRoute('AdminUsers')}
+      onOpenProblemReports={() => setAppRoute('ProblemReports')}
       onOpenDiscovery={() => setAppRoute('Member3')}
       onOpenPostItem={() => setAppRoute('PostItem')}
       onOpenMyItems={() => setAppRoute('MyItems')}

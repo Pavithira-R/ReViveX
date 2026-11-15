@@ -6,3 +6,4 @@ export * from './ActionBadge';
 export * from './StatusBadge';
 export * from './ChipSelector';
 export * from './ItemCard';
+export * from './ReportProblemModal';

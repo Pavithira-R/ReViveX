@@ -30,3 +30,21 @@ jest.mock('react-native-keychain', () => {
     }),
   };
 });
+
+// Stand-in for the shake detector. Tests "shake the phone" with
+// `require('react-native-shake').__shake()`.
+jest.mock('react-native-shake', () => {
+  const listeners = new Set();
+  return {
+    __esModule: true,
+    default: {
+      addListener: (callback) => {
+        listeners.add(callback);
+        return { remove: () => listeners.delete(callback) };
+      },
+      removeAllListeners: () => listeners.clear(),
+      configure: () => undefined,
+    },
+    __shake: () => listeners.forEach((callback) => callback()),
+  };
+});

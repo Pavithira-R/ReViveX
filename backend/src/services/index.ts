@@ -6,3 +6,4 @@ export * from './recommendationService';
 export * from './searchService';
 export * from './notification.service';
 export * from './chat.service';
+export * from './report.service';
