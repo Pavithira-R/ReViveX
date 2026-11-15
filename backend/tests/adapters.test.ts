@@ -120,8 +120,61 @@ export async function runAdapterTests() {
 
   // 1.4 queryItems & getItemById
   try {
+    const mockItems = [
+      {
+        id: 'item_lenovo_001',
+        name: 'Lenovo ThinkPad T480',
+        brand: 'Lenovo',
+        condition: 'WORKING',
+        action: 'SELL',
+        description: '14-inch laptop',
+        location: { city: 'Downtown Tech District', latitude: 40.7128, longitude: -74.006 },
+        status: 'POSTED',
+        images: ['https://images.unsplash.com/photo-1588872657578-7efd1f1555ed'],
+        ownerId: 'usr_cust_001',
+        categoryId: 'cat_laptops_01',
+        category: { id: 'cat_laptops_01', name: 'Laptops' },
+        owner: { id: 'usr_cust_001', name: 'Jane Doe' },
+      },
+      {
+        id: 'item_iphone_002',
+        name: 'Apple iPhone 12 Pro',
+        brand: 'Apple',
+        condition: 'DAMAGED',
+        action: 'REPAIR',
+        description: 'Cracked screen',
+        location: { city: 'Midtown East', latitude: 40.7549, longitude: -73.984 },
+        status: 'POSTED',
+        images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9'],
+        ownerId: 'usr_cust_002',
+        categoryId: 'cat_phones_02',
+        category: { id: 'cat_phones_02', name: 'Mobile Phones' },
+        owner: { id: 'usr_cust_002', name: 'Mark Vance' },
+      },
+      {
+        id: 'item_dell_003',
+        name: 'Dell UltraSharp 24 Monitor',
+        brand: 'Dell',
+        condition: 'WORKING',
+        action: 'DONATE',
+        description: 'Monitor',
+        location: { city: 'Westside Eco District', latitude: 40.7306, longitude: -73.9352 },
+        status: 'POSTED',
+        images: ['https://images.unsplash.com/photo-1527443224154-c4a3942d3acf'],
+        ownerId: 'usr_cust_003',
+        categoryId: 'cat_monitors_03',
+        category: { id: 'cat_monitors_03', name: 'Monitors' },
+        owner: { id: 'usr_cust_003', name: 'Samantha Green' },
+      },
+    ];
+
+    ItemAdapter.setDelegates(
+      async () => mockItems,
+      async (id) => mockItems.find((i) => i.id === id) || null
+    );
+
     const allItems = await ItemAdapter.queryItems();
-    assert(Array.isArray(allItems) && allItems.length >= 3, 'ItemAdapter.queryItems returns seeded items');
+    assert(Array.isArray(allItems) && allItems.length >= 3, 'ItemAdapter.queryItems returns items array');
 
     const searchResults = await ItemAdapter.queryItems({ search: 'ThinkPad' });
     assert(searchResults.length === 1 && searchResults[0].brand === 'Lenovo', 'ItemAdapter.queryItems filters by search');

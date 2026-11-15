@@ -30,11 +30,34 @@ function assert(condition: boolean, message: string) {
 export async function runDiscoveryTests(): Promise<void> {
   console.log('\n=== RUNNING MEMBER 3 TESTS: Discovery Feed ===\n');
 
+  // Inject mock test items for ItemAdapter
+  const mockTestItems = [
+    {
+      id: 'item_test_001',
+      name: 'Lenovo ThinkPad T480',
+      brand: 'Lenovo',
+      condition: 'WORKING',
+      action: 'SELL',
+      description: '14-inch laptop',
+      location: { city: 'Downtown Tech District', latitude: 40.7128, longitude: -74.006 },
+      status: 'POSTED',
+      images: ['https://example.com/item1.jpg'],
+      ownerId: 'usr_001',
+      categoryId: 'cat_laptops_01',
+      category: { id: 'cat_laptops_01', name: 'Laptops' },
+      owner: { id: 'usr_001', name: 'Jane Doe' },
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
   // Reset all adapter delegates before starting tests
   ProviderAdapter.setDelegates(null, null);
   ListingAdapter.setDelegate(null);
   RecyclingAdapter.setDelegate(null);
-  ItemAdapter.setDelegates(null, null);
+  ItemAdapter.setDelegates(
+    async () => mockTestItems,
+    async (id) => mockTestItems.find((i) => i.id === id) || null
+  );
 
   // --------------------------------------------------------------------------
   // 1. Full feed retrieval

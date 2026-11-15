@@ -63,60 +63,6 @@ export function normalizeItem(raw: any): NormalizedItem {
   };
 }
 
-/**
- * Seeded integration dataset matching Member 2's schema (used until branches merge into develop)
- */
-const SEEDED_MEMBER_2_ITEMS = [
-  {
-    id: 'item_lenovo_001',
-    name: 'Lenovo ThinkPad T480',
-    brand: 'Lenovo',
-    condition: 'WORKING',
-    action: 'SELL',
-    description: '14-inch business laptop, Intel i5 8th Gen, 16GB RAM, 512GB SSD. Perfect working order.',
-    location: { city: 'Downtown Tech District', latitude: 40.7128, longitude: -74.006 },
-    status: 'POSTED',
-    images: ['https://images.unsplash.com/photo-1588872657578-7efd1f1555ed'],
-    ownerId: 'usr_cust_001',
-    categoryId: 'cat_laptops_01',
-    category: { id: 'cat_laptops_01', name: 'Laptops' },
-    owner: { id: 'usr_cust_001', name: 'Jane Doe' },
-    createdAt: '2026-09-20T10:00:00.000Z',
-  },
-  {
-    id: 'item_iphone_002',
-    name: 'Apple iPhone 12 Pro',
-    brand: 'Apple',
-    condition: 'DAMAGED',
-    action: 'REPAIR',
-    description: 'Cracked front glass. Touch digitizer works normally. Battery health at 84%.',
-    location: { city: 'Midtown East', latitude: 40.7549, longitude: -73.984 },
-    status: 'POSTED',
-    images: ['https://images.unsplash.com/photo-1511707171634-5f897ff02aa9'],
-    ownerId: 'usr_cust_002',
-    categoryId: 'cat_phones_02',
-    category: { id: 'cat_phones_02', name: 'Mobile Phones' },
-    owner: { id: 'usr_cust_002', name: 'Mark Vance' },
-    createdAt: '2026-09-22T14:30:00.000Z',
-  },
-  {
-    id: 'item_dell_003',
-    name: 'Dell UltraSharp 24 Monitor',
-    brand: 'Dell',
-    condition: 'WORKING',
-    action: 'DONATE',
-    description: '24-inch 1080p IPS monitor with HDMI and DisplayPort. Free for schools or students.',
-    location: { city: 'Westside Eco District', latitude: 40.7306, longitude: -73.9352 },
-    status: 'POSTED',
-    images: ['https://images.unsplash.com/photo-1527443224154-c4a3942d3acf'],
-    ownerId: 'usr_cust_003',
-    categoryId: 'cat_monitors_03',
-    category: { id: 'cat_monitors_03', name: 'Monitors' },
-    owner: { id: 'usr_cust_003', name: 'Samantha Green' },
-    createdAt: '2026-09-25T08:15:00.000Z',
-  },
-];
-
 // Pluggable delegate hook for post-merge live integration
 type ItemQueryDelegate = (params?: ItemQueryParams) => Promise<any[]>;
 type ItemGetDelegate = (id: string) => Promise<any | null>;
@@ -135,23 +81,20 @@ export const ItemAdapter = {
 
   /**
    * Retrieves electronic items applying Member 2 filters and geographic distance calculation
+   * Queries real database via delegate. Returns [] if no items exist or delegate is unset.
    */
   async queryItems(params?: ItemQueryParams): Promise<NormalizedItem[]> {
-    let results: NormalizedItem[];
+    let results: NormalizedItem[] = [];
 
     if (externalQueryDelegate) {
       const rawList = await externalQueryDelegate(params);
-      if (Array.isArray(rawList) && rawList.length > 0) {
+      if (Array.isArray(rawList)) {
         results = rawList.map(normalizeItem);
-      } else {
-        results = SEEDED_MEMBER_2_ITEMS.map(normalizeItem);
       }
-    } else {
-      results = SEEDED_MEMBER_2_ITEMS.map(normalizeItem);
     }
 
     // 1. Text keyword search
-    if (params?.search) {
+    if (params?.search && results.length > 0) {
       const q = params.search.toLowerCase();
       results = results.filter(
         (i) =>
@@ -162,7 +105,7 @@ export const ItemAdapter = {
     }
 
     // 2. Category name filtering (before pagination)
-    if (params?.category) {
+    if (params?.category && results.length > 0) {
       const cat = params.category.toLowerCase();
       results = results.filter(
         (i) =>
@@ -172,17 +115,17 @@ export const ItemAdapter = {
     }
 
     // 3. Category ID filtering
-    if (params?.categoryId) {
+    if (params?.categoryId && results.length > 0) {
       results = results.filter((i) => i.categoryId === params.categoryId);
     }
 
     // 4. Condition filtering
-    if (params?.condition) {
+    if (params?.condition && results.length > 0) {
       results = results.filter((i) => i.condition === params.condition);
     }
 
     // 5. Action filtering
-    if (params?.action) {
+    if (params?.action && results.length > 0) {
       results = results.filter((i) => i.action === params.action);
     }
 
@@ -193,7 +136,7 @@ export const ItemAdapter = {
       !isNaN(params.latitude) &&
       !isNaN(params.longitude);
 
-    if (hasUserCoords) {
+    if (hasUserCoords && results.length > 0) {
       results = results.map((item) => {
         const itemLat = item.location?.latitude;
         const itemLon = item.location?.longitude;
@@ -232,7 +175,7 @@ export const ItemAdapter = {
     }
 
     // 7. Pagination (only applied if page or limit explicitly requested)
-    if (params?.page !== undefined || params?.limit !== undefined) {
+    if ((params?.page !== undefined || params?.limit !== undefined) && results.length > 0) {
       const page = params.page && params.page > 0 ? params.page : 1;
       const limit = params.limit && params.limit > 0 ? params.limit : 20;
       const start = (page - 1) * limit;
@@ -243,7 +186,7 @@ export const ItemAdapter = {
   },
 
   /**
-   * Retrieves a single item by unique ID
+   * Retrieves a single item by unique ID from database
    */
   async getItemById(id: string): Promise<NormalizedItem | null> {
     if (externalGetDelegate) {
@@ -251,7 +194,6 @@ export const ItemAdapter = {
       return raw ? normalizeItem(raw) : null;
     }
 
-    const found = SEEDED_MEMBER_2_ITEMS.find((i) => i.id === id);
-    return found ? normalizeItem(found) : null;
+    return null;
   },
 };

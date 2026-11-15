@@ -7,11 +7,6 @@ import prisma from '../utils/prisma';
 import { ItemAdapter } from './itemAdapter';
 
 export function setupAdapters(): void {
-  // In unit test mode, adapters allow test scenarios to inject custom delegates
-  if (process.env.NODE_ENV === 'test') {
-    return;
-  }
-
   try {
     // Connect ItemAdapter to live Prisma Item & Category models (Member 2)
     ItemAdapter.setDelegates(

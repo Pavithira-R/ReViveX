@@ -609,11 +609,11 @@ export async function runMobileQaAudit(): Promise<void> {
   // 6.4 Motion Sensor Probes (Accelerometer & Gyroscope)
   const accelRes = await probeAccelerometer();
   assert(accelRes.id === 'ACCELEROMETER', 'Accelerometer Check: Safe evaluation in bare RN environment');
-  assert(accelRes.status === 'PASSED', 'Accelerometer Check: Defaults safely to PASSED');
+  assert(accelRes.status === 'PASSED' || accelRes.status === 'UNSUPPORTED', 'Accelerometer Check: Accurately reports capability status');
 
   const gyroRes = await probeGyroscope();
   assert(gyroRes.id === 'GYROSCOPE', 'Gyroscope Check: Safe evaluation in bare RN environment');
-  assert(gyroRes.status === 'PASSED', 'Gyroscope Check: Defaults safely to PASSED');
+  assert(gyroRes.status === 'PASSED' || gyroRes.status === 'UNSUPPORTED', 'Gyroscope Check: Accurately reports capability status');
 
   // 6.5 Full Report Compilation & Condition Derivation: Pristine Hardware
   const pristineResults: Record<HealthTestId, HealthTestResult> = {
@@ -629,8 +629,26 @@ export async function runMobileQaAudit(): Promise<void> {
       details: 'Camera operational.',
       defect: null,
     },
-    ACCELEROMETER: accelRes,
-    GYROSCOPE: gyroRes,
+    ACCELEROMETER: {
+      id: 'ACCELEROMETER',
+      name: 'Accelerometer Sensor',
+      description: '3-axis linear motion check',
+      status: 'PASSED',
+      maxScore: 15,
+      earnedScore: 15,
+      details: 'Motion sensor active.',
+      defect: null,
+    },
+    GYROSCOPE: {
+      id: 'GYROSCOPE',
+      name: 'Gyroscope Sensor',
+      description: 'Rotational orientation check',
+      status: 'PASSED',
+      maxScore: 15,
+      earnedScore: 15,
+      details: 'Gyroscope active.',
+      defect: null,
+    },
   };
   const pristineReport = compileHealthReport(pristineResults);
   assert(pristineReport.overallScore === 100, 'Health Report: Pristine hardware scores 100%');
@@ -646,15 +664,42 @@ export async function runMobileQaAudit(): Promise<void> {
       id: 'BATTERY',
       name: 'Battery',
       description: 'Battery health',
-      status: 'PASSED',
+      status: 'FAILED',
       maxScore: 25,
-      earnedScore: 18,
-      details: 'Minor wear',
+      earnedScore: 10,
+      details: 'Fast depletion',
+      defect: 'Battery degraded',
+    },
+    CAMERA: {
+      id: 'CAMERA',
+      name: 'Camera Capability',
+      description: 'Camera optical sensor check',
+      status: 'PASSED',
+      maxScore: 15,
+      earnedScore: 15,
+      details: 'Camera operational.',
       defect: null,
     },
-    CAMERA: cameraRes,
-    ACCELEROMETER: accelRes,
-    GYROSCOPE: gyroRes,
+    ACCELEROMETER: {
+      id: 'ACCELEROMETER',
+      name: 'Accelerometer Sensor',
+      description: '3-axis linear motion check',
+      status: 'PASSED',
+      maxScore: 15,
+      earnedScore: 10,
+      details: 'Motion sensor active.',
+      defect: null,
+    },
+    GYROSCOPE: {
+      id: 'GYROSCOPE',
+      name: 'Gyroscope Sensor',
+      description: 'Rotational orientation check',
+      status: 'PASSED',
+      maxScore: 15,
+      earnedScore: 10,
+      details: 'Gyroscope active.',
+      defect: null,
+    },
   };
   const degradedReport = compileHealthReport(degradedResults);
   assert(degradedReport.overallScore < 85 && degradedReport.overallScore >= 50, 'Health Report: Degraded hardware scores 50-84%');

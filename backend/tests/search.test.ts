@@ -25,6 +25,60 @@ export async function runSearchTests() {
     }
   };
 
+  // Inject mock test items into ItemAdapter for search test suite
+  const mockTestItems = [
+    {
+      id: 'item_test_001',
+      name: 'Lenovo ThinkPad T480',
+      brand: 'Lenovo',
+      condition: 'WORKING',
+      action: 'SELL',
+      description: '14-inch laptop',
+      location: { city: 'Downtown Tech District', latitude: 40.7128, longitude: -74.006 },
+      status: 'POSTED',
+      images: ['https://example.com/item1.jpg'],
+      ownerId: 'usr_001',
+      categoryId: 'cat_laptops_01',
+      category: { id: 'cat_laptops_01', name: 'Laptops' },
+      owner: { id: 'usr_001', name: 'Jane Doe' },
+    },
+    {
+      id: 'item_test_002',
+      name: 'Apple iPhone 12 Pro',
+      brand: 'Apple',
+      condition: 'DAMAGED',
+      action: 'REPAIR',
+      description: 'Cracked screen',
+      location: { city: 'Midtown East', latitude: 40.7549, longitude: -73.984 },
+      status: 'POSTED',
+      images: ['https://example.com/item2.jpg'],
+      ownerId: 'usr_002',
+      categoryId: 'cat_phones_02',
+      category: { id: 'cat_phones_02', name: 'Mobile Phones' },
+      owner: { id: 'usr_002', name: 'Mark Vance' },
+    },
+    {
+      id: 'item_test_003',
+      name: 'Dell XPS 15 Laptop',
+      brand: 'Dell',
+      condition: 'WORKING',
+      action: 'SELL',
+      description: 'Core i7 laptop',
+      location: { city: 'Westside Eco District', latitude: 40.7306, longitude: -73.9352 },
+      status: 'POSTED',
+      images: ['https://example.com/item3.jpg'],
+      ownerId: 'usr_003',
+      categoryId: 'cat_laptops_01',
+      category: { id: 'cat_laptops_01', name: 'Laptops' },
+      owner: { id: 'usr_003', name: 'Samantha Green' },
+    },
+  ];
+
+  ItemAdapter.setDelegates(
+    async () => mockTestItems,
+    async (id) => mockTestItems.find((i) => i.id === id) || null
+  );
+
   // --------------------------------------------------------------------------
   // 1. Empty search (default all sources, page 1, limit 20)
   // --------------------------------------------------------------------------
@@ -264,11 +318,17 @@ export async function runSearchTests() {
     await searchService.search(val.validatedQuery!);
     assert(itemCalled && providerCalled, 'Scenario 21: Parallel query triggers both active adapters');
 
-    ItemAdapter.setDelegates(null, null);
+    ItemAdapter.setDelegates(
+      async () => mockTestItems,
+      async (id) => mockTestItems.find((i) => i.id === id) || null
+    );
     ProviderAdapter.setDelegates(null, null);
   } catch (err: any) {
     assert(false, `Scenario 21 threw: ${err.message}`);
-    ItemAdapter.setDelegates(null, null);
+    ItemAdapter.setDelegates(
+      async () => mockTestItems,
+      async (id) => mockTestItems.find((i) => i.id === id) || null
+    );
     ProviderAdapter.setDelegates(null, null);
   }
 

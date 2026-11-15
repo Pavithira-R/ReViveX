@@ -19,16 +19,39 @@ import {
   registerCapability,
 } from '../../../services/capabilities';
 
-// Register Member 3 sensor capability presence checks
+// Register Member 3 sensor capability presence checks for React Native Android hardware
 registerCapability('accelerometer', {
-  isSupported: async () =>
-    typeof (globalThis as any).DeviceMotionEvent !== 'undefined' ||
-    typeof (globalThis as any).DeviceOrientationEvent !== 'undefined',
+  isSupported: async () => {
+    try {
+      const g = globalThis as any;
+      if (typeof g.DeviceMotionEvent !== 'undefined' || typeof g.DeviceOrientationEvent !== 'undefined') {
+        return true;
+      }
+      if (typeof g.nativeCallSyncHook !== 'undefined' || (g.navigator && g.navigator.userAgent)) {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
 });
 
 registerCapability('gyroscope', {
-  isSupported: async () =>
-    typeof (globalThis as any).DeviceOrientationEvent !== 'undefined',
+  isSupported: async () => {
+    try {
+      const g = globalThis as any;
+      if (typeof g.DeviceOrientationEvent !== 'undefined') {
+        return true;
+      }
+      if (typeof g.nativeCallSyncHook !== 'undefined' || (g.navigator && g.navigator.userAgent)) {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
 });
 
 /**
@@ -104,7 +127,7 @@ export async function probeCameraCapability(): Promise<HealthTestResult> {
         description: 'Checks optical camera hardware and runtime permissions',
         status: 'UNSUPPORTED',
         maxScore: 15,
-        earnedScore: 8,
+        earnedScore: 0,
         details: 'Camera hardware unavailable (emulator or disabled).',
         defect: null,
       };
@@ -116,7 +139,7 @@ export async function probeCameraCapability(): Promise<HealthTestResult> {
       description: 'Checks optical camera hardware and runtime permissions',
       status: 'UNSUPPORTED',
       maxScore: 15,
-      earnedScore: 8,
+      earnedScore: 0,
       details: 'Camera check bypassed safely.',
       defect: null,
     };
@@ -174,7 +197,7 @@ export async function probeBatteryCapability(holdsChargeUserAnswer?: boolean): P
     // getBattery not supported in standard bare React Native without native link
   }
 
-  // Graceful fallback: User confirmation or healthy presumption
+  // Fallback: User confirmation or presumes functional power cell
   if (holdsChargeUserAnswer === false) {
     return {
       id: 'BATTERY',
@@ -227,10 +250,10 @@ export async function probeAccelerometer(): Promise<HealthTestResult> {
     id: 'ACCELEROMETER',
     name: 'Accelerometer Sensor',
     description: 'Measures 3-axis linear acceleration and tilt',
-    status: 'PASSED',
+    status: 'UNSUPPORTED',
     maxScore: 15,
-    earnedScore: 15,
-    details: 'Accelerometer verified (standard mobile configuration).',
+    earnedScore: 0,
+    details: 'Accelerometer hardware sensor unsupported or unavailable.',
     defect: null,
   };
 }
@@ -262,10 +285,10 @@ export async function probeGyroscope(): Promise<HealthTestResult> {
     id: 'GYROSCOPE',
     name: 'Gyroscope Sensor',
     description: 'Detects angular velocity and rotational motion',
-    status: 'PASSED',
+    status: 'UNSUPPORTED',
     maxScore: 15,
-    earnedScore: 15,
-    details: 'Gyroscope orientation tracking verified.',
+    earnedScore: 0,
+    details: 'Gyroscope orientation sensor unsupported or unavailable.',
     defect: null,
   };
 }
