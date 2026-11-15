@@ -14,3 +14,5 @@ export * from './ItemDetailsScreen';
 export * from './ProblemReportsScreen';
 export * from './WriteReviewScreen';
 export * from './ReviewsScreen';
+
+export * from './ReuseRecycleScreen';
