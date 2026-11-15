@@ -2,9 +2,12 @@
 import { FirebaseError } from 'firebase/app';
 import {
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
 } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import { ApiError } from './api';
@@ -155,6 +158,41 @@ export const authService = {
       if (code === 'auth/too-many-requests') {
         throw new ApiError('Too many reset requests. Try again later.', 429, 'TOO_MANY_ATTEMPTS');
       }
+      throw authError(error);
+    }
+  },
+
+  /**
+   * Change the signed-in user's password. Firebase asks for the current password again
+   * first (re-authentication), so a phone left unlocked can't be used to take over the account.
+   */
+  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    const firebaseUser = auth.currentUser;
+    if (!firebaseUser?.email) throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+    const errors: string[] = [];
+    if (!currentPassword) errors.push('Current password is required');
+    if (!isValidPassword(newPassword ?? '')) {
+      errors.push('New password must be at least 8 characters and contain both letters and numbers');
+    } else if (newPassword === currentPassword) {
+      errors.push('New password must be different from the current one');
+    }
+    if (errors.length) throw validation(errors);
+
+    try {
+      await reauthenticateWithCredential(
+        firebaseUser,
+        EmailAuthProvider.credential(firebaseUser.email, currentPassword)
+      );
+    } catch (error) {
+      const code = error instanceof FirebaseError ? error.code : '';
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
+        throw new ApiError('Current password is incorrect', 401, 'WRONG_PASSWORD');
+      }
+      throw authError(error);
+    }
+    try {
+      await updatePassword(firebaseUser, newPassword);
+    } catch (error) {
       throw authError(error);
     }
   },
