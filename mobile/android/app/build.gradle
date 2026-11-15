@@ -92,15 +92,25 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // ReViveX release key. The keystore and passwords are NOT in the repository: they are
+        // read from the builder's own ~/.gradle/gradle.properties (REVIVEX_UPLOAD_* values).
+        if (project.hasProperty('REVIVEX_UPLOAD_STORE_FILE')) {
+            release {
+                storeFile file(REVIVEX_UPLOAD_STORE_FILE)
+                storePassword REVIVEX_UPLOAD_STORE_PASSWORD
+                keyAlias REVIVEX_UPLOAD_KEY_ALIAS
+                keyPassword REVIVEX_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // Signed with the ReViveX release key when it is set up on this computer;
+            // otherwise falls back to the debug key so anyone can still build a test APK.
+            signingConfig project.hasProperty('REVIVEX_UPLOAD_STORE_FILE') ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
