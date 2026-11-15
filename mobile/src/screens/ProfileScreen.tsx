@@ -60,8 +60,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
   const handleBiometricToggle = async (enabled: boolean) => {
     setMessage(null);
     setIsTogglingBiometric(true);
-    const changed = await setBiometricEnabled(enabled);
-    setIsTogglingBiometric(false);
+    let changed: boolean;
+    try {
+      changed = await setBiometricEnabled(enabled);
+    } catch (error) {
+      setMessage({ text: getErrorMessage(error, "Fingerprint login couldn't be changed."), type: 'error' });
+      return;
+    } finally {
+      setIsTogglingBiometric(false);
+    }
     if (!changed) {
       setMessage({
         text: "Fingerprint login couldn't be turned on. Check that a fingerprint is set up on this phone.",

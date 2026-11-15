@@ -6,6 +6,8 @@ import ReactTestRenderer, { ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
 import App from '../App';
 
+const { __fake } = require('../jest.firebase');
+
 const user = {
   id: 'user-1',
   name: 'Nimal Perera',
@@ -54,12 +56,7 @@ const openEcoImpact = async (mockEcoResponse: () => void) => {
   });
   const root = renderer.root;
 
-  mockFetchResponse(200, {
-    success: true,
-    message: 'Login successful',
-    data: { token: 'jwt-token-123', user },
-    error: null,
-  });
+  __fake.addAccount(user, 'Password123');
   await ReactTestRenderer.act(async () => {
     input(root, 'Email address').props.onChangeText(user.email);
     input(root, 'Password').props.onChangeText('Password123');
@@ -92,10 +89,9 @@ test('shows points, badge, impact, counts and community totals from the server',
     mockFetchResponse(200, { success: true, message: 'OK', data: community, error: null });
   });
 
-  const [ecoUrl, ecoInit] = (globalThis.fetch as jest.Mock).mock.calls[1];
+  const [ecoUrl] = (globalThis.fetch as jest.Mock).mock.calls[0];
   expect(ecoUrl).toMatch(/\/eco\/me$/);
-  expect(ecoInit.headers.Authorization).toBe('Bearer jwt-token-123');
-  expect((globalThis.fetch as jest.Mock).mock.calls[2][0]).toMatch(/\/eco\/community$/);
+  expect((globalThis.fetch as jest.Mock).mock.calls[1][0]).toMatch(/\/eco\/community$/);
 
   const text = allText(root);
   expect(text).toContain('75');

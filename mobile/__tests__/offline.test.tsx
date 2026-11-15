@@ -5,10 +5,9 @@
 import React from 'react';
 import ReactTestRenderer, { ReactTestInstance } from 'react-test-renderer';
 import { Text } from 'react-native';
-import * as Keychain from 'react-native-keychain';
 import App from '../App';
 
-const keychain = Keychain as unknown as { __store: Record<string, { password: string }> };
+const { __fake } = require('../jest.firebase');
 
 const user = {
   id: 'user-1',
@@ -81,7 +80,6 @@ const renderApp = async () => {
 };
 
 const signIn = async (root: ReactTestInstance) => {
-  mockFetchResponse(200, ok({ token: 'jwt-token-123', user }));
   await act(() => input(root, 'Email address').props.onChangeText(user.email));
   await act(() => input(root, 'Password').props.onChangeText('Password123'));
   await press(root, 'Sign In');
@@ -89,6 +87,7 @@ const signIn = async (root: ReactTestInstance) => {
 
 beforeEach(() => {
   globalThis.fetch = jest.fn();
+  __fake.addAccount(user, 'Password123');
 });
 
 afterEach(async () => {
@@ -118,11 +117,10 @@ test('opening the app without internet keeps the user signed in with saved data'
   await signIn(first);
   await ReactTestRenderer.act(async () => renderer.unmount());
 
-  // App restarts with no connection: GET /users/me fails.
-  mockOffline();
+  // App restarts with no connection: loading the profile from Firestore fails.
+  __fake.setOffline(true);
   const root = await renderApp();
 
-  expect(keychain.__store['revivex.session'].password).toBe('jwt-token-123');
   expect(allText(root)).toMatch(/Hello,\s+Nimal/);
 });
 
@@ -134,7 +132,6 @@ test('logging out deletes the saved copies', async () => {
   await press(root, '‹ Back');
 
   await press(root, 'My Profile');
-  mockFetchResponse(200, ok(null)); // POST /auth/logout
   await press(root, 'Log Out');
 
   // Sign in again, then go offline: nothing saved any more → normal error.
@@ -147,8 +144,9 @@ test('logging out deletes the saved copies', async () => {
 });
 
 test('without a saved profile, opening the app offline shows the login screen', async () => {
-  keychain.__store['revivex.session'] = { password: 'old-token' };
-  mockOffline();
+  // Signed in to Firebase earlier, but no profile copy saved on this phone.
+  await require('firebase/auth').signInWithEmailAndPassword(null, user.email, 'Password123');
+  __fake.setOffline(true);
 
   const root = await renderApp();
 

@@ -1,30 +1,29 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+// Member 1 – Authentication & User Management (Firebase session)
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   ApiError,
   authService,
   clearOfflineData,
-  clearSessionToken,
   disableBiometricLogin,
   enableBiometricLogin,
   isBiometricLoginEnabled,
   isOfflineError,
-  loadSessionToken,
   recallUser,
   rememberUser,
-  saveSessionToken,
-  setAuthToken,
-  setUnauthorizedHandler,
   unlockWithBiometrics,
 } from '../services';
+import { auth } from '../services/firebase';
 import { LoginCredentials, RegisterData, UpdateProfileData, User, UserRole } from '../types';
 
 interface AuthContextValue {
   user: User | null;
+  /** Firebase user id of the signed-in user (kept as `token` so screens don't change). */
   token: string | null;
   isAuthenticated: boolean;
   /** True while a saved session is being restored at app start. */
   isRestoring: boolean;
-  /** True when a fingerprint-protected token is saved on this phone. */
+  /** True when fingerprint-protected sign-in details are saved on this phone. */
   isBiometricEnabled: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   /** Returns false if the scan was cancelled or failed (show the password form). */
@@ -39,101 +38,90 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const parseSavedCredentials = (saved: string): LoginCredentials | null => {
+  try {
+    const parsed = JSON.parse(saved);
+    return typeof parsed?.email === 'string' && typeof parsed?.password === 'string' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 /**
- * Holds the signed-in user and token for the whole app.
- * The token is saved in encrypted storage, so the user stays signed in after the
- * app restarts. Optionally a fingerprint-protected copy allows fingerprint login.
+ * Holds the signed-in user for the whole app.
+ * Firebase keeps the session after the app restarts. Fingerprint login keeps the
+ * email and password in fingerprint-protected encrypted storage on this phone only.
  */
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
+  /** Sign-in details from this app run, needed to turn fingerprint login on. Memory only. */
+  const lastCredentials = useRef<LoginCredentials | null>(null);
 
   const clearSession = useCallback(() => {
-    setAuthToken(null);
+    lastCredentials.current = null;
     setToken(null);
     setUser(null);
-    clearSessionToken();
     clearOfflineData();
   }, []);
 
-  const startSession = useCallback((newToken: string, newUser: User) => {
-    setAuthToken(newToken);
-    setToken(newToken);
+  const startSession = useCallback((uid: string, newUser: User) => {
+    setToken(uid);
     setUser(newUser);
-    saveSessionToken(newToken);
     rememberUser(newUser);
   }, []);
 
-  /**
-   * Load the user for a saved token; on 401 the token is no longer valid.
-   * Without internet, open with the last saved profile so saved data can be viewed offline.
-   */
-  const resumeSession = useCallback(
-    async (savedToken: string) => {
-      setAuthToken(savedToken);
-      try {
-        startSession(savedToken, await authService.getMe());
-      } catch (error) {
-        const lastUser = isOfflineError(error) ? await recallUser() : null;
-        if (!lastUser) throw error;
-        startSession(savedToken, lastUser);
+  // App start: Firebase tells us whether a user is still signed in.
+  // Later "signed out" events (logout, deactivation) clear the session.
+  useEffect(() => {
+    let restored = false;
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (restored) {
+        if (!firebaseUser) clearSession();
+        return;
       }
-    },
-    [startSession]
-  );
-
-  // An expired or invalid token (401 from any API call) signs the user out everywhere,
-  // and the saved fingerprint copy is useless too.
-  useEffect(() => {
-    setUnauthorizedHandler(() => {
-      clearSession();
-      disableBiometricLogin();
-      setIsBiometricEnabled(false);
-    });
-    return () => setUnauthorizedHandler(null);
-  }, [clearSession]);
-
-  // App start: restore a saved session, if any.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+      restored = true;
       setIsBiometricEnabled(await isBiometricLoginEnabled());
-      const savedToken = await loadSessionToken();
-      if (savedToken) {
+      if (firebaseUser) {
         try {
-          await resumeSession(savedToken);
-        } catch {
-          // Expired, or offline with no saved profile: show the login screen.
-          // A 401 already cleared storage.
-          setAuthToken(null);
+          const profile = await authService.getMe();
+          if (profile.isActive) startSession(firebaseUser.uid, profile);
+          else await authService.logout();
+        } catch (error) {
+          // Without internet, open with the last saved profile so saved data can be viewed offline.
+          const lastUser = isOfflineError(error) ? await recallUser() : null;
+          if (lastUser) startSession(firebaseUser.uid, lastUser);
         }
       }
-      if (!cancelled) setIsRestoring(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [resumeSession]);
+      setIsRestoring(false);
+    });
+    return unsubscribe;
+  }, [clearSession, startSession]);
 
   const login = useCallback(
     async (credentials: LoginCredentials) => {
       const result = await authService.login(credentials);
+      lastCredentials.current = credentials;
       startSession(result.token, result.user);
     },
     [startSession]
   );
 
   const loginWithBiometrics = useCallback(async () => {
-    const savedToken = await unlockWithBiometrics();
-    if (!savedToken) return false;
+    const saved = await unlockWithBiometrics();
+    if (!saved) return false;
+    const credentials = parseSavedCredentials(saved);
     try {
-      await resumeSession(savedToken);
+      if (!credentials) throw new ApiError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
+      await login(credentials);
       return true;
     } catch (error) {
-      setAuthToken(null);
       if (error instanceof ApiError && error.status === 401) {
+        // The password was changed (or the saved copy is unreadable): the copy is useless now.
+        await disableBiometricLogin();
+        setIsBiometricEnabled(false);
         throw new ApiError(
           'Fingerprint login has expired. Please sign in with your password.',
           401,
@@ -142,11 +130,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       throw error;
     }
-  }, [resumeSession]);
+  }, [login]);
 
   const register = useCallback(
     async (data: RegisterData) => {
       const result = await authService.register(data);
+      lastCredentials.current = { email: data.email, password: data.password };
       startSession(result.token, result.user);
     },
     [startSession]
@@ -156,25 +145,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await authService.logout();
     } catch {
-      // The local session is cleared even if the server can't be reached.
+      // The local session is cleared even if Firebase can't be reached.
     }
     clearSession();
   }, [clearSession]);
 
-  const setBiometricEnabled = useCallback(
-    async (enabled: boolean) => {
-      if (!enabled) {
-        await disableBiometricLogin();
-        setIsBiometricEnabled(false);
-        return true;
-      }
-      if (!token) return false;
-      const saved = await enableBiometricLogin(token);
-      setIsBiometricEnabled(saved);
-      return saved;
-    },
-    [token]
-  );
+  const setBiometricEnabled = useCallback(async (enabled: boolean) => {
+    if (!enabled) {
+      await disableBiometricLogin();
+      setIsBiometricEnabled(false);
+      return true;
+    }
+    if (!lastCredentials.current) {
+      throw new ApiError(
+        'For your security, sign out and sign in with your password once, then turn fingerprint login on.',
+        400,
+        'PASSWORD_REQUIRED'
+      );
+    }
+    const saved = await enableBiometricLogin(JSON.stringify(lastCredentials.current));
+    setIsBiometricEnabled(saved);
+    return saved;
+  }, []);
 
   const updateProfile = useCallback(async (data: UpdateProfileData) => {
     const updated = await authService.updateMe(data);
