@@ -12,9 +12,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MessageBanner } from '../components';
+import { MessageBanner, OfflineBanner } from '../components';
 import { COLORS } from '../constants';
-import { chatService } from '../services';
+import { chatService, withOfflineCache } from '../services';
 import { ChatMessage, Conversation } from '../types';
 import { getErrorMessage } from '../utils';
 
@@ -35,14 +35,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ conversation, onBack }) 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  /** When showing data saved on the phone (offline), the time it was saved. */
+  const [offlineSince, setOfflineSince] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
 
   const load = useCallback(async () => {
     try {
-      const result = await chatService.messages(conversation.id);
-      setMessages(result.messages);
+      const result = await withOfflineCache(`chat.${conversation.id}`, () =>
+        chatService.messages(conversation.id)
+      );
+      setMessages(result.data.messages);
+      setOfflineSince(result.fromCache ? result.savedAt : null);
       setErrorMessage(null);
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Could not load messages.'));
@@ -97,6 +102,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ conversation, onBack }) 
           contentContainerStyle={styles.messages}
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
+          <OfflineBanner savedAt={offlineSince} />
           <MessageBanner message={errorMessage} />
           {isLoading ? <ActivityIndicator color={COLORS.primary} style={styles.loader} /> : null}
           {!isLoading && messages.length === 0 && !errorMessage ? (

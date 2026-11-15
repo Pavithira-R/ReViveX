@@ -8,3 +8,4 @@ export * from './chat.service';
 export * from './item.service';
 export * from './report.service';
 export * from './shake';
+export * from './offlineCache';

@@ -2,11 +2,15 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import {
   ApiError,
   authService,
+  clearOfflineData,
   clearSessionToken,
   disableBiometricLogin,
   enableBiometricLogin,
   isBiometricLoginEnabled,
+  isOfflineError,
   loadSessionToken,
+  recallUser,
+  rememberUser,
   saveSessionToken,
   setAuthToken,
   setUnauthorizedHandler,
@@ -51,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setUser(null);
     clearSessionToken();
+    clearOfflineData();
   }, []);
 
   const startSession = useCallback((newToken: string, newUser: User) => {
@@ -58,13 +63,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(newToken);
     setUser(newUser);
     saveSessionToken(newToken);
+    rememberUser(newUser);
   }, []);
 
-  /** Load the user for a saved token; on 401 the token is no longer valid. */
+  /**
+   * Load the user for a saved token; on 401 the token is no longer valid.
+   * Without internet, open with the last saved profile so saved data can be viewed offline.
+   */
   const resumeSession = useCallback(
     async (savedToken: string) => {
       setAuthToken(savedToken);
-      startSession(savedToken, await authService.getMe());
+      try {
+        startSession(savedToken, await authService.getMe());
+      } catch (error) {
+        const lastUser = isOfflineError(error) ? await recallUser() : null;
+        if (!lastUser) throw error;
+        startSession(savedToken, lastUser);
+      }
     },
     [startSession]
   );
@@ -90,7 +105,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           await resumeSession(savedToken);
         } catch {
-          // Offline or expired: show the login screen. A 401 already cleared storage.
+          // Expired, or offline with no saved profile: show the login screen.
+          // A 401 already cleared storage.
           setAuthToken(null);
         }
       }
@@ -161,7 +177,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const updateProfile = useCallback(async (data: UpdateProfileData) => {
-    setUser(await authService.updateMe(data));
+    const updated = await authService.updateMe(data);
+    setUser(updated);
+    rememberUser(updated);
   }, []);
 
   const refreshProfile = useCallback(async () => {
