@@ -23,6 +23,7 @@ Built for the Mobile Application Development (INTE 22283) group project.
 | Accounts | Register, login, profiles, role-based access, admin user management | ✅ Done |
 | Accounts | Stay signed in after restart, fingerprint login | ✅ Done |
 | Security | Login lockout after repeated wrong passwords | ✅ Done |
+| Support | Shake the phone to report a problem; admins review and resolve reports | ✅ Done |
 | Discovery | Smart recommendation questionnaire, discovery feed, search and filters | ✅ Done |
 | Discovery | Nearby technicians/recyclers with GPS, Device Health Check | ✅ Done |
 | Eco impact | Eco points, badges, My Eco Impact screen | ✅ Done |
@@ -41,6 +42,7 @@ The app uses the phone's hardware, and **never crashes when hardware is missing 
 | Feature | Hardware | Fallback |
 |---|---|---|
 | Fingerprint login | Fingerprint / face sensor | Email and password |
+| Report a problem | Accelerometer (shake) | *Report a problem* button on Profile |
 | Nearby providers | GPS location | Choose a district from a list |
 | Device Health Check | Accelerometer, gyroscope, battery | Missing sensors shown as "Not available on this device" |
 | Item photos *(with the Items module)* | Camera | Gallery, then post without a photo |

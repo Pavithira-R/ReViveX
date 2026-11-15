@@ -117,6 +117,14 @@ An unexpected error in any screen shows a "Something went wrong / Try again" scr
 
 ---
 
+### Mobile – report a problem (shake the phone)
+
+While signed in, **shaking the phone on any screen** opens *Report a problem* (accelerometer, via `react-native-shake`). The report includes the screen the user was on. Phones without an accelerometer simply never trigger it; **Profile → Report a problem** is the fallback. Admins read and resolve reports in **Home → Problem Reports**.
+
+To open the sheet from your own screen: `const { openReport } = useProblemReport(); openReport();`
+
+> In **debug** builds, shaking also opens React Native's developer menu. For the demo, install a **release** build (`cd mobile/android && gradlew.bat app:installRelease`), which has no developer menu and does not need Metro.
+
 ## API endpoints
 
 Base URL: `http://localhost:5000/api` (on Android, run `adb reverse tcp:5000 tcp:5000` first – see Running it)
@@ -133,6 +141,9 @@ Base URL: `http://localhost:5000/api` (on Android, run `adb reverse tcp:5000 tcp
 | GET | `/admin/users/:id` | ADMIN | Full user details |
 | PATCH | `/admin/users/:id/role` | ADMIN | Body `{ role }` |
 | PATCH | `/admin/users/:id/status` | ADMIN | Body `{ isActive }` – activate/deactivate |
+| POST | `/reports` | Required | Report a problem. Body `{ message, screen? }` (message 5–1000 characters) |
+| GET | `/admin/reports` | ADMIN | Problem reports, newest first (`?status=OPEN` or `RESOLVED`) |
+| PATCH | `/admin/reports/:id/resolve` | ADMIN | Mark a report as resolved |
 
 Rules enforced:
 - Passwords: 8+ characters with letters and numbers; stored as bcrypt hashes only.
