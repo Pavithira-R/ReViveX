@@ -3,7 +3,6 @@
 // Platform-aware HTTP client with timeout, error handling and offline safety
 // ============================================================================
 
-import { Platform } from 'react-native';
 import { API_BASE_URL } from '../../../constants';
 
 let activeBaseUrl = API_BASE_URL;

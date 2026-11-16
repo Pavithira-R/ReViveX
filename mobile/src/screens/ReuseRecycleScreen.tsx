@@ -236,6 +236,7 @@ export const ReuseRecycleScreen: React.FC<{
     if (tab === 'OFFERS') loadMyListings();
     if (tab === 'RECYCLE') loadRequests();
     if (tab === 'TRANSACTIONS') loadTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, loadListings]);
 
   // -------------------------

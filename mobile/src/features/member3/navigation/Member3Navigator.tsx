@@ -48,7 +48,7 @@ export const Member3Navigator: React.FC<Member3NavigatorProps> = ({
   onNavigateToModule4,
   onNavigateToModule5,
   onNavigateToModule2,
-  onNavigateBack,
+  onNavigateBack: _onNavigateBack,
 }) => {
   const [currentRoute, setCurrentRoute] = useState<Member3Route>('DISCOVERY_HOME');
   const [recommendationResult, setRecommendationResult] = useState<RecommendationResult | null>(

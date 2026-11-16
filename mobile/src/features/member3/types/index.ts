@@ -187,10 +187,12 @@ export interface DiscoveryFeedData {
   featuredListings: ListingSummary[];
   urgentDonations: UrgentDonationSummary[];
   nearestRecyclePoint?: RecyclePointSummary | null;
+  communityItems?: any[];
   sourceStatus: {
     providers: 'OK' | 'UNAVAILABLE';
     listings: 'OK' | 'UNAVAILABLE';
     recycling: 'OK' | 'UNAVAILABLE';
+    items?: 'OK' | 'UNAVAILABLE';
   };
 }
 

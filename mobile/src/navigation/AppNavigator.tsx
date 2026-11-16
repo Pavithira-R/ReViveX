@@ -215,7 +215,7 @@ export const AppNavigator: React.FC = () => {
             `Booking service provider: ${providerId || 'Selected Provider'} for ${category || 'Device'}`
           );
         }}
-        onNavigateToModule5={(actionType, draft) => {
+        onNavigateToModule5={(_actionType, _draft) => {
           setAppRoute('ReuseRecycle');
         }}
         onNavigateToModule2={(itemDraft) => {
