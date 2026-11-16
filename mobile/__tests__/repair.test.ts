@@ -72,6 +72,14 @@ test('provider profiles: register/update and list with search & category filter'
     phone: '0719876543',
   });
 
+  // Verify getMyProviderProfile retrieves current provider's own profile
+  const myProfile = await repairService.getMyProviderProfile();
+  expect(myProfile).toMatchObject({
+    businessName: 'TechFix Solutions Colombo',
+    phone: '0719876543',
+    startingPrice: 3500,
+  });
+
   // Test listing all providers
   const allProviders = await repairService.listProviders();
   expect(allProviders.length).toBeGreaterThanOrEqual(1);

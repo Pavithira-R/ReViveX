@@ -8,6 +8,7 @@ import { BackHandler, StyleSheet, View } from 'react-native';
 import { Booking, RepairRequest, ServiceProvider } from '../types';
 import { ProviderListScreen } from '../phase1-provider-profile/screens/ProviderListScreen';
 import { ProviderProfileScreen } from '../phase1-provider-profile/screens/ProviderProfileScreen';
+import { EditProviderProfileScreen } from '../phase1-provider-profile/screens/EditProviderProfileScreen';
 import { CreateRepairRequestScreen } from '../phase2-repair-request/screens/CreateRepairRequestScreen';
 import { ProviderRequestsScreen } from '../phase3-quotation-response/screens/ProviderRequestsScreen';
 import { RepairBookingScreen } from '../phase4-booking/screens/RepairBookingScreen';
@@ -18,6 +19,7 @@ import { COLORS } from '../../../constants';
 export type Member4Route =
   | 'PROVIDER_LIST'
   | 'PROVIDER_PROFILE'
+  | 'EDIT_PROVIDER_PROFILE'
   | 'CREATE_REQUEST'
   | 'PROVIDER_REQUESTS'
   | 'BOOKING'
@@ -91,7 +93,7 @@ export const Member4Navigator: React.FC<Member4NavigatorProps> = ({
         }
         return true;
       }
-      if (currentRoute === 'PROVIDER_LIST' || currentRoute === 'PROVIDER_REQUESTS') {
+      if (currentRoute === 'PROVIDER_LIST' || currentRoute === 'PROVIDER_REQUESTS' || currentRoute === 'EDIT_PROVIDER_PROFILE') {
         onBack();
         return true;
       }
@@ -221,6 +223,16 @@ export const Member4Navigator: React.FC<Member4NavigatorProps> = ({
           onNavigateToBooking={handleNavigateToBooking}
           onLeaveReview={handleLeaveReview}
           onChatWithProvider={onChatWithProvider}
+        />
+      )}
+
+      {/* 7. Technician Business Profile Setup */}
+      {currentRoute === 'EDIT_PROVIDER_PROFILE' && (
+        <EditProviderProfileScreen
+          onBack={onBack}
+          onProfileSaved={() => {
+            setCurrentRoute('PROVIDER_REQUESTS');
+          }}
         />
       )}
     </View>
