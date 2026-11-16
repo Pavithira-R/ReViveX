@@ -23,9 +23,13 @@ export interface Item {
   description?: string | null;
   location?: Record<string, unknown> | null;
   status: ItemStatus | string;
+  /** Photos as `data:` URIs; filled by itemService.get (empty in lists). */
   images: string[];
+  photoCount?: number;
   ownerId: string;
+  ownerName?: string;
   categoryId: string;
+  categoryName?: string;
   category?: Category;
   owner?: ItemOwner;
   createdAt: string;

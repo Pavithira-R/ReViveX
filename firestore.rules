@@ -127,17 +127,28 @@ service cloud.firestore {
     // ---------- Other modules: add your blocks below ----------
 
     // ---------- Member 2 – Items ----------
+    // Built-in list in the app; admins may add more.
     match /categories/{categoryId} {
       allow read: if signedIn();
-      allow create, update, delete: if signedIn();
+      allow create, update, delete: if isAdmin();
     }
 
     match /items/{itemId} {
       allow read: if signedIn();
       allow create: if signedIn()
         && request.resource.data.ownerId == uid();
-      allow update, delete: if signedIn()
-        && resource.data.ownerId == uid();
+      // The owner (or an admin) edits or deletes; the owner can't be changed.
+      allow update: if signedIn()
+        && (resource.data.ownerId == uid() || isAdmin())
+        && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if signedIn() && (resource.data.ownerId == uid() || isAdmin());
+
+      // Photos (JPEG bytes, max 5 per item, each under 1 MB): only the item's owner (or an admin) writes them.
+      match /photos/{photoId} {
+        allow read: if signedIn();
+        allow write: if signedIn()
+          && (get(/databases/$(database)/documents/items/$(itemId)).data.ownerId == uid() || isAdmin());
+      }
     }
   }
 }
