@@ -15,3 +15,13 @@ beforeEach(async () => {
 beforeEach(() => {
   require('./jest.firebase').__fake.reset();
 });
+
+// Confirmation pop-ups (e.g. "Log out of ReViveX?"): tests tap the confirming button
+// (the destructive one, else the last one), as a user would.
+beforeEach(() => {
+  const { Alert } = require('react-native');
+  jest.spyOn(Alert, 'alert').mockImplementation((_title, _message, buttons) => {
+    const confirm = buttons?.find((b) => b.style === 'destructive') ?? buttons?.[buttons.length - 1];
+    confirm?.onPress?.();
+  });
+});
