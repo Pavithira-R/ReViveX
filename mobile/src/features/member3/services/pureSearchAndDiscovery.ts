@@ -90,7 +90,14 @@ export async function fetchFirestoreListings(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'listings'));
-      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
+      return snap.docs.map((d: any) => {
+        const item = withId<GenericDomainItem>(d);
+        const rawAction = (item.actionType || item.type || item.action || '').toString().trim().toUpperCase();
+        return {
+          ...item,
+          actionType: rawAction || undefined,
+        };
+      });
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch listings collection:', err);

@@ -229,3 +229,12 @@ export const ACTION_THEMES: Record<
     ctaLabel: 'Find E-Waste Drop-Offs',
   },
 };
+
+export const NEUTRAL_ACTION_THEME = {
+  title: 'Community Listing',
+  icon: '📦',
+  badgeColor: '#475569',
+  bgColor: '#F1F5F9',
+  textColor: '#1E293B',
+  ctaLabel: 'View Details',
+};

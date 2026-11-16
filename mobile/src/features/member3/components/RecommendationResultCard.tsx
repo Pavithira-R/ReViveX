@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { RecommendationResult } from '../types';
-import { ACTION_THEMES, COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { ACTION_THEMES, NEUTRAL_ACTION_THEME, COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
 
 interface RecommendationResultCardProps {
   result: RecommendationResult;
@@ -15,8 +15,10 @@ interface RecommendationResultCardProps {
 export const RecommendationResultCard: React.FC<RecommendationResultCardProps> = ({
   result,
 }) => {
-  const theme = ACTION_THEMES[result.primaryAction];
-  const altTheme = result.secondaryAction ? ACTION_THEMES[result.secondaryAction] : null;
+  const theme = (ACTION_THEMES as Record<string, any>)[result.primaryAction] || NEUTRAL_ACTION_THEME;
+  const altTheme = result.secondaryAction
+    ? (ACTION_THEMES as Record<string, any>)[result.secondaryAction] || NEUTRAL_ACTION_THEME
+    : null;
 
   return (
     <View style={styles.card}>
