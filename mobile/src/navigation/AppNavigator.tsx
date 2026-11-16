@@ -67,6 +67,10 @@ export const AppNavigator: React.FC = () => {
   const [routeBeforeReviews, setRouteBeforeReviews] = useState<AppRoute>('Home');
   const [reviewTarget, setReviewTarget] = useState<any>(null);
   const [routeBeforeWriteReview, setRouteBeforeWriteReview] = useState<AppRoute>('ReuseRecycle');
+  // Member 5 & 2 – Handoff state from Member 3
+  const [reuseRecycleInitialTab, setReuseRecycleInitialTab] = useState<'BROWSE' | 'CREATE' | 'OFFERS' | 'RECYCLE' | 'TRANSACTIONS' | undefined>(undefined);
+  const [reuseRecycleInitialAction, setReuseRecycleInitialAction] = useState<'SELL' | 'DONATE' | 'REUSE' | 'RECYCLE' | undefined>(undefined);
+  const [postItemInitialDraft, setPostItemInitialDraft] = useState<any>(undefined);
   // Member 4 – Repair state
   const [repairInitialRoute, setRepairInitialRoute] = useState<Member4Route>('PROVIDER_LIST');
   const [repairInitialProviderId, setRepairInitialProviderId] = useState<string | undefined>(undefined);
@@ -180,6 +184,8 @@ export const AppNavigator: React.FC = () => {
           setRouteBeforeWriteReview('ReuseRecycle');
           setAppRoute('WriteReview');
         }}
+        initialTab={reuseRecycleInitialTab}
+        initialActionType={reuseRecycleInitialAction}
       />
     );
   }
@@ -225,7 +231,7 @@ export const AppNavigator: React.FC = () => {
     return <ProblemReportsScreen onBack={goHome} />;
   }
   if (appRoute === 'PostItem') {
-    return <PostItemScreen onBack={goHome} onPosted={openItem} />;
+    return <PostItemScreen onBack={goHome} onPosted={openItem} initialDraft={postItemInitialDraft} />;
   }
   if (appRoute === 'MyItems') {
     return (
@@ -258,11 +264,22 @@ export const AppNavigator: React.FC = () => {
           setRepairInitialRequestId(undefined);
           setAppRoute('Member4');
         }}
-        onNavigateToModule5={(_actionType, _draft) => {
+        onNavigateToModule5={(actionType, _draft) => {
+          const act = String(actionType || '').toUpperCase();
+          if (act === 'SELL' || act === 'DONATE') {
+            setReuseRecycleInitialTab('CREATE');
+            setReuseRecycleInitialAction(act as any);
+          } else if (act === 'RECYCLE') {
+            setReuseRecycleInitialTab('RECYCLE');
+            setReuseRecycleInitialAction('RECYCLE');
+          } else {
+            setReuseRecycleInitialTab('BROWSE');
+            setReuseRecycleInitialAction('REUSE');
+          }
           setAppRoute('ReuseRecycle');
         }}
-        onNavigateToModule2={() => {
-          // Member 6 – integration: "save this device" from Discovery opens Post an Item.
+        onNavigateToModule2={(itemDraft) => {
+          setPostItemInitialDraft(itemDraft);
           setAppRoute('PostItem');
         }}
       />
