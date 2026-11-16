@@ -143,13 +143,13 @@ export class RepairService {
       }
 
       if (filters?.search && filters.search.trim().length > 0) {
-        const query = filters.search.toLowerCase();
+        const term = filters.search.toLowerCase();
         providers = providers.filter(
           (p) =>
-            p.businessName?.toLowerCase().includes(query) ||
-            p.description?.toLowerCase().includes(query) ||
-            p.services?.some((s) => s.toLowerCase().includes(query)) ||
-            p.servicesOffered?.some((s) => s.toLowerCase().includes(query))
+            p.businessName?.toLowerCase().includes(term) ||
+            p.description?.toLowerCase().includes(term) ||
+            p.services?.some((s) => s.toLowerCase().includes(term)) ||
+            p.servicesOffered?.some((s) => s.toLowerCase().includes(term))
         );
       }
 
@@ -314,7 +314,7 @@ export class RepairService {
       await notify(
         data.customerId,
         'Repair Quotation Ready 📋',
-        `${data.providerName || 'Provider'} quoted $${quote.price} for "${data.itemName}". Please review and confirm your appointment.`,
+        `${data.providerName || 'Provider'} quoted Rs. ${Math.round(quote.price).toLocaleString('en-US')} for "${data.itemName}". Please review and confirm your appointment.`,
         { type: 'REPAIR', refId: id }
       );
 
@@ -535,7 +535,7 @@ export class RepairService {
     }
   }
 
-  async getIncomingRequests(providerId?: string): Promise<ApiResponse<RepairRequest[]>> {
+  async getIncomingRequests(_providerId?: string): Promise<ApiResponse<RepairRequest[]>> {
     try {
       const data = await this.listProviderJobs();
       return { success: true, statusCode: 200, data };

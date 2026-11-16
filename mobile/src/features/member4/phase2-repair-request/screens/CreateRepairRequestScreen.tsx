@@ -11,9 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ServiceProvider, RepairRequest } from '../../types';
 import { mobileRepairRequestService } from '../repairRequestService';
-import { useAuth } from '../../../../context';
 import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
-import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
+import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
 
 export interface DeviceItemSummary {
   id: string;
@@ -50,8 +49,6 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
   onNavigateBack,
   onRequestSubmitted,
 }) => {
-  const { user } = useAuth();
-
   const [problemDescription, setProblemDescription] = useState<string>('');
   const [preferredDate, setPreferredDate] = useState<string>('2025-04-10');
   const [preferredTime, setPreferredTime] = useState<string>(TIME_SLOTS[0]);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -29,12 +29,16 @@ export const ProviderListScreen: React.FC<ProviderListScreenProps> = ({ onSelect
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
-  const loadProviders = async (query?: string, category?: string) => {
+  // The search box is applied when the user taps Search; a category change reuses the latest text.
+  const searchRef = useRef(searchQuery);
+  searchRef.current = searchQuery;
+
+  const loadProviders = useCallback(async (searchText?: string, category?: string) => {
     setIsLoading(true);
     setError(null);
     try {
       const catParam = category && category !== 'All' ? category : undefined;
-      const res = await mobileProviderService.fetchProviders({ search: query, category: catParam });
+      const res = await mobileProviderService.fetchProviders({ search: searchText, category: catParam });
       if (res.success && res.data) {
         setProviders(res.data);
       } else {
@@ -45,11 +49,11 @@ export const ProviderListScreen: React.FC<ProviderListScreenProps> = ({ onSelect
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadProviders(searchQuery, activeCategory);
-  }, [activeCategory]);
+    loadProviders(searchRef.current, activeCategory);
+  }, [activeCategory, loadProviders]);
 
   const handleSearch = () => {
     loadProviders(searchQuery, activeCategory);

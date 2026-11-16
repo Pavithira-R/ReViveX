@@ -124,12 +124,12 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
 
           {action === 'ACCEPT' ? (
             <View style={styles.bodySection}>
-              <Text style={styles.label}>Estimated Repair Price (USD) *</Text>
+              <Text style={styles.label}>Estimated Repair Price (LKR) *</Text>
               <View style={styles.priceInputWrapper}>
-                <Text style={styles.currencyPrefix}>$</Text>
+                <Text style={styles.currencyPrefix}>Rs.</Text>
                 <TextInput
                   style={styles.priceInput}
-                  placeholder="0.00"
+                  placeholder="e.g. 18500"
                   placeholderTextColor={COLORS.textMuted}
                   keyboardType="decimal-pad"
                   value={estimatedPrice}
@@ -169,14 +169,14 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
 
           {/* Action Buttons */}
           <View style={styles.footerRow}>
-            <View style={{ flex: 1 }}>
+            <View style={styles.flexOne}>
               <PrimaryButton
                 title="Cancel"
                 variant="outlined"
                 onPress={onClose}
               />
             </View>
-            <View style={{ flex: 2 }}>
+            <View style={styles.flexTwo}>
               <PrimaryButton
                 title={action === 'ACCEPT' ? 'Send Quotation' : 'Confirm Decline'}
                 variant={action === 'ACCEPT' ? 'filled' : 'danger'}
@@ -192,6 +192,8 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  flexOne: { flex: 1 },
+  flexTwo: { flex: 2 },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',

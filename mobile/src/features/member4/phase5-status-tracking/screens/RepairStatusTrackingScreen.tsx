@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -14,7 +14,8 @@ import { mobileStatusTrackingService } from '../statusTrackingService';
 import { ProgressTracker } from '../components/ProgressTracker';
 import { chatService } from '../../../../services';
 import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
-import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
+import { formatLKR } from '../../../../utils';
+import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
 
 interface RepairStatusTrackingScreenProps {
   requestId?: string;
@@ -40,7 +41,7 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
   const [providerNoteInput, setProviderNoteInput] = useState<string>('');
   const [ecoAwardNotice, setEcoAwardNotice] = useState<string | null>(null);
 
-  const loadStatus = async () => {
+  const loadStatus = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -55,11 +56,11 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [requestId]);
 
   useEffect(() => {
     loadStatus();
-  }, [requestId]);
+  }, [loadStatus]);
 
   const handleUpdateStatus = async (targetStatus: RepairStatus) => {
     if (!request) return;
@@ -149,7 +150,7 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Agreed Repair Quotation:</Text>
             <Text style={styles.priceValue}>
-              ${request.estimatedPrice ? request.estimatedPrice.toFixed(2) : (request.quotation?.price || 85).toFixed(2)} USD
+              {formatLKR(request.estimatedPrice ?? request.quotation?.price)}
             </Text>
           </View>
 

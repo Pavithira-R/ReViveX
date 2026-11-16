@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { ServiceProvider } from '../types';
 import { Card, StatusBadge } from '../../../../components';
 import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
+import { formatLKR } from '../../../../utils';
 
 interface ProviderCardProps {
   provider: ServiceProvider;
@@ -71,7 +72,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress })
 
       <View style={styles.footerRow}>
         <Text style={styles.pricing}>
-          Starting at <Text style={styles.priceHighlight}>${provider.startingPrice || 25}</Text>
+          Starting at <Text style={styles.priceHighlight}>{formatLKR(provider.startingPrice)}</Text>
         </Text>
         <Text style={styles.viewProfileText}>View Profile →</Text>
       </View>

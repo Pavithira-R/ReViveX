@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -13,7 +13,8 @@ import { ServiceProvider } from '../types';
 import { mobileProviderService } from '../providerService';
 import { chatService } from '../../../../services';
 import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
-import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
+import { formatLKR } from '../../../../utils';
+import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
 
 interface ProviderProfileScreenProps {
   providerId?: string;
@@ -32,7 +33,7 @@ export const ProviderProfileScreen: React.FC<ProviderProfileScreenProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProvider = async () => {
+  const loadProvider = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -47,11 +48,11 @@ export const ProviderProfileScreen: React.FC<ProviderProfileScreenProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [providerId]);
 
   useEffect(() => {
     loadProvider();
-  }, [providerId]);
+  }, [loadProvider]);
 
   if (isLoading) {
     return (
@@ -136,7 +137,7 @@ export const ProviderProfileScreen: React.FC<ProviderProfileScreenProps> = ({
             <View style={styles.metricBox}>
               <Text style={styles.metricLabel}>Est. Starting</Text>
               <Text style={[styles.metricValue, { color: COLORS.primary }]}>
-                ${provider.startingPrice ?? 30}
+                {formatLKR(provider.startingPrice)}
               </Text>
               <Text style={styles.metricSub}>Diagnostics</Text>
             </View>
