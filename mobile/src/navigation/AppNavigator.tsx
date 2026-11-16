@@ -23,6 +23,7 @@ import {
 } from '../screens';
 import { Member3Navigator } from '../features/member3';
 import { Conversation } from '../types';
+import type { ReviewTarget } from '../screens/WriteReviewScreen';
 
 type AuthRoute = 'Login' | 'Register';
 type AppRoute =
@@ -45,8 +46,8 @@ type AppRoute =
 
 /**
  * Top-level navigator with protected screens:
- * - Signed out â†’ only Login / Register are reachable.
- * - Signed in  â†’ app screens; AdminUsers additionally requires the ADMIN role.
+ * - Signed out only Login / Register are reachable.
+ * - Signed in  app screens; AdminUsers additionally requires the ADMIN role.
  *
  * Kept dependency-free on purpose. Swap for React Navigation once the team
  * agrees on the shared mobile project setup; the auth gating logic stays the same.
@@ -58,10 +59,10 @@ export const AppNavigator: React.FC = () => {
   const [appRoute, setAppRoute] = useState<AppRoute>('Home');
   const [openConversation, setOpenConversation] = useState<Conversation | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  // Member 6 â€“ whose reviews to show, and where Back returns to.
+  // Member 6 - whose reviews to show, and where Back returns to.
   const [reviewsOf, setReviewsOf] = useState<{ userId: string; userName?: string } | null>(null);
   const [routeBeforeReviews, setRouteBeforeReviews] = useState<AppRoute>('Home');
-  const [reviewTarget, setReviewTarget] = useState<any>(null);
+  const [reviewTarget, setReviewTarget] = useState<ReviewTarget | null>(null);
   const [routeBeforeWriteReview, setRouteBeforeWriteReview] = useState<AppRoute>('ReuseRecycle');
 
   // Always land on the right first screen after sign-in / sign-out.
@@ -116,7 +117,7 @@ export const AppNavigator: React.FC = () => {
     setSelectedItemId(id);
     setAppRoute('ItemDetails');
   };
-  /** Member 6 â€“ reviews a user has received (own profile, or e.g. a service provider). */
+  /** Member 6 - reviews a user has received (own profile, or e.g. a service provider). */
   const openReviews = (userId: string, userName?: string) => {
     setRouteBeforeReviews(appRoute);
     setReviewsOf({ userId, userName });
