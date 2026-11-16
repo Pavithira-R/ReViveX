@@ -54,7 +54,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
     try {
       const response = await mobileBookingService.createBooking({
         repairRequestId: repairRequest.id,
-        customerId: user?.uid || repairRequest.customerId,
+        customerId: user?.id || repairRequest.customerId,
         providerId: repairRequest.providerId,
         appointmentDate: new Date(appointmentDate).toISOString(),
         appointmentTime,
@@ -202,7 +202,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
           </View>
           <View style={styles.summaryItemRow}>
             <Text style={styles.summaryLabel}>User ID:</Text>
-            <Text style={styles.summaryValue}>{user?.uid ? user.uid.substring(0, 8) + '...' : 'Signed In'}</Text>
+            <Text style={styles.summaryValue}>{user?.id ? user.id.substring(0, 8) + '...' : 'Signed In'}</Text>
           </View>
         </Card>
 
