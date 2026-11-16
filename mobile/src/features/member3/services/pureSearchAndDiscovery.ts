@@ -3,7 +3,7 @@
 // Integrates Cloud Firestore getDocs snapshots wrapped in fsCall & withId
 // ============================================================================
 
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../services/firebase';
 import { fsCall, withId } from '../../../services/firebaseHelpers';
 import {
@@ -78,6 +78,34 @@ export async function fetchFirestoreRecyclingRequests(): Promise<any[]> {
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch recyclingRequests collection:', err);
+    return [];
+  }
+}
+
+/**
+ * Firestore Fetcher: Users with role == 'RECYCLER' (for nearest recycler drop-off section in Discovery)
+ */
+export async function fetchFirestoreRecyclers(): Promise<any[]> {
+  try {
+    return await fsCall(async () => {
+      const q = query(collection(db, 'users'), where('role', '==', 'RECYCLER'));
+      const snap = await getDocs(q);
+      return snap.docs.map((d: any) => {
+        const item = withId(d) as any;
+        return {
+          id: item.id,
+          name: item.name || 'Certified E-Waste Recycler',
+          address: item.location?.city || item.address || 'Registered Recycler Depot',
+          location: item.location,
+          latitude: item.location?.latitude ?? item.latitude,
+          longitude: item.location?.longitude ?? item.longitude,
+          acceptedCategories: item.acceptedCategories || ['LAPTOP', 'PHONE', 'TABLET', 'BATTERIES'],
+          isCertified: true,
+        };
+      });
+    });
+  } catch (err) {
+    console.warn('[Firestore] Failed to fetch RECYCLER users:', err);
     return [];
   }
 }
@@ -316,7 +344,7 @@ export function filterListings(listings: any[], params: Partial<SearchFilters>):
 }
 
 /**
- * Pure function: Filters e-waste recycling requests (Member 5 schema)
+ * Pure function: Filters e-waste recycling requests (Member 5 schema) or recycler profiles
  */
 export function filterRecyclingRequests(requests: any[], params: Partial<SearchFilters>): any[] {
   if (!Array.isArray(requests)) return [];
@@ -395,7 +423,7 @@ export function buildDiscoveryFeed(data: {
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, limit);
 
-  // 4. E-Waste Drop-Off Kiosks (Member 5 - RECYCLING)
+  // 4. E-Waste Drop-Off Kiosks / Recyclers (Member 5 - RECYCLING)
   const recyclingList = filterRecyclingRequests(data.recyclingRequests || [], {})
     .slice(0, 1);
   const nearestRecyclePoint = recyclingList[0] || null;
@@ -427,17 +455,17 @@ export function buildDiscoveryFeed(data: {
 export async function fetchFirestoreDiscoveryFeed(
   userLocation?: LocationCoordinates | null
 ): Promise<DiscoveryFeedData> {
-  const [itemsRes, providersRes, listingsRes, recyclingRes] = await Promise.allSettled([
+  const [itemsRes, providersRes, listingsRes, recyclersRes] = await Promise.allSettled([
     fetchFirestoreItems(),
     fetchFirestoreProviders(),
     fetchFirestoreListings(),
-    fetchFirestoreRecyclingRequests(),
+    fetchFirestoreRecyclers(),
   ]);
 
   const items = itemsRes.status === 'fulfilled' ? itemsRes.value : [];
   const providers = providersRes.status === 'fulfilled' ? providersRes.value : [];
   const listings = listingsRes.status === 'fulfilled' ? listingsRes.value : [];
-  const recyclingRequests = recyclingRes.status === 'fulfilled' ? recyclingRes.value : [];
+  const recyclingRequests = recyclersRes.status === 'fulfilled' ? recyclersRes.value : [];
 
   return buildDiscoveryFeed({
     items,
