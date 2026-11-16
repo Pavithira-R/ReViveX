@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FormInput, MessageBanner, PrimaryButton } from '../components';
+import { AppIcon, FormInput, MessageBanner, PrimaryButton } from '../components';
 import { APP_NAME, COLORS, ROLE_LABELS } from '../constants';
 import { useAuth } from '../context';
 import { PUBLIC_ROLES, UserRole } from '../types';
@@ -76,7 +76,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigateToLogi
         style={styles.flex}
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.logo}>{APP_NAME}</Text>
+          <View style={styles.brandRow}>
+            <View style={styles.logoMark}>
+              <AppIcon name="leaf" size={24} color="#FFFFFF" />
+            </View>
+            <Text style={styles.logo}>{APP_NAME}</Text>
+          </View>
           <Text style={styles.title}>Create your account</Text>
           <Text style={styles.subtitle}>Fields marked * are required.</Text>
 
@@ -168,7 +173,17 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   flex: { flex: 1 },
   content: { flexGrow: 1, padding: 24 },
-  logo: { fontSize: 24, fontWeight: '800', color: COLORS.primary, marginBottom: 16 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  logoMark: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  logo: { fontSize: 24, fontWeight: '800', color: COLORS.primary },
   title: { fontSize: 24, fontWeight: '700', color: COLORS.text },
   subtitle: { fontSize: 14, color: COLORS.textMuted, marginTop: 4, marginBottom: 16 },
   sectionLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 8, marginTop: 4 },

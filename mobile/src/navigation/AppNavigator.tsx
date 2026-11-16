@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, BackHandler, StyleSheet, View } from 'react-native';
+import { TabBar, TabKey } from '../components';
 import { COLORS } from '../constants';
 import { useAuth, useProblemReport } from '../context';
 import {
@@ -112,6 +113,20 @@ export const AppNavigator: React.FC = () => {
   }
 
   const goHome = () => setAppRoute('Home');
+
+  /** Member 6 – the four main sections get the bottom tab bar. */
+  const TAB_ROUTES: Record<TabKey, AppRoute> = {
+    home: 'Home',
+    discover: 'Member3',
+    messages: 'Conversations',
+    profile: 'Profile',
+  };
+  const withTabs = (tab: TabKey, screen: React.ReactNode) => (
+    <View style={styles.tabScreen}>
+      <View style={styles.tabScreen}>{screen}</View>
+      <TabBar active={tab} onSelect={(next) => setAppRoute(TAB_ROUTES[next])} />
+    </View>
+  );
   const openItem = (id: string) => {
     setSelectedItemId(id);
     setAppRoute('ItemDetails');
@@ -124,7 +139,10 @@ export const AppNavigator: React.FC = () => {
   };
 
   if (appRoute === 'Profile') {
-    return <ProfileScreen onBack={goHome} onOpenReviews={() => user && openReviews(user.id)} />;
+    return withTabs(
+      'profile',
+      <ProfileScreen onBack={goHome} onOpenReviews={() => user && openReviews(user.id)} />
+    );
   }
   if (appRoute === 'WriteReview' && reviewTarget) {
     return (
@@ -157,7 +175,8 @@ export const AppNavigator: React.FC = () => {
     );
   }
   if (appRoute === 'Conversations') {
-    return (
+    return withTabs(
+      'messages',
       <ConversationsScreen
         onBack={goHome}
         onOpenConversation={(conversation) => {
@@ -206,7 +225,8 @@ export const AppNavigator: React.FC = () => {
     return <ItemDetailsScreen itemId={selectedItemId} onBack={goHome} />;
   }
   if (appRoute === 'Member3') {
-    return (
+    return withTabs(
+      'discover',
       <Member3Navigator
         onNavigateBack={goHome}
         onNavigateToModule4={(providerId, category) => {
@@ -218,17 +238,16 @@ export const AppNavigator: React.FC = () => {
         onNavigateToModule5={(_actionType, _draft) => {
           setAppRoute('ReuseRecycle');
         }}
-        onNavigateToModule2={(itemDraft) => {
-          Alert.alert(
-            'Handoff to Member 2 (Inventory)',
-            `Item saved to user inventory: ${JSON.stringify(itemDraft || {}, null, 2)}`
-          );
+        onNavigateToModule2={() => {
+          // Member 6 – integration: "save this device" from Discovery opens Post an Item.
+          setAppRoute('PostItem');
         }}
       />
     );
   }
 
-  return (
+  return withTabs(
+    'home',
     <HomeScreen
       onOpenProfile={() => setAppRoute('Profile')}
       onOpenEcoImpact={() => setAppRoute('EcoImpact')}
@@ -240,11 +259,13 @@ export const AppNavigator: React.FC = () => {
       onOpenPostItem={() => setAppRoute('PostItem')}
       onOpenMyItems={() => setAppRoute('MyItems')}
       onOpenBrowseItems={() => setAppRoute('BrowseItems')}
+      onOpenReuseRecycle={() => setAppRoute('ReuseRecycle')}
     />
   );
 };
 
 const styles = StyleSheet.create({
+  tabScreen: { flex: 1, backgroundColor: COLORS.background },
   splash: {
     flex: 1,
     alignItems: 'center',

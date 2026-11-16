@@ -10,3 +10,6 @@ export * from './ReportProblemModal';
 export * from './OfflineBanner';
 export * from './RatingStars';
 export * from './ReviewCard';
+export * from './Card';
+export * from './TabBar';
+export * from './AppIcon';

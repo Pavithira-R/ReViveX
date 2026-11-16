@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FormInput, MessageBanner, PrimaryButton } from '../components';
+import { AppIcon, FormInput, MessageBanner, PrimaryButton } from '../components';
 import { APP_NAME, APP_TAGLINE, COLORS } from '../constants';
 import { useAuth } from '../context';
 import { authService, useCapability } from '../services';
@@ -99,6 +99,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }
       >
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
+            <View style={styles.logoMark}>
+              <AppIcon name="leaf" size={40} color="#FFFFFF" />
+            </View>
             <Text style={styles.logo}>{APP_NAME}</Text>
             <Text style={styles.tagline}>{APP_TAGLINE}</Text>
             <Text style={styles.title}>Welcome back</Text>
@@ -169,7 +172,22 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   header: { marginBottom: 24 },
-  logo: { fontSize: 32, fontWeight: '800', color: COLORS.primary, textAlign: 'center' },
+  logoMark: {
+    alignSelf: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: 22,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    elevation: 6,
+    shadowColor: '#0B2A14',
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  logo: { fontSize: 32, fontWeight: '800', color: COLORS.primary, textAlign: 'center', letterSpacing: 0.5 },
   tagline: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginBottom: 28 },
   title: { fontSize: 24, fontWeight: '700', color: COLORS.text },
   subtitle: { fontSize: 15, color: COLORS.textMuted, marginTop: 4 },
