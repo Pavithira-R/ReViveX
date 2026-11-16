@@ -1,5 +1,4 @@
 // Member 1 – Fingerprint login storage
-import * as Keychain from 'react-native-keychain';
 import { registerCapability } from './capabilities';
 
 /**
@@ -15,13 +14,36 @@ import { registerCapability } from './capabilities';
 const ACCOUNT = 'revivex';
 const BIOMETRIC_SERVICE = 'revivex.biometric';
 
+let KeychainModule: any = null;
+try {
+  KeychainModule = require('react-native-keychain');
+} catch {
+  KeychainModule = null;
+}
+
+const isKeychainAvailable = (): boolean => {
+  try {
+    return KeychainModule !== null && typeof KeychainModule?.getSupportedBiometryType === 'function';
+  } catch {
+    return false;
+  }
+};
+
 registerCapability('biometric', {
-  isSupported: async () => (await Keychain.getSupportedBiometryType()) !== null,
+  isSupported: async () => {
+    try {
+      if (!isKeychainAvailable()) return false;
+      return (await KeychainModule.getSupportedBiometryType()) !== null;
+    } catch {
+      return false;
+    }
+  },
 });
 
 export const isBiometricLoginEnabled = async (): Promise<boolean> => {
   try {
-    return await Keychain.hasGenericPassword({ service: BIOMETRIC_SERVICE });
+    if (!isKeychainAvailable()) return false;
+    return await KeychainModule.hasGenericPassword({ service: BIOMETRIC_SERVICE });
   } catch {
     return false;
   }
@@ -30,10 +52,11 @@ export const isBiometricLoginEnabled = async (): Promise<boolean> => {
 /** Save the sign-in details behind the fingerprint. Returns false if they could not be saved. */
 export const enableBiometricLogin = async (secret: string): Promise<boolean> => {
   try {
-    const result = await Keychain.setGenericPassword(ACCOUNT, secret, {
+    if (!isKeychainAvailable()) return false;
+    const result = await KeychainModule.setGenericPassword(ACCOUNT, secret, {
       service: BIOMETRIC_SERVICE,
-      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
-      storage: Keychain.STORAGE_TYPE.AES_GCM,
+      accessControl: KeychainModule.ACCESS_CONTROL?.BIOMETRY_ANY,
+      storage: KeychainModule.STORAGE_TYPE?.AES_GCM,
       authenticationPrompt: { title: 'Turn on fingerprint login', cancel: 'Cancel' },
     });
     return result !== false;
@@ -45,7 +68,8 @@ export const enableBiometricLogin = async (secret: string): Promise<boolean> => 
 /** Ask for a fingerprint scan and return the saved sign-in details, or null if cancelled or failed. */
 export const unlockWithBiometrics = async (): Promise<string | null> => {
   try {
-    const credentials = await Keychain.getGenericPassword({
+    if (!isKeychainAvailable()) return null;
+    const credentials = await KeychainModule.getGenericPassword({
       service: BIOMETRIC_SERVICE,
       authenticationPrompt: {
         title: 'Log in to ReViveX',
@@ -61,7 +85,8 @@ export const unlockWithBiometrics = async (): Promise<string | null> => {
 
 export const disableBiometricLogin = async (): Promise<void> => {
   try {
-    await Keychain.resetGenericPassword({ service: BIOMETRIC_SERVICE });
+    if (!isKeychainAvailable()) return;
+    await KeychainModule.resetGenericPassword({ service: BIOMETRIC_SERVICE });
   } catch {
     // Nothing to clear.
   }
