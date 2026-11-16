@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -37,6 +38,7 @@ export const AdminUsersScreen: React.FC<AdminUsersScreenProps> = ({ onBack }) =>
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<UserRole | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
@@ -172,6 +174,17 @@ export const AdminUsersScreen: React.FC<AdminUsersScreenProps> = ({ onBack }) =>
             renderItem={renderUser}
             ListEmptyComponent={<Text style={styles.empty}>No users match these filters.</Text>}
             contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                tintColor={COLORS.primary}
+                onRefresh={async () => {
+                  setIsRefreshing(true);
+                  await loadUsers();
+                  setIsRefreshing(false);
+                }}
+              />
+            }
           />
         )}
       </View>
