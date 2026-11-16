@@ -21,6 +21,7 @@ interface HomeScreenProps {
   onOpenBrowseItems: () => void;
   onOpenReuseRecycle?: () => void;
   onOpenRepair?: () => void;
+  onOpenProviderRequests?: () => void;
 }
 
 const BADGE_LABELS: Record<EcoSummary['badge'], string> = {
@@ -46,6 +47,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenBrowseItems,
   onOpenReuseRecycle,
   onOpenRepair,
+  onOpenProviderRequests,
 }) => {
   const { user, hasRole } = useAuth();
   const [eco, setEco] = useState<EcoSummary | null>(null);
@@ -184,6 +186,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onPress={onOpenMessages}
           />
         </View>
+
+        {hasRole('SERVICE_PROVIDER') && onOpenProviderRequests ? (
+          <>
+            <Text style={styles.sectionTitle}>Technician Portal</Text>
+            <View style={styles.grid}>
+              <Tile
+                label="Repair Jobs"
+                hint="Incoming requests & quotes"
+                icon="clipboard-list-outline"
+                tint="amber"
+                onPress={onOpenProviderRequests}
+              />
+            </View>
+          </>
+        ) : null}
 
         {hasRole('ADMIN') ? (
           <>
