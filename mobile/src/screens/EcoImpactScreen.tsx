@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageBanner, OfflineBanner, PrimaryButton } from '../components';
 import { COLORS } from '../constants';
@@ -54,6 +54,7 @@ export const EcoImpactScreen: React.FC<EcoImpactScreenProps> = ({ onBack }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   /** When showing data saved on the phone (offline), the time it was saved. */
   const [offlineSince, setOfflineSince] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -97,7 +98,20 @@ export const EcoImpactScreen: React.FC<EcoImpactScreenProps> = ({ onBack }) => {
         <View style={styles.topSpacer} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            tintColor={COLORS.primary}
+            onRefresh={async () => {
+              setIsRefreshing(true);
+              await load();
+              setIsRefreshing(false);
+            }}
+          />
+        }
+      >
         {isLoading ? <ActivityIndicator color={COLORS.primary} style={styles.loader} /> : null}
         <OfflineBanner savedAt={offlineSince} />
 

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -10,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FormInput, MessageBanner, PrimaryButton } from '../components';
+import { FormInput, MessageBanner, PasswordChecklist, PrimaryButton, TextInputHandle } from '../components';
 import { COLORS, ROLE_LABELS } from '../constants';
 import { useAuth, useProblemReport } from '../context';
 import { useCapability } from '../services';
@@ -36,6 +37,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenRevi
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const newPasswordRef = useRef<TextInputHandle>(null);
+  const confirmPasswordRef = useRef<TextInputHandle>(null);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
   if (!user) return null;
@@ -62,6 +65,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenRevi
     } finally {
       setIsSaving(false);
     }
+  };
+
+  /** Asks first, so a mis-tap doesn't sign the user out. */
+  const confirmLogout = () => {
+    Alert.alert('Log out of ReViveX?', 'You can sign back in with your password or fingerprint.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log Out', style: 'destructive', onPress: logout },
+    ]);
   };
 
   const startChangingPassword = () => {
@@ -170,8 +181,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenRevi
                 onChangeText={setCurrentPassword}
                 secureTextEntry
                 autoComplete="password"
+                returnKeyType="next"
+                onSubmitEditing={() => newPasswordRef.current?.focus()}
+                blurOnSubmit={false}
               />
               <FormInput
+                ref={newPasswordRef}
                 label="New password"
                 required
                 placeholder="8+ characters, letters and numbers"
@@ -179,15 +194,24 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenRevi
                 onChangeText={setNewPassword}
                 secureTextEntry
                 autoComplete="password-new"
+                returnKeyType="next"
+                onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                blurOnSubmit={false}
               />
               <FormInput
+                ref={confirmPasswordRef}
                 label="Confirm new password"
                 required
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
                 autoComplete="password-new"
+                returnKeyType="done"
+                onSubmitEditing={handleChangePassword}
               />
+              {newPassword || confirmPassword ? (
+                <PasswordChecklist password={newPassword} confirmPassword={confirmPassword} />
+              ) : null}
               <PrimaryButton title="Change Password" onPress={handleChangePassword} loading={isSaving} />
               <PrimaryButton
                 title="Cancel"
@@ -249,7 +273,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenRevi
               ) : null}
               <PrimaryButton title="Report a problem" variant="outlined" onPress={openReport} />
               <Text style={styles.hint}>Tip: you can also shake your phone on any screen.</Text>
-              <PrimaryButton title="Log Out" variant="danger" onPress={logout} />
+              <PrimaryButton title="Log Out" variant="danger" onPress={confirmLogout} />
             </View>
           )}
         </ScrollView>

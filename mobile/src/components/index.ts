@@ -13,3 +13,4 @@ export * from './ReviewCard';
 export * from './Card';
 export * from './TabBar';
 export * from './AppIcon';
+export * from './PasswordChecklist';

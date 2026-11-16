@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppIcon, FormInput, MessageBanner, PrimaryButton } from '../components';
+import { AppIcon, FormInput, MessageBanner, PasswordChecklist, PrimaryButton, TextInputHandle } from '../components';
 import { APP_NAME, COLORS, ROLE_LABELS } from '../constants';
 import { useAuth } from '../context';
 import { PUBLIC_ROLES, UserRole } from '../types';
@@ -35,6 +35,10 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigateToLogi
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('ITEM_OWNER');
+  const emailRef = useRef<TextInputHandle>(null);
+  const phoneRef = useRef<TextInputHandle>(null);
+  const passwordRef = useRef<TextInputHandle>(null);
+  const confirmRef = useRef<TextInputHandle>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -94,8 +98,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigateToLogi
             value={name}
             onChangeText={setName}
             autoComplete="name"
+            returnKeyType="next"
+            onSubmitEditing={() => emailRef.current?.focus()}
+            blurOnSubmit={false}
           />
           <FormInput
+            ref={emailRef}
             label="Email address"
             required
             placeholder="you@example.com"
@@ -105,16 +113,24 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigateToLogi
             autoComplete="email"
             keyboardType="email-address"
             autoCorrect={false}
+            returnKeyType="next"
+            onSubmitEditing={() => phoneRef.current?.focus()}
+            blurOnSubmit={false}
           />
           <FormInput
+            ref={phoneRef}
             label="Phone number"
             placeholder="+94 77 123 4567"
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
             autoComplete="tel"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+            blurOnSubmit={false}
           />
           <FormInput
+            ref={passwordRef}
             label="Password"
             required
             placeholder="At least 8 characters, letters and numbers"
@@ -122,8 +138,12 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigateToLogi
             onChangeText={setPassword}
             secureTextEntry
             autoComplete="new-password"
+            returnKeyType="next"
+            onSubmitEditing={() => confirmRef.current?.focus()}
+            blurOnSubmit={false}
           />
           <FormInput
+            ref={confirmRef}
             label="Confirm password"
             required
             placeholder="Re-enter your password"
@@ -131,7 +151,11 @@ export const RegisterScreen: React.FC<RegisterScreenProps> = ({ onNavigateToLogi
             onChangeText={setConfirmPassword}
             secureTextEntry
             autoComplete="new-password"
+            returnKeyType="done"
           />
+          {password || confirmPassword ? (
+            <PasswordChecklist password={password} confirmPassword={confirmPassword} />
+          ) : null}
 
           <Text style={styles.sectionLabel}>How will you use ReViveX? *</Text>
           {PUBLIC_ROLES.map((option) => {
