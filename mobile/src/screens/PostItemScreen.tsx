@@ -20,22 +20,42 @@ import { itemService } from '../services/item.service';
 import { Category, CreateItemPayload, ItemAction, ItemCondition } from '../types';
 import { getErrorMessage } from '../utils';
 
+export interface ItemDraft {
+  name?: string;
+  brand?: string;
+  categoryId?: string;
+  categoryName?: string;
+  condition?: ItemCondition | string;
+  action?: ItemAction | string;
+  description?: string;
+}
+
 interface PostItemScreenProps {
   onBack: () => void;
   onPosted: (itemId: string) => void;
+  initialDraft?: ItemDraft;
 }
 
 const conditions: ItemCondition[] = ['WORKING', 'DAMAGED', 'BROKEN'];
 const actions: ItemAction[] = ['REPAIR', 'REUSE', 'SELL', 'DONATE', 'RECYCLE'];
 
-export const PostItemScreen: React.FC<PostItemScreenProps> = ({ onBack, onPosted }) => {
+export const PostItemScreen: React.FC<PostItemScreenProps> = ({ onBack, onPosted, initialDraft }) => {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [brand, setBrand] = useState('');
-  const [condition, setCondition] = useState<ItemCondition>('WORKING');
-  const [action, setAction] = useState<ItemAction>('REUSE');
-  const [description, setDescription] = useState('');
+  const [categoryId, setCategoryId] = useState<string | null>(initialDraft?.categoryId ?? null);
+  const [name, setName] = useState(initialDraft?.name ?? '');
+  const [brand, setBrand] = useState(initialDraft?.brand ?? '');
+  const [condition, setCondition] = useState<ItemCondition>(() => {
+    const cond = String(initialDraft?.condition || '').toUpperCase();
+    if (cond.includes('DAMAGED') || cond.includes('PROBLEMS')) return 'DAMAGED';
+    if (cond.includes('BROKEN') || cond.includes('NOT_WORKING')) return 'BROKEN';
+    return 'WORKING';
+  });
+  const [action, setAction] = useState<ItemAction>(() => {
+    const act = String(initialDraft?.action || '').toUpperCase();
+    if (actions.includes(act as ItemAction)) return act as ItemAction;
+    return 'REUSE';
+  });
+  const [description, setDescription] = useState(initialDraft?.description ?? '');
   const [photos, setPhotos] = useState<Asset[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,13 +69,22 @@ export const PostItemScreen: React.FC<PostItemScreenProps> = ({ onBack, onPosted
     try {
       const result = await itemService.categories();
       setCategories(result);
-      setCategoryId((current) => current ?? result[0]?.id ?? null);
+      if (initialDraft?.categoryId) {
+        setCategoryId(initialDraft.categoryId);
+      } else if (initialDraft?.categoryName) {
+        const matched = result.find(
+          (c) => c.name.toLowerCase() === initialDraft.categoryName?.toLowerCase()
+        );
+        setCategoryId(matched?.id ?? result[0]?.id ?? null);
+      } else {
+        setCategoryId((current) => current ?? result[0]?.id ?? null);
+      }
     } catch (error) {
       setErrorMessage(getErrorMessage(error, 'Could not load item categories.'));
     } finally {
       setIsLoadingCategories(false);
     }
-  }, []);
+  }, [initialDraft]);
 
   useEffect(() => {
     loadCategories();

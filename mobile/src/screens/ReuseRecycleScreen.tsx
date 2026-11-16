@@ -124,11 +124,24 @@ const Button = ({
 export const ReuseRecycleScreen: React.FC<{
   onBack?: () => void;
   onLeaveReview?: (target: { revieweeId: string; revieweeName: string; refType: 'LISTING' | 'RECYCLING'; refId: string; subject?: string }) => void;
-}> = ({ onBack, onLeaveReview }) => {
+  initialTab?: Tab;
+  initialActionType?: ListingType | 'RECYCLE';
+}> = ({ onBack, onLeaveReview, initialTab, initialActionType }) => {
   const { user, hasRole } = useAuth();
 
-  const [tab, setTab] = useState<Tab>('BROWSE');
-  const [type, setType] = useState<ListingType>('REUSE');
+  const [tab, setTab] = useState<Tab>(() => {
+    if (initialTab) return initialTab;
+    if (initialActionType === 'RECYCLE') return 'RECYCLE';
+    if (initialActionType === 'SELL' || initialActionType === 'DONATE') return 'CREATE';
+    return 'BROWSE';
+  });
+
+  const [type, setType] = useState<ListingType>(() => {
+    if (initialActionType === 'SELL' || initialActionType === 'DONATE' || initialActionType === 'REUSE') {
+      return initialActionType;
+    }
+    return 'REUSE';
+  });
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [myListings, setMyListings] = useState<Listing[]>([]);
