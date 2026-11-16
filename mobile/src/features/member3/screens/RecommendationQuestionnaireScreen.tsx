@@ -11,7 +11,6 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import {
   DeviceCategory,

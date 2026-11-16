@@ -32,6 +32,11 @@ interface AuthContextValue {
   logout: () => Promise<void>;
   setBiometricEnabled: (enabled: boolean) => Promise<boolean>;
   updateProfile: (data: UpdateProfileData) => Promise<void>;
+  /**
+   * Change the password. Resolves `true` when fingerprint login was on and had to be turned
+   * off (its saved password is now old); the user can turn it on again straight away.
+   */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
   hasRole: (...roles: UserRole[]) => boolean;
 }
@@ -174,6 +179,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     rememberUser(updated);
   }, []);
 
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      await authService.changePassword(currentPassword, newPassword);
+      if (user) lastCredentials.current = { email: user.email, password: newPassword };
+      if (!isBiometricEnabled) return false;
+      await disableBiometricLogin();
+      setIsBiometricEnabled(false);
+      return true;
+    },
+    [user, isBiometricEnabled]
+  );
+
   const refreshProfile = useCallback(async () => {
     setUser(await authService.getMe());
   }, []);
@@ -196,6 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout,
       setBiometricEnabled,
       updateProfile,
+      changePassword,
       refreshProfile,
       hasRole,
     }),
@@ -210,6 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logout,
       setBiometricEnabled,
       updateProfile,
+      changePassword,
       refreshProfile,
       hasRole,
     ]

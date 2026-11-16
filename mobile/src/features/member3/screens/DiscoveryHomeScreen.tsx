@@ -170,7 +170,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => loadFeed(true)}
+              onRefresh={handleRefresh}
               colors={[COLORS.primary]}
               tintColor={COLORS.primary}
             />

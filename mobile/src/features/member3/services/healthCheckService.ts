@@ -1,10 +1,10 @@
 // ============================================================================
 // Member 3 - Device Health Check Service
 // Diagnostic probes: Touch screen, Camera, Battery, Accelerometer, Gyroscope
+// Integrated with shared capability layer (checkCapability, requestCapability, registerCapability)
 // Safe handling of unsupported hardware, denied permissions, and emulator environments
 // ============================================================================
 
-import { Platform, PermissionsAndroid } from 'react-native';
 import {
   HealthTestId,
   HealthTestResult,
@@ -13,6 +13,40 @@ import {
   HealthGrade,
 } from '../types/healthCheck.types';
 import { DeviceCondition } from '../types';
+import {
+  checkCapability,
+  requestCapability,
+  registerCapability,
+} from '../../../services/capabilities';
+
+// Register Member 3 sensor capability presence checks for hardware motion sensors
+registerCapability('accelerometer', {
+  isSupported: async () => {
+    try {
+      const g = globalThis as any;
+      if (typeof g.DeviceMotionEvent !== 'undefined' || typeof g.DeviceOrientationEvent !== 'undefined') {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
+});
+
+registerCapability('gyroscope', {
+  isSupported: async () => {
+    try {
+      const g = globalThis as any;
+      if (typeof g.DeviceOrientationEvent !== 'undefined') {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
+});
 
 /**
  * Evaluates the Four-Corner Screen Touch Test (Digitizer check)
@@ -51,29 +85,14 @@ export function evaluateTouchTest(touchState: FourCornerTouchState): HealthTestR
 }
 
 /**
- * Checks Camera capability and runtime permissions
+ * Checks Camera capability via shared capability layer
  * Max Score: 15
  */
 export async function probeCameraCapability(): Promise<HealthTestResult> {
-  if (Platform.OS !== 'android') {
-    return {
-      id: 'CAMERA',
-      name: 'Camera Capability',
-      description: 'Checks optical camera hardware and runtime permissions',
-      status: 'PASSED',
-      maxScore: 15,
-      earnedScore: 15,
-      details: 'Camera hardware is available.',
-      defect: null,
-    };
-  }
-
   try {
-    const hasPermission = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.CAMERA
-    );
+    const status = await requestCapability('camera');
 
-    if (hasPermission) {
+    if (status === 'available') {
       return {
         id: 'CAMERA',
         name: 'Camera Capability',
@@ -84,25 +103,7 @@ export async function probeCameraCapability(): Promise<HealthTestResult> {
         details: 'Camera permission active and hardware responsive.',
         defect: null,
       };
-    }
-
-    // Request on-demand
-    const requestResult = await PermissionsAndroid.request(
-      PermissionsAndroid.PERMISSIONS.CAMERA
-    );
-
-    if (requestResult === PermissionsAndroid.RESULTS.GRANTED) {
-      return {
-        id: 'CAMERA',
-        name: 'Camera Capability',
-        description: 'Checks optical camera hardware and runtime permissions',
-        status: 'PASSED',
-        maxScore: 15,
-        earnedScore: 15,
-        details: 'Camera permission granted and sensor verified.',
-        defect: null,
-      };
-    } else if (requestResult === PermissionsAndroid.RESULTS.DENIED) {
+    } else if (status === 'denied') {
       return {
         id: 'CAMERA',
         name: 'Camera Capability',
@@ -120,19 +121,19 @@ export async function probeCameraCapability(): Promise<HealthTestResult> {
         description: 'Checks optical camera hardware and runtime permissions',
         status: 'UNSUPPORTED',
         maxScore: 15,
-        earnedScore: 8,
+        earnedScore: 0,
         details: 'Camera hardware unavailable (emulator or disabled).',
         defect: null,
       };
     }
-  } catch (err: any) {
+  } catch {
     return {
       id: 'CAMERA',
       name: 'Camera Capability',
       description: 'Checks optical camera hardware and runtime permissions',
       status: 'UNSUPPORTED',
       maxScore: 15,
-      earnedScore: 8,
+      earnedScore: 0,
       details: 'Camera check bypassed safely.',
       defect: null,
     };
@@ -186,11 +187,11 @@ export async function probeBatteryCapability(holdsChargeUserAnswer?: boolean): P
         };
       }
     }
-  } catch (err) {
+  } catch {
     // getBattery not supported in standard bare React Native without native link
   }
 
-  // Graceful fallback: User confirmation or healthy presumption
+  // Fallback: User confirmation or presumes functional power cell
   if (holdsChargeUserAnswer === false) {
     return {
       id: 'BATTERY',
@@ -217,17 +218,13 @@ export async function probeBatteryCapability(holdsChargeUserAnswer?: boolean): P
 }
 
 /**
- * Checks Accelerometer hardware capability
+ * Checks Accelerometer hardware capability via shared capability layer
  * Max Score: 15
  */
 export async function probeAccelerometer(): Promise<HealthTestResult> {
   try {
-    // Check if motion events exist in environment
-    const hasDeviceMotion =
-      typeof (globalThis as any).DeviceMotionEvent !== 'undefined' ||
-      typeof (globalThis as any).DeviceOrientationEvent !== 'undefined';
-
-    if (hasDeviceMotion) {
+    const status = await checkCapability('accelerometer');
+    if (status === 'available') {
       return {
         id: 'ACCELEROMETER',
         name: 'Accelerometer Sensor',
@@ -239,31 +236,30 @@ export async function probeAccelerometer(): Promise<HealthTestResult> {
         defect: null,
       };
     }
-  } catch (err) {
+  } catch {
     // Safely continue
   }
 
-  // Graceful handling for emulators / standard bare RN
   return {
     id: 'ACCELEROMETER',
     name: 'Accelerometer Sensor',
     description: 'Measures 3-axis linear acceleration and tilt',
-    status: 'PASSED',
+    status: 'UNSUPPORTED',
     maxScore: 15,
-    earnedScore: 15,
-    details: 'Accelerometer verified (standard mobile configuration).',
+    earnedScore: 0,
+    details: 'Accelerometer hardware sensor unsupported or unverified.',
     defect: null,
   };
 }
 
 /**
- * Checks Gyroscope hardware capability
+ * Checks Gyroscope hardware capability via shared capability layer
  * Max Score: 15
  */
 export async function probeGyroscope(): Promise<HealthTestResult> {
   try {
-    const hasOrientation = typeof (globalThis as any).DeviceOrientationEvent !== 'undefined';
-    if (hasOrientation) {
+    const status = await checkCapability('gyroscope');
+    if (status === 'available') {
       return {
         id: 'GYROSCOPE',
         name: 'Gyroscope Sensor',
@@ -275,7 +271,7 @@ export async function probeGyroscope(): Promise<HealthTestResult> {
         defect: null,
       };
     }
-  } catch (err) {
+  } catch {
     // Safely continue
   }
 
@@ -283,10 +279,10 @@ export async function probeGyroscope(): Promise<HealthTestResult> {
     id: 'GYROSCOPE',
     name: 'Gyroscope Sensor',
     description: 'Detects angular velocity and rotational motion',
-    status: 'PASSED',
+    status: 'UNSUPPORTED',
     maxScore: 15,
-    earnedScore: 15,
-    details: 'Gyroscope orientation tracking verified.',
+    earnedScore: 0,
+    details: 'Gyroscope orientation sensor unsupported or unverified.',
     defect: null,
   };
 }
@@ -307,7 +303,6 @@ export function compileHealthReport(
     }
   });
 
-  // Clamp score between 0 and 100
   const score = Math.max(0, Math.min(100, totalScore));
 
   let derivedCondition: DeviceCondition;

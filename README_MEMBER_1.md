@@ -125,6 +125,7 @@ Notifications, eco points, chat and reviews are Member 6 features: see [README_M
 | Login / logout | Email + password through Firebase. Same message for unknown email and wrong password. |
 | Stay signed in | Firebase keeps the session after the app restarts. Without internet, the app opens with the last saved profile. |
 | Forgot password | Login → *Forgot password?* emails a reset link to the typed address. The message is the same whether or not the email is registered. |
+| Change password | Profile → *Change password*: current password (Firebase re-checks it), new password twice. If fingerprint login was on, it is turned off because it saved the old password, and can be turned on again straight away. |
 | Fingerprint login | Profile → *Fingerprint login* switch (only when `checkCapability('biometric')` is `available`). Saves the email and password behind the fingerprint. Login → *Log in with fingerprint*. Expires if the password changes. Turning it on after an app restart needs one password sign-in first. |
 | Profile | Edit name, phone, photo and location. Role, email and active flag can't be changed by the user. |
 | Admin | List users with search, role filter and paging; change roles; activate / deactivate. Admins can't change or deactivate themselves. |
@@ -154,7 +155,7 @@ To open the sheet from your own screen: `const { openReport } = useProblemReport
 
 | Function | Purpose |
 |---|---|
-| `authService.register / login / logout / getMe / updateMe / sendPasswordReset` | Accounts |
+| `authService.register / login / logout / getMe / updateMe / sendPasswordReset / changePassword` | Accounts |
 | `adminService.listUsers({ role, search, page, limit }) / changeRole / setActive` | Admin user management |
 | `reportService.send / adminList / adminResolve` | Problem reports |
 

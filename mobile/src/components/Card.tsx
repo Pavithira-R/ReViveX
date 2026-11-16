@@ -1,10 +1,11 @@
+// Member 6 – Shared UI: a white rounded card with a soft shadow.
 import React from 'react';
-import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
-import { COLORS, RADIUS } from '../constants';
+import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { COLORS, RADIUS, SHADOW, SPACING } from '../constants';
 
 export const Card: React.FC<{
   children: React.ReactNode;
-  style?: ViewStyle | ViewStyle[];
+  style?: StyleProp<ViewStyle>;
   onPress?: () => void;
 }> = ({ children, style, onPress }) => {
   if (onPress) {
@@ -20,13 +21,12 @@ export const Card: React.FC<{
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
-    borderColor: COLORS.border,
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    padding: 16,
+    padding: SPACING.lg,
+    marginTop: SPACING.md,
+    ...SHADOW.card,
   },
   pressed: {
     opacity: 0.85,
   },
 });
-

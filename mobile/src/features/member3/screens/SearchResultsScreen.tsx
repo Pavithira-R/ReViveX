@@ -26,7 +26,7 @@ import { MultiFacetFilterModal } from '../components/MultiFacetFilterModal';
 import { ProviderCard } from '../components/ProviderCard';
 import { ListingCard } from '../components/ListingCard';
 import { RecyclePointCard } from '../components/RecyclePointCard';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { COLORS, RADIUS, SPACING } from '../constants/theme';
 
 interface SearchResultsScreenProps {
   initialFilters: SearchFilters;

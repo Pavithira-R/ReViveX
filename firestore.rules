@@ -1,7 +1,7 @@
 rules_version = '2';
 
-// ReViveX – Cloud Firestore security rules.
-// Paste into Firebase console → Firestore Database → Rules → Publish.
+// ReViveX â€“ Cloud Firestore security rules.
+// Paste into Firebase console â†’ Firestore Database â†’ Rules â†’ Publish.
 // Each module adds its own block in the marked section below.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -13,7 +13,7 @@ service cloud.firestore {
     function isAdmin() { return signedIn() && me().role == 'ADMIN'; }
     function hasRole(r) { return signedIn() && me().role == r; }
 
-    // ---------- Member 1 – Users and roles ----------
+    // ---------- Member 1 â€“ Users and roles ----------
     match /users/{userId} {
       allow read: if signedIn();
       // Public registration: own profile only, never ADMIN, always active.
@@ -28,13 +28,13 @@ service cloud.firestore {
                     || (isAdmin() && userId != uid());
     }
 
-    // ---------- Member 1 – Problem reports ----------
+    // ---------- Member 1 â€“ Problem reports ----------
     match /problemReports/{id} {
       allow create: if signedIn() && request.resource.data.userId == uid();
       allow read, update: if isAdmin();
     }
 
-    // ---------- Member 6 – Notifications and eco points ----------
+    // ---------- Member 6 â€“ Notifications and eco points ----------
     match /notifications/{id} {
       allow read, update: if signedIn() && resource.data.userId == uid();
       allow create: if signedIn();
@@ -45,7 +45,7 @@ service cloud.firestore {
       allow create: if signedIn();
     }
 
-    // ---------- Member 6 – Chat ----------
+    // ---------- Member 6 â€“ Chat ----------
     // Conversation id = both user ids sorted ("uidA_uidB"); only those two can use it.
     function inChat(chatId) {
       return uid() in get(/databases/$(database)/documents/conversations/$(chatId)).data.participants;
@@ -67,7 +67,7 @@ service cloud.firestore {
       }
     }
 
-    // ---------- Member 6 – Ratings and reviews ----------
+    // ---------- Member 6 â€“ Ratings and reviews ----------
     // Id `TYPE_refId_reviewerId`: one review per person per completed activity, never edited.
     match /reviews/{reviewId} {
       allow read: if signedIn();
@@ -96,6 +96,75 @@ service cloud.firestore {
                         || resource.data.providerId == uid());
     }
 
+    // ---------- Member 5 – Reuse, Sell, Donate and Recycle ----------
+    match /listings/{listingId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+                    && request.resource.data.ownerId == uid();
+      allow update: if signedIn()
+                    && resource.data.ownerId == uid()
+                    && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if signedIn() && resource.data.ownerId == uid();
+    }
+
+    match /offers/{offerId} {
+      allow create: if signedIn()
+                    && request.resource.data.buyerId == uid()
+                    && request.resource.data.status == 'PENDING';
+      allow read: if signedIn()
+                  && (resource.data.buyerId == uid()
+                      || resource.data.ownerId == uid());
+      allow update: if signedIn()
+                    && resource.data.ownerId == uid()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['status']);
+    }
+
+    match /recyclingRequests/{requestId} {
+      allow create: if signedIn()
+                    && request.resource.data.ownerId == uid();
+      allow read: if signedIn()
+                  && (resource.data.ownerId == uid()
+                      || resource.data.recyclerId == uid()
+                      || hasRole('RECYCLER'));
+      allow update: if signedIn()
+                    && (resource.data.ownerId == uid()
+                        || hasRole('RECYCLER'));
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if signedIn()
+                  && (resource.data.fromUserId == uid()
+                      || resource.data.toUserId == uid());
+      allow create: if signedIn()
+                    && (request.resource.data.fromUserId == uid()
+                        || request.resource.data.toUserId == uid());
+    }
     // ---------- Other modules: add your blocks below ----------
+
+    // ---------- Member 2 – Items ----------
+    // Built-in list in the app; admins may add more.
+    match /categories/{categoryId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /items/{itemId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.ownerId == uid();
+      // The owner (or an admin) edits or deletes; the owner can't be changed.
+      allow update: if signedIn()
+        && (resource.data.ownerId == uid() || isAdmin())
+        && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if signedIn() && (resource.data.ownerId == uid() || isAdmin());
+
+      // Photos (JPEG bytes, max 5 per item, each under 1 MB): only the item's owner (or an admin) writes them.
+      match /photos/{photoId} {
+        allow read: if signedIn();
+        allow write: if signedIn()
+          && (get(/databases/$(database)/documents/items/$(itemId)).data.ownerId == uid() || isAdmin());
+      }
+    }
   }
 }

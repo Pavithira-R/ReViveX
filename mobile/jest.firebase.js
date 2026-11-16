@@ -94,6 +94,21 @@ const auth = {
   signOut: async () => {
     setCurrentUser(null);
   },
+  EmailAuthProvider: { credential: (email, password) => ({ email, password }) },
+  reauthenticateWithCredential: async (user, credential) => {
+    offlineCheck(true);
+    const account = state.accounts.get(credential.email);
+    if (!account || account.uid !== user.uid || account.password !== credential.password) {
+      throw new FirebaseError('auth/invalid-credential');
+    }
+    return { user };
+  },
+  updatePassword: async (user, password) => {
+    offlineCheck(true);
+    const account = state.accounts.get(user.email);
+    if (!account) throw new FirebaseError('auth/user-not-found');
+    account.password = password;
+  },
   sendPasswordResetEmail: async (_auth, email) => {
     offlineCheck(true);
     if (!state.accounts.has(email)) throw new FirebaseError('auth/user-not-found');

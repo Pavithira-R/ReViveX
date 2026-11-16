@@ -1,6 +1,6 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
-import { COLORS } from '../constants';
+import { COLORS, RADIUS, SHADOW } from '../constants';
 
 interface PrimaryButtonProps {
   title: string;
@@ -55,19 +55,19 @@ export const PrimaryButton: React.FC<PrimaryButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
-    borderRadius: 10,
+    minHeight: 50,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    marginTop: 8,
+    paddingHorizontal: 18,
+    marginTop: 10,
   },
-  filled: { backgroundColor: COLORS.primary },
+  filled: { backgroundColor: COLORS.primary, ...SHADOW.card },
   outlined: { borderWidth: 1.5, borderColor: COLORS.primary, backgroundColor: COLORS.surface },
   danger: { borderWidth: 1.5, borderColor: COLORS.error, backgroundColor: COLORS.surface },
-  pressed: { opacity: 0.85 },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.55 },
-  text: { fontSize: 16, fontWeight: '700' },
+  text: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
   textFilled: { color: '#FFFFFF' },
   textOutlined: { color: COLORS.primary },
   textDanger: { color: COLORS.error },

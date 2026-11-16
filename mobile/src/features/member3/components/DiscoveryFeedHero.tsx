@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { HeroBannerData } from '../types';
-import { COLORS, RADIUS, SHADOWS, SPACING } from '../constants/theme';
+import { RADIUS, SHADOWS, SPACING } from '../constants/theme';
 
 interface DiscoveryFeedHeroProps {
   banner: HeroBannerData;

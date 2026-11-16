@@ -28,21 +28,23 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   ADMIN: 'Admin',
 };
 
+// Member 6 – Shared design system (colours, spacing, type, corners, shadows) used by every screen.
 export const COLORS = {
-  background: '#F4F7F5',
+  background: '#F3F6F4',
   surface: '#FFFFFF',
   surfaceSubtle: '#F1F5F9',
+  surfaceMuted: '#F8FAF9',
   primary: '#2E7D32',
   primaryDark: '#1B5E20',
   primaryLight: '#E8F5E9',
   secondary: '#3B82F6',
-  accent: '#F59E0B',
+  accent: '#00897B',
   accentLight: '#FEF3C7',
-  text: '#1C2421',
+  text: '#16201B',
   textMuted: '#5F6B66',
   textSecondary: '#64748B',
   textWhite: '#FFFFFF',
-  border: '#D5DED9',
+  border: '#DCE4DF',
   borderLight: '#F1F5F9',
   error: '#C62828',
   errorBg: '#FDECEA',
@@ -50,26 +52,53 @@ export const COLORS = {
   dangerLight: '#FDECEA',
   success: '#2E7D32',
   successLight: '#E8F5E9',
+  warning: '#B26A00',
+  warningBg: '#FFF4E0',
+  /** Soft tints for icon circles on tiles. */
+  tint: {
+    green: '#E3F2E5',
+    teal: '#DDF2EF',
+    blue: '#E3EEFB',
+    amber: '#FDF0D9',
+    purple: '#EEE7F8',
+    rose: '#FBE6E8',
+  },
+  /** Icon colour that goes with each tint. */
+  tintIcon: {
+    green: '#2E7D32',
+    teal: '#00796B',
+    blue: '#1565C0',
+    amber: '#B26A00',
+    purple: '#6A1B9A',
+    rose: '#C2185B',
+  },
 };
 
 export const SPACING = {
   xs: 4,
   sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
 };
 
 export const RADIUS = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  full: 9999,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  round: 999,
+  full: 999,
 };
 
 export const FONT = {
+  title: 26,
+  heading: 20,
+  subheading: 17,
+  body: 15,
+  small: 13,
+  tiny: 11,
   xs: 12,
   sm: 14,
   md: 16,
@@ -78,7 +107,22 @@ export const FONT = {
   xxl: 24,
 };
 
+/** Soft card shadow (Android elevation + iOS shadow). */
 export const SHADOW = {
+  card: {
+    elevation: 2,
+    shadowColor: '#0B2A14',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  raised: {
+    elevation: 6,
+    shadowColor: '#0B2A14',
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+  },
   sm: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -101,4 +145,3 @@ export const SHADOW = {
     elevation: 4,
   },
 };
-
