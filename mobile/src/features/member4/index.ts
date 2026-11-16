@@ -17,3 +17,11 @@ export { ProviderCard } from './phase1-provider-profile/components/ProviderCard'
 export { QuotationModal } from './phase3-quotation-response/components/QuotationModal';
 export { ProgressTracker } from './phase5-status-tracking/components/ProgressTracker';
 
+// Navigator
+export {
+  Member4Navigator,
+  type Member4Route,
+  type Member4NavigatorProps,
+  type RepairReviewTarget,
+} from './navigation/Member4Navigator';
+

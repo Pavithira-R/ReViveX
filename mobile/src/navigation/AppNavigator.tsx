@@ -23,6 +23,8 @@ import {
   WriteReviewScreen,
 } from '../screens';
 import { Member3Navigator } from '../features/member3';
+import { Member4Navigator, Member4Route, RepairReviewTarget } from '../features/member4';
+import { chatService } from '../services';
 import { Conversation } from '../types';
 
 type AuthRoute = 'Login' | 'Register';
@@ -35,6 +37,7 @@ type AppRoute =
   | 'Conversations'
   | 'Chat'
   | 'Member3'
+  | 'Member4'
   | 'PostItem'
   | 'MyItems'
   | 'BrowseItems'
@@ -64,6 +67,10 @@ export const AppNavigator: React.FC = () => {
   const [routeBeforeReviews, setRouteBeforeReviews] = useState<AppRoute>('Home');
   const [reviewTarget, setReviewTarget] = useState<any>(null);
   const [routeBeforeWriteReview, setRouteBeforeWriteReview] = useState<AppRoute>('ReuseRecycle');
+  // Member 4 – Repair state
+  const [repairInitialRoute, setRepairInitialRoute] = useState<Member4Route>('PROVIDER_LIST');
+  const [repairInitialProviderId, setRepairInitialProviderId] = useState<string | undefined>(undefined);
+  const [repairInitialRequestId, setRepairInitialRequestId] = useState<string | undefined>(undefined);
 
   // Always land on the right first screen after sign-in / sign-out.
   useEffect(() => {
@@ -229,11 +236,16 @@ export const AppNavigator: React.FC = () => {
       'discover',
       <Member3Navigator
         onNavigateBack={goHome}
-        onNavigateToModule4={(providerId, category) => {
-          Alert.alert(
-            'Handoff to Member 4 (Repair)',
-            `Booking service provider: ${providerId || 'Selected Provider'} for ${category || 'Device'}`
-          );
+        onNavigateToModule4={(providerId, _category) => {
+          if (providerId) {
+            setRepairInitialRoute('PROVIDER_PROFILE');
+            setRepairInitialProviderId(providerId);
+          } else {
+            setRepairInitialRoute('PROVIDER_LIST');
+            setRepairInitialProviderId(undefined);
+          }
+          setRepairInitialRequestId(undefined);
+          setAppRoute('Member4');
         }}
         onNavigateToModule5={(_actionType, _draft) => {
           setAppRoute('ReuseRecycle');
@@ -241,6 +253,31 @@ export const AppNavigator: React.FC = () => {
         onNavigateToModule2={() => {
           // Member 6 – integration: "save this device" from Discovery opens Post an Item.
           setAppRoute('PostItem');
+        }}
+      />
+    );
+  }
+
+  if (appRoute === 'Member4') {
+    return (
+      <Member4Navigator
+        initialRoute={repairInitialRoute}
+        initialProviderId={repairInitialProviderId}
+        initialRequestId={repairInitialRequestId}
+        onBack={goHome}
+        onLeaveReview={(target) => {
+          setReviewTarget(target);
+          setRouteBeforeWriteReview('Member4');
+          setAppRoute('WriteReview');
+        }}
+        onChatWithProvider={async (providerId) => {
+          try {
+            const convo = await chatService.startWithUser(providerId);
+            setOpenConversation(convo);
+            setAppRoute('Chat');
+          } catch (e) {
+            console.log('Failed to start chat with provider:', e);
+          }
         }}
       />
     );
@@ -260,6 +297,18 @@ export const AppNavigator: React.FC = () => {
       onOpenMyItems={() => setAppRoute('MyItems')}
       onOpenBrowseItems={() => setAppRoute('BrowseItems')}
       onOpenReuseRecycle={() => setAppRoute('ReuseRecycle')}
+      onOpenRepair={() => {
+        setRepairInitialRoute('PROVIDER_LIST');
+        setRepairInitialProviderId(undefined);
+        setRepairInitialRequestId(undefined);
+        setAppRoute('Member4');
+      }}
+      onOpenProviderRequests={() => {
+        setRepairInitialRoute('PROVIDER_REQUESTS');
+        setRepairInitialProviderId(user?.id);
+        setRepairInitialRequestId(undefined);
+        setAppRoute('Member4');
+      }}
     />
   );
 };
