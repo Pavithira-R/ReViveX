@@ -97,6 +97,13 @@ const PEOPLE = {
     phone: '+94 81 222 7845',
     location: { city: 'Kandy', latitude: 7.2955, longitude: 80.6356 },
   },
+  kandyTech: {
+    email: 'kandy.tech@revivex.demo',
+    name: 'Central Tech Care',
+    role: 'SERVICE_PROVIDER',
+    phone: '+94 81 234 9876',
+    location: { city: 'Kandy', latitude: 7.2912, longitude: 80.6345 },
+  },
 };
 
 /** Creates the account and its users/{uid} profile the first time (registration rules: never ADMIN). */
@@ -185,11 +192,69 @@ const listing = (id, owner, data) => {
   });
 };
 
-const { owner, buyer, tech, recycler, tharindu, fathima, kavindu, priya, kandyRecycler } = PEOPLE;
+const { owner, buyer, tech, recycler, tharindu, fathima, kavindu, priya, kandyRecycler, kandyTech } = PEOPLE;
 
-for (const person of [tharindu, fathima, kavindu, priya, kandyRecycler]) await ensureAccount(person);
+for (const person of [tharindu, fathima, kavindu, priya, kandyRecycler, kandyTech]) await ensureAccount(person);
 
-await as(tech, (uid) => setLocation(uid, tech));
+await as(tech, async (uid) => {
+  await setLocation(uid, tech);
+  await setDoc(doc(db, 'serviceProviders', uid), {
+    userId: uid,
+    businessName: 'Kasun TechFix Repairs',
+    name: 'Kasun TechFix Repairs',
+    description: 'Expert repair shop in Maharagama. Specialized in motherboard microsoldering, cracked screen replacements, battery renewal, and water damage diagnostics.',
+    phone: '+94 71 234 5678',
+    phoneNumber: '+94 71 234 5678',
+    email: tech.email,
+    startingPrice: 2500,
+    currency: 'LKR',
+    categoryIds: ['smartphones', 'laptops', 'tablets'],
+    services: ['Screen Replacement', 'Battery Replacement', 'Chipset Diagnostics', 'Water Damage Recovery'],
+    servicesOffered: ['Screen Replacement', 'Battery Replacement', 'Chipset Diagnostics', 'Water Damage Recovery'],
+    location: {
+      city: 'Maharagama',
+      latitude: 6.848,
+      longitude: 79.9265,
+    },
+    rating: 4.9,
+    ratingAverage: 4.9,
+    ratingCount: 18,
+    reviewCount: 18,
+    isVerified: true,
+    createdAt: daysAgo(30),
+    updatedAt: daysAgo(1),
+  });
+});
+
+await as(kandyTech, async (uid) => {
+  await setLocation(uid, kandyTech);
+  await setDoc(doc(db, 'serviceProviders', uid), {
+    userId: uid,
+    businessName: 'Central Tech Care Kandy',
+    name: 'Central Tech Care Kandy',
+    description: 'Premier electronics repair lab in Kandy. Official warranty inspection, laptop motherboard repair, and battery calibration.',
+    phone: '+94 81 234 9876',
+    phoneNumber: '+94 81 234 9876',
+    email: kandyTech.email,
+    startingPrice: 3000,
+    currency: 'LKR',
+    categoryIds: ['smartphones', 'laptops', 'desktops'],
+    services: ['Motherboard Repair', 'Display Assembly', 'Thermal Paste Renewal', 'OS Recovery'],
+    servicesOffered: ['Motherboard Repair', 'Display Assembly', 'Thermal Paste Renewal', 'OS Recovery'],
+    location: {
+      city: 'Kandy',
+      latitude: 7.2912,
+      longitude: 80.6345,
+    },
+    rating: 4.8,
+    ratingAverage: 4.8,
+    ratingCount: 12,
+    reviewCount: 12,
+    isVerified: true,
+    createdAt: daysAgo(25),
+    updatedAt: daysAgo(2),
+  });
+});
 
 await as(recycler, (uid) =>
   setLocation(uid, recycler, {
@@ -277,6 +342,44 @@ await as(owner, async (uid) => {
     createdAt: daysAgo(2, 9),
     updatedAt: daysAgo(2, 9),
   });
+
+  await setDoc(doc(db, 'repairRequests', 'demo-repair-phone'), {
+    itemId: 'demo-item-phone',
+    itemName: 'Samsung Galaxy A32',
+    categoryName: 'Phone',
+    customerId: uid,
+    customerName: owner.name,
+    providerId: tech.uid,
+    providerName: 'Kasun TechFix Repairs',
+    problem: 'Screen cracked after a fall. Touch screen works on bottom half only.',
+    problemDescription: 'Screen cracked after a fall. Touch screen works on bottom half only.',
+    status: 'REQUESTED',
+    quotation: null,
+    appointmentAt: null,
+    preferredDate: daysAgo(0),
+    preferredTime: '10:30 AM',
+    notes: 'Please check if original AMOLED screen replacement is available.',
+    createdAt: daysAgo(1, 10),
+    updatedAt: daysAgo(1, 10),
+    itemSummary: {
+      id: 'demo-item-phone',
+      title: 'Samsung Galaxy A32',
+      category: 'Phone',
+      imageUrl: null,
+    },
+    customerSummary: {
+      id: uid,
+      name: owner.name,
+      email: owner.email,
+      phone: '+94 77 123 4567',
+    },
+    providerSummary: {
+      id: tech.uid,
+      businessName: 'Kasun TechFix Repairs',
+      rating: 4.9,
+      location: 'Maharagama',
+    },
+  });
 });
 
 // Dilini (Nugegoda): a spare office monitor to give away and old chargers to recycle.
@@ -345,6 +448,48 @@ await as(tharindu, async (uid) => {
     categoryName: 'Camera',
     condition: 'WORKING',
     price: 78000,
+  });
+
+  await setDoc(doc(db, 'repairRequests', 'demo-repair-asus'), {
+    itemId: 'demo-item-asus',
+    itemName: 'Asus TUF Gaming F15',
+    categoryName: 'Laptop',
+    customerId: uid,
+    customerName: tharindu.name,
+    providerId: kandyTech.uid,
+    providerName: 'Central Tech Care Kandy',
+    problem: 'Overheats and shuts down during games. Needs fan clean and new thermal paste.',
+    problemDescription: 'Overheats and shuts down during games. Needs fan clean and new thermal paste.',
+    status: 'QUOTED',
+    quotation: {
+      price: 6500,
+      notes: 'Deep clean, heatsink dusting and Arctic MX-4 thermal paste re-application. 1-day turnaround.',
+      createdAt: daysAgo(0, 15),
+    },
+    appointmentAt: null,
+    preferredDate: daysAgo(0),
+    preferredTime: '02:00 PM',
+    notes: 'Please backup BIOS profile if possible.',
+    createdAt: daysAgo(1, 11),
+    updatedAt: daysAgo(0, 15),
+    itemSummary: {
+      id: 'demo-item-asus',
+      title: 'Asus TUF Gaming F15',
+      category: 'Laptop',
+      imageUrl: null,
+    },
+    customerSummary: {
+      id: uid,
+      name: tharindu.name,
+      email: tharindu.email,
+      phone: tharindu.phone,
+    },
+    providerSummary: {
+      id: kandyTech.uid,
+      businessName: 'Central Tech Care Kandy',
+      rating: 4.8,
+      location: 'Kandy',
+    },
   });
 });
 
@@ -475,5 +620,6 @@ await as(kandyRecycler, (uid) =>
 
 console.log('Sri Lankan demo marketplace ready:');
 console.log('  13 items across Colombo, Nugegoda, Kandy, Negombo, Galle and Jaffna,');
-console.log('  8 listings (prices in LKR), 2 recycling pickups, 2 recyclers (Wattala, Kandy).');
+console.log('  8 listings (prices in LKR), 2 recycling pickups, 2 recyclers (Wattala, Kandy),');
+console.log('  2 verified service providers (Maharagama, Kandy), 2 active repair requests.');
 process.exit(0);
