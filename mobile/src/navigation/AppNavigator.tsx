@@ -145,10 +145,21 @@ export const AppNavigator: React.FC = () => {
     setAppRoute('Reviews');
   };
 
+  const openProviderProfileEdit = () => {
+    setRepairInitialRoute('EDIT_PROVIDER_PROFILE');
+    setRepairInitialProviderId(user?.id);
+    setRepairInitialRequestId(undefined);
+    setAppRoute('Member4');
+  };
+
   if (appRoute === 'Profile') {
     return withTabs(
       'profile',
-      <ProfileScreen onBack={goHome} onOpenReviews={() => user && openReviews(user.id)} />
+      <ProfileScreen
+        onBack={goHome}
+        onOpenReviews={() => user && openReviews(user.id)}
+        onEditProviderProfile={openProviderProfileEdit}
+      />
     );
   }
   if (appRoute === 'WriteReview' && reviewTarget) {
@@ -309,6 +320,7 @@ export const AppNavigator: React.FC = () => {
         setRepairInitialRequestId(undefined);
         setAppRoute('Member4');
       }}
+      onOpenProviderProfileEdit={openProviderProfileEdit}
     />
   );
 };

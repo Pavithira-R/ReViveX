@@ -22,6 +22,7 @@ interface HomeScreenProps {
   onOpenReuseRecycle?: () => void;
   onOpenRepair?: () => void;
   onOpenProviderRequests?: () => void;
+  onOpenProviderProfileEdit?: () => void;
 }
 
 const BADGE_LABELS: Record<EcoSummary['badge'], string> = {
@@ -48,6 +49,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenReuseRecycle,
   onOpenRepair,
   onOpenProviderRequests,
+  onOpenProviderProfileEdit,
 }) => {
   const { user, hasRole } = useAuth();
   const [eco, setEco] = useState<EcoSummary | null>(null);
@@ -187,17 +189,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           />
         </View>
 
-        {hasRole('SERVICE_PROVIDER') && onOpenProviderRequests ? (
+        {hasRole('SERVICE_PROVIDER') ? (
           <>
             <Text style={styles.sectionTitle}>Technician Portal</Text>
             <View style={styles.grid}>
-              <Tile
-                label="Repair Jobs"
-                hint="Incoming requests & quotes"
-                icon="clipboard-list-outline"
-                tint="amber"
-                onPress={onOpenProviderRequests}
-              />
+              {onOpenProviderRequests ? (
+                <Tile
+                  label="Repair Jobs"
+                  hint="Incoming requests & quotes"
+                  icon="clipboard-list-outline"
+                  tint="amber"
+                  onPress={onOpenProviderRequests}
+                />
+              ) : null}
+              {onOpenProviderProfileEdit ? (
+                <Tile
+                  label="Business Profile"
+                  hint="Services, rates & city"
+                  icon="store-edit-outline"
+                  tint="blue"
+                  onPress={onOpenProviderProfileEdit}
+                />
+              ) : null}
             </View>
           </>
         ) : null}
