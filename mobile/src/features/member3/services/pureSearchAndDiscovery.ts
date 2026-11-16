@@ -3,7 +3,7 @@
 // Integrates Cloud Firestore getDocs snapshots wrapped in fsCall & withId
 // ============================================================================
 
-import { collection, getDocs, query, where, DocumentData } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../services/firebase';
 import { fsCall, withId } from '../../../services/firebaseHelpers';
 import {
@@ -12,6 +12,7 @@ import {
   DiscoveryFeedData,
   HeroBannerData,
   RecyclePointSummary,
+  DeviceCategory,
 } from '../types';
 import { calculateHaversineDistanceKm } from '../utils/location';
 
@@ -40,7 +41,7 @@ export interface GenericDomainItem {
   longitude?: number;
   distanceKm?: number | null;
   createdAt?: string;
-  acceptedCategories?: string[];
+  acceptedCategories?: DeviceCategory[];
   isCertified?: boolean;
 }
 
@@ -59,7 +60,7 @@ export async function fetchFirestoreItems(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'items'));
-      return snap.docs.map((d: DocumentData) => withId<GenericDomainItem>(d));
+      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch items collection:', err);
@@ -74,7 +75,7 @@ export async function fetchFirestoreProviders(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'serviceProviders'));
-      return snap.docs.map((d: DocumentData) => withId<GenericDomainItem>(d));
+      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch serviceProviders collection:', err);
@@ -89,7 +90,7 @@ export async function fetchFirestoreListings(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'listings'));
-      return snap.docs.map((d: DocumentData) => withId<GenericDomainItem>(d));
+      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch listings collection:', err);
@@ -104,7 +105,7 @@ export async function fetchFirestoreRecyclingRequests(): Promise<GenericDomainIt
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'recyclingRequests'));
-      return snap.docs.map((d: DocumentData) => withId<GenericDomainItem>(d));
+      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch recyclingRequests collection:', err);
@@ -120,16 +121,14 @@ export async function fetchFirestoreRecyclers(): Promise<RecyclePointSummary[]> 
     return await fsCall(async () => {
       const q = query(collection(db, 'users'), where('role', '==', 'RECYCLER'));
       const snap = await getDocs(q);
-      return snap.docs.map((d: DocumentData) => {
+      return snap.docs.map((d: any): RecyclePointSummary => {
         const item = withId<GenericDomainItem>(d);
         return {
           id: item.id,
           name: item.name || 'Certified E-Waste Recycler',
           address: item.location?.city || item.pickupAddress || 'Registered Recycler Depot',
-          location: item.location,
-          latitude: item.location?.latitude ?? item.latitude,
-          longitude: item.location?.longitude ?? item.longitude,
-          acceptedCategories: item.acceptedCategories || ['LAPTOP', 'PHONE', 'TABLET', 'BATTERIES'],
+          distanceKm: item.distanceKm ?? null,
+          acceptedCategories: (item.acceptedCategories as DeviceCategory[]) || ['LAPTOP', 'PHONE', 'TABLET'],
           isCertified: true,
         };
       });
@@ -199,11 +198,14 @@ export function filterItems(items: GenericDomainItem[], params: Partial<SearchFi
     results = results.map((item) => {
       const lat = item.location?.latitude ?? item.latitude;
       const lon = item.location?.longitude ?? item.longitude;
-      const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
-      return {
-        ...item,
-        distanceKm: dist < Infinity ? dist : item.distanceKm ?? null,
-      };
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...item,
+          distanceKm: dist < Infinity ? dist : item.distanceKm ?? null,
+        };
+      }
+      return item;
     });
 
     if (typeof params.radiusKm === 'number' && params.radiusKm > 0) {
@@ -260,11 +262,14 @@ export function rankProvidersByDistance(
     results = results.map((p) => {
       const lat = p.location?.latitude ?? p.latitude;
       const lon = p.location?.longitude ?? p.longitude;
-      const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
-      return {
-        ...p,
-        distanceKm: dist < Infinity ? dist : p.distanceKm ?? null,
-      };
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...p,
+          distanceKm: dist < Infinity ? dist : p.distanceKm ?? null,
+        };
+      }
+      return p;
     });
 
     const radius = filters?.radiusKm;
@@ -353,11 +358,14 @@ export function filterListings(listings: GenericDomainItem[], params: Partial<Se
     results = results.map((l) => {
       const lat = l.location?.latitude ?? l.latitude;
       const lon = l.location?.longitude ?? l.longitude;
-      const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
-      return {
-        ...l,
-        distanceKm: dist < Infinity ? dist : l.distanceKm ?? null,
-      };
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...l,
+          distanceKm: dist < Infinity ? dist : l.distanceKm ?? null,
+        };
+      }
+      return l;
     });
 
     if (typeof params.radiusKm === 'number' && params.radiusKm > 0) {
@@ -403,11 +411,14 @@ export function filterRecyclingRequests(requests: GenericDomainItem[], params: P
     results = results.map((r) => {
       const lat = r.location?.latitude ?? r.latitude;
       const lon = r.location?.longitude ?? r.longitude;
-      const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
-      return {
-        ...r,
-        distanceKm: dist < Infinity ? dist : r.distanceKm ?? null,
-      };
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...r,
+          distanceKm: dist < Infinity ? dist : r.distanceKm ?? null,
+        };
+      }
+      return r;
     });
 
     if (typeof params.radiusKm === 'number' && params.radiusKm > 0) {
