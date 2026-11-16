@@ -93,8 +93,17 @@ export async function fetchFirestoreListings(): Promise<GenericDomainItem[]> {
       return snap.docs.map((d: any) => {
         const item = withId<GenericDomainItem>(d);
         const rawAction = (item.actionType || item.type || item.action || '').toString().trim().toUpperCase();
+        const rawLoc: any = item.location;
+        const stringLoc = typeof rawLoc === 'string'
+          ? rawLoc
+          : (rawLoc && typeof rawLoc.city === 'string')
+            ? rawLoc.city
+            : (rawLoc && typeof rawLoc.address === 'string')
+              ? rawLoc.address
+              : 'Sri Lanka';
         return {
           ...item,
+          location: stringLoc,
           actionType: rawAction || undefined,
         };
       });
