@@ -77,9 +77,10 @@ export const PostItemScreen: React.FC<PostItemScreenProps> = ({ onBack, onPosted
       try {
         const cameraResult = await launchCamera({
           mediaType: 'photo',
-          quality: 0.7,
-          maxWidth: 1600,
-          maxHeight: 1600,
+          quality: 0.6,
+          maxWidth: 800,
+          maxHeight: 800,
+          includeBase64: true,
         });
         if (cameraResult.assets?.length) {
           await addPhotos(cameraResult.assets);
@@ -94,10 +95,11 @@ export const PostItemScreen: React.FC<PostItemScreenProps> = ({ onBack, onPosted
     try {
       const galleryResult = await launchImageLibrary({
         mediaType: 'photo',
-        quality: 0.7,
+        quality: 0.6,
         selectionLimit: 5 - photos.length,
-        maxWidth: 1600,
-        maxHeight: 1600,
+        maxWidth: 800,
+        maxHeight: 800,
+        includeBase64: true,
       });
       if (galleryResult.assets?.length) await addPhotos(galleryResult.assets);
     } catch {
@@ -123,18 +125,10 @@ export const PostItemScreen: React.FC<PostItemScreenProps> = ({ onBack, onPosted
         categoryId,
       };
       const item = await itemService.create(payload);
-      const files = photos.filter((photo) => !!photo.uri);
+      const files = photos.map((photo) => photo.base64).filter((base64): base64 is string => !!base64);
       if (files.length > 0) {
-        const form = new FormData();
-        files.forEach((photo, index) => {
-          form.append('images', {
-            uri: photo.uri!,
-            name: photo.fileName ?? `item-photo-${index + 1}.jpg`,
-            type: photo.type ?? 'image/jpeg',
-          } as unknown as Blob);
-        });
         try {
-          await itemService.uploadImages(item.id, form);
+          await itemService.uploadPhotos(item.id, files);
         } catch {
           setPostedItemId(item.id);
           setErrorMessage('Item posted, but the photo could not be uploaded. You can open the item or try again later.');
