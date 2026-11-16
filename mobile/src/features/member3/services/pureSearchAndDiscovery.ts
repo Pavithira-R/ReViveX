@@ -497,23 +497,47 @@ export function buildDiscoveryFeed(data: {
   };
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: any;
+  const timeoutPromise = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([
+    promise.then((res) => {
+      clearTimeout(timer);
+      return res;
+    }),
+    timeoutPromise,
+  ]);
+}
+
 /**
  * Firestore Feed Aggregator: Builds Discovery Feed using live Firestore collections
  */
 export async function fetchFirestoreDiscoveryFeed(
   userLocation?: LocationCoordinates | null
 ): Promise<DiscoveryFeedData> {
-  const [itemsRes, providersRes, listingsRes, recyclersRes] = await Promise.allSettled([
+  const fetchAll = Promise.allSettled([
     fetchFirestoreItems(),
     fetchFirestoreProviders(),
     fetchFirestoreListings(),
     fetchFirestoreRecyclers(),
   ]);
 
-  const items = itemsRes.status === 'fulfilled' ? itemsRes.value : [];
-  const providers = providersRes.status === 'fulfilled' ? providersRes.value : [];
-  const listings = listingsRes.status === 'fulfilled' ? listingsRes.value : [];
-  const recyclingRequests = recyclersRes.status === 'fulfilled' ? recyclersRes.value : [];
+  const settled = await withTimeout(fetchAll, 6000, null);
+
+  let items: GenericDomainItem[] = [];
+  let providers: GenericDomainItem[] = [];
+  let listings: GenericDomainItem[] = [];
+  let recyclingRequests: any[] = [];
+
+  if (settled) {
+    const [itemsRes, providersRes, listingsRes, recyclersRes] = settled;
+    items = itemsRes.status === 'fulfilled' ? itemsRes.value : [];
+    providers = providersRes.status === 'fulfilled' ? providersRes.value : [];
+    listings = listingsRes.status === 'fulfilled' ? listingsRes.value : [];
+    recyclingRequests = recyclersRes.status === 'fulfilled' ? recyclersRes.value : [];
+  }
 
   return buildDiscoveryFeed({
     items,

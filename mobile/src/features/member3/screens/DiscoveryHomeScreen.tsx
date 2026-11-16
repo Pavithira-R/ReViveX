@@ -71,6 +71,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocationState>(getLocationState());
   const [locationModalVisible, setLocationModalVisible] = useState<boolean>(false);
   const [healthModalVisible, setHealthModalVisible] = useState<boolean>(false);
@@ -93,28 +94,40 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
     return () => unsubscribe();
   }, []);
 
+  const userLat = userLocation.coordinates?.latitude;
+  const userLon = userLocation.coordinates?.longitude;
+
   const loadFeed = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setLoadError(null);
 
     try {
-      const response = await fetchDiscoveryFeed(userLocation.coordinates);
+      const coords =
+        typeof userLat === 'number' && typeof userLon === 'number'
+          ? { latitude: userLat, longitude: userLon }
+          : undefined;
+
+      const response = await fetchDiscoveryFeed(coords);
       setFeed(response.feed);
       setIsOffline(response.isOfflineFallback);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load discovery feed:', err);
+      setLoadError(err?.message || 'Unable to load discovery feed. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [userLocation.coordinates]);
+  }, [userLat, userLon]);
 
   useEffect(() => {
     loadFeed();
   }, [loadFeed]);
 
   const handleRefresh = async () => {
-    // On pull-to-refresh, attempt lazy GPS update if user was in prompt state
     if (userLocation.permissionStatus === 'PROMPT') {
       await resolveUserLocation({
         coordinates: profileCoordinates,
@@ -123,6 +136,14 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
     }
     loadFeed(true);
   };
+
+  const isFeedEmpty =
+    feed !== null &&
+    (!feed.nearbyProviders || feed.nearbyProviders.length === 0) &&
+    (!feed.featuredListings || feed.featuredListings.length === 0) &&
+    (!feed.urgentDonations || feed.urgentDonations.length === 0) &&
+    !feed.nearestRecyclePoint &&
+    (!feed.communityItems || feed.communityItems.length === 0);
 
   return (
     <View style={styles.screen}>
@@ -214,6 +235,38 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Error Banner / Retry Card */}
+          {loadError && (
+            <View style={styles.errorStateCard}>
+              <Text style={styles.errorStateTitle}>⚠️ Unable to Load Feed</Text>
+              <Text style={styles.errorStateSubtitle}>{loadError}</Text>
+              <TouchableOpacity
+                style={styles.errorStateButton}
+                onPress={handleRefresh}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.errorStateButtonText}>Tap to Retry ↻</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Empty State Banner */}
+          {isFeedEmpty && !loadError && (
+            <View style={styles.emptyStateCard}>
+              <Text style={styles.emptyStateTitle}>🌱 Local Discovery Feed Ready</Text>
+              <Text style={styles.emptyStateSubtitle}>
+                No active listings or repair providers found nearby yet. Be the first to post an item or service on ReViveX!
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={handleRefresh}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.emptyStateButtonText}>Refresh Feed ↻</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Section 1: Nearby Repair Providers */}
           {feed?.nearbyProviders && feed.nearbyProviders.length > 0 && (
@@ -476,6 +529,74 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  emptyStateCard: {
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.lg,
+    backgroundColor: '#F0FDF4',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    padding: SPACING.lg,
+    alignItems: 'center',
+  },
+  emptyStateTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
+    marginBottom: SPACING.xs,
+  },
+  emptyStateSubtitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 17,
+    marginBottom: SPACING.md,
+  },
+  emptyStateButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+  },
+  emptyStateButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textInverse,
+  },
+  errorStateCard: {
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.lg,
+    backgroundColor: '#FEF2F2',
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    padding: SPACING.lg,
+    alignItems: 'center',
+  },
+  errorStateTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.danger,
+    marginBottom: SPACING.xs,
+  },
+  errorStateSubtitle: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 17,
+    marginBottom: SPACING.md,
+  },
+  errorStateButton: {
+    backgroundColor: COLORS.danger,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+  },
+  errorStateButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textInverse,
   },
   horizontalScroll: {
     paddingHorizontal: SPACING.lg,
