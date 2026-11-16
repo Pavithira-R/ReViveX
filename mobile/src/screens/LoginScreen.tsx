@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppIcon, FormInput, MessageBanner, PrimaryButton } from '../components';
+import { AppIcon, FormInput, MessageBanner, PrimaryButton, TextInputHandle } from '../components';
 import { APP_NAME, APP_TAGLINE, COLORS } from '../constants';
 import { useAuth } from '../context';
 import { authService, useCapability } from '../services';
@@ -21,6 +21,7 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }) => {
   const { login, loginWithBiometrics, isBiometricEnabled } = useAuth();
+  const passwordRef = useRef<TextInputHandle>(null);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { status: biometricStatus } = useCapability('biometric');
@@ -122,8 +123,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }
             keyboardType="email-address"
             autoCorrect={false}
             returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
+            blurOnSubmit={false}
           />
           <FormInput
+            ref={passwordRef}
             label="Password"
             required
             placeholder="Your password"
