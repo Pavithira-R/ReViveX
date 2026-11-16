@@ -79,6 +79,22 @@ service cloud.firestore {
                     && reviewId == request.resource.data.refType + '_' + request.resource.data.refId + '_' + uid();
     }
 
+    // ---------- Member 4 – Repair & Service Providers ----------
+    match /serviceProviders/{providerId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && providerId == uid();
+    }
+
+    match /repairRequests/{id} {
+      allow read: if signedIn()
+                  && (resource.data.customerId == uid()
+                      || resource.data.providerId == uid());
+      allow create: if signedIn()
+                    && request.resource.data.customerId == uid();
+      allow update: if signedIn()
+                    && (resource.data.customerId == uid()
+                        || resource.data.providerId == uid());
+    }
 
     // ---------- Member 5 – Reuse, Sell, Donate and Recycle ----------
     match /listings/{listingId} {

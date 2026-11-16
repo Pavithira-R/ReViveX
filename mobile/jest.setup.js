@@ -72,8 +72,4 @@ jest.mock('firebase/app', () => require('./jest.firebase').app);
 jest.mock('firebase/auth', () => require('./jest.firebase').auth);
 jest.mock('firebase/firestore', () => require('./jest.firebase').firestore);
 
-// Icon font stand-in: icons render nothing in tests (no font, no text to confuse text checks).
-jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
-  const Icon = () => null;
-  return { __esModule: true, default: Icon };
-});
+// Icon font stand-in handled by moduleNameMapper in jest.config.js → __mocks__/react-native-vector-icons.js

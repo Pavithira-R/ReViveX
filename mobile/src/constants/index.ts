@@ -32,17 +32,26 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 export const COLORS = {
   background: '#F3F6F4',
   surface: '#FFFFFF',
+  surfaceSubtle: '#F1F5F9',
   surfaceMuted: '#F8FAF9',
   primary: '#2E7D32',
   primaryDark: '#1B5E20',
   primaryLight: '#E8F5E9',
+  secondary: '#3B82F6',
   accent: '#00897B',
+  accentLight: '#FEF3C7',
   text: '#16201B',
   textMuted: '#5F6B66',
+  textSecondary: '#64748B',
+  textWhite: '#FFFFFF',
   border: '#DCE4DF',
+  borderLight: '#F1F5F9',
   error: '#C62828',
   errorBg: '#FDECEA',
+  danger: '#C62828',
+  dangerLight: '#FDECEA',
   success: '#2E7D32',
+  successLight: '#E8F5E9',
   warning: '#B26A00',
   warningBg: '#FFF4E0',
   /** Soft tints for icon circles on tiles. */
@@ -65,9 +74,23 @@ export const COLORS = {
   },
 };
 
-export const SPACING = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+};
 
-export const RADIUS = { sm: 8, md: 12, lg: 16, xl: 24, round: 999 };
+export const RADIUS = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  round: 999,
+  full: 999,
+};
 
 export const FONT = {
   title: 26,
@@ -76,6 +99,12 @@ export const FONT = {
   body: 15,
   small: 13,
   tiny: 11,
+  xs: 12,
+  sm: 14,
+  md: 16,
+  lg: 18,
+  xl: 20,
+  xxl: 24,
 };
 
 /** Soft card shadow (Android elevation + iOS shadow). */
@@ -93,5 +122,26 @@ export const SHADOW = {
     shadowOpacity: 0.14,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
+  },
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
   },
 };
