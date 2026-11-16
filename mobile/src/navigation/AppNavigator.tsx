@@ -17,6 +17,9 @@ import {
   ProblemReportsScreen,
   ProfileScreen,
   RegisterScreen,
+  ReviewsScreen,
+  ReuseRecycleScreen,
+  WriteReviewScreen,
 } from '../screens';
 import { Member3Navigator } from '../features/member3';
 import { Conversation } from '../types';
@@ -35,23 +38,31 @@ type AppRoute =
   | 'MyItems'
   | 'BrowseItems'
   | 'ItemDetails'
-  | 'ProblemReports';
+  | 'ProblemReports'
+  | 'Reviews'
+  | 'ReuseRecycle'
+  | 'WriteReview';
 
 /**
  * Top-level navigator with protected screens:
- * - Signed out → only Login / Register are reachable.
- * - Signed in  → app screens; AdminUsers additionally requires the ADMIN role.
+ * - Signed out â†’ only Login / Register are reachable.
+ * - Signed in  â†’ app screens; AdminUsers additionally requires the ADMIN role.
  *
  * Kept dependency-free on purpose. Swap for React Navigation once the team
  * agrees on the shared mobile project setup; the auth gating logic stays the same.
  */
 export const AppNavigator: React.FC = () => {
-  const { isAuthenticated, isRestoring, hasRole } = useAuth();
+  const { isAuthenticated, isRestoring, hasRole, user } = useAuth();
   const { setCurrentScreen } = useProblemReport();
   const [authRoute, setAuthRoute] = useState<AuthRoute>('Login');
   const [appRoute, setAppRoute] = useState<AppRoute>('Home');
   const [openConversation, setOpenConversation] = useState<Conversation | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  // Member 6 â€“ whose reviews to show, and where Back returns to.
+  const [reviewsOf, setReviewsOf] = useState<{ userId: string; userName?: string } | null>(null);
+  const [routeBeforeReviews, setRouteBeforeReviews] = useState<AppRoute>('Home');
+  const [reviewTarget, setReviewTarget] = useState<any>(null);
+  const [routeBeforeWriteReview, setRouteBeforeWriteReview] = useState<AppRoute>('ReuseRecycle');
 
   // Always land on the right first screen after sign-in / sign-out.
   useEffect(() => {
@@ -105,9 +116,45 @@ export const AppNavigator: React.FC = () => {
     setSelectedItemId(id);
     setAppRoute('ItemDetails');
   };
+  /** Member 6 â€“ reviews a user has received (own profile, or e.g. a service provider). */
+  const openReviews = (userId: string, userName?: string) => {
+    setRouteBeforeReviews(appRoute);
+    setReviewsOf({ userId, userName });
+    setAppRoute('Reviews');
+  };
 
   if (appRoute === 'Profile') {
-    return <ProfileScreen onBack={goHome} />;
+    return <ProfileScreen onBack={goHome} onOpenReviews={() => user && openReviews(user.id)} />;
+  }
+  if (appRoute === 'WriteReview' && reviewTarget) {
+    return (
+      <WriteReviewScreen
+        target={reviewTarget}
+        onBack={() => setAppRoute(routeBeforeWriteReview)}
+      />
+    );
+  }
+
+  if (appRoute === 'ReuseRecycle') {
+    return (
+      <ReuseRecycleScreen
+        onBack={goHome}
+        onLeaveReview={(target) => {
+          setReviewTarget(target);
+          setRouteBeforeWriteReview('ReuseRecycle');
+          setAppRoute('WriteReview');
+        }}
+      />
+    );
+  }
+  if (appRoute === 'Reviews' && reviewsOf) {
+    return (
+      <ReviewsScreen
+        userId={reviewsOf.userId}
+        userName={reviewsOf.userName}
+        onBack={() => setAppRoute(routeBeforeReviews)}
+      />
+    );
   }
   if (appRoute === 'Conversations') {
     return (
@@ -169,10 +216,7 @@ export const AppNavigator: React.FC = () => {
           );
         }}
         onNavigateToModule5={(actionType, draft) => {
-          Alert.alert(
-            'Handoff to Member 5 (Marketplace / Donation / Recycling)',
-            `Action: ${actionType}\nDraft: ${JSON.stringify(draft || {}, null, 2)}`
-          );
+          setAppRoute('ReuseRecycle');
         }}
         onNavigateToModule2={(itemDraft) => {
           Alert.alert(

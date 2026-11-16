@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FormInput, MessageBanner, PrimaryButton } from '../components';
 import { APP_NAME, APP_TAGLINE, COLORS } from '../constants';
 import { useAuth } from '../context';
-import { useCapability } from '../services';
+import { authService, useCapability } from '../services';
 import { getErrorMessage, isValidEmail } from '../utils';
 
 interface LoginScreenProps {
@@ -21,6 +21,8 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }) => {
   const { login, loginWithBiometrics, isBiometricEnabled } = useAuth();
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { status: biometricStatus } = useCapability('biometric');
   const canUseFingerprint = isBiometricEnabled && biometricStatus === 'available';
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
@@ -31,6 +33,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }
 
   const handleLogin = async () => {
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     if (!isValidEmail(email)) {
       setErrorMessage('Please enter a valid email address.');
@@ -51,8 +54,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }
     }
   };
 
+  /** Emails a reset link to the address typed in the Email field. */
+  const handleForgotPassword = async () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    if (!isValidEmail(email)) {
+      setErrorMessage('Enter your email address above, then tap "Forgot password?" again.');
+      return;
+    }
+    setIsSendingReset(true);
+    try {
+      await authService.sendPasswordReset(email);
+      setSuccessMessage(
+        `If ${email.trim()} has a ReViveX account, a link to reset your password has been sent. Check your inbox and spam folder.`
+      );
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, 'Could not send the reset email.'));
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
+
   const handleBiometricLogin = async () => {
     setErrorMessage(null);
+    setSuccessMessage(null);
     setIsBiometricLoading(true);
     try {
       const signedIn = await loginWithBiometrics();
@@ -81,6 +106,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }
           </View>
 
           <MessageBanner message={errorMessage} />
+          <MessageBanner message={successMessage} type="success" />
 
           <FormInput
             label="Email address"
@@ -105,6 +131,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToRegister }
             returnKeyType="go"
             onSubmitEditing={handleLogin}
           />
+          <Pressable
+            onPress={handleForgotPassword}
+            disabled={isSendingReset}
+            accessibilityRole="button"
+            hitSlop={8}
+            style={styles.forgot}
+          >
+            <Text style={styles.forgotText}>{isSendingReset ? 'Sending…' : 'Forgot password?'}</Text>
+          </Pressable>
 
           <PrimaryButton title="Sign In" onPress={handleLogin} loading={isLoading} />
           {canUseFingerprint ? (
@@ -138,6 +173,8 @@ const styles = StyleSheet.create({
   tagline: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginBottom: 28 },
   title: { fontSize: 24, fontWeight: '700', color: COLORS.text },
   subtitle: { fontSize: 15, color: COLORS.textMuted, marginTop: 4 },
+  forgot: { alignSelf: 'flex-end', marginTop: -6, marginBottom: 14 },
+  forgotText: { color: COLORS.primary, fontSize: 14, fontWeight: '600' },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
   footerText: { color: COLORS.textMuted, fontSize: 15 },
   footerLink: { color: COLORS.primary, fontSize: 15, fontWeight: '700' },

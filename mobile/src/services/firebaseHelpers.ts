@@ -35,7 +35,7 @@ export const toApiError = (error: unknown): ApiError => {
 
   if (NETWORK_CODES.has(code)) {
     return new ApiError(
-      'Cannot reach the server. Check your connection and that the backend is running.',
+      'Cannot reach the server. Check your internet connection and try again.',
       0,
       'NETWORK_ERROR'
     );

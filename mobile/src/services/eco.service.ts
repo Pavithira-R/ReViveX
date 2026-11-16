@@ -1,11 +1,28 @@
 // Member 6 – Eco impact
-import { doc, runTransaction } from 'firebase/firestore';
-import { ApiError, apiRequest } from './api';
-import { db } from './firebase';
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  QueryDocumentSnapshot,
+  runTransaction,
+  where,
+} from 'firebase/firestore';
+import { ApiError } from './api';
+import { auth, db } from './firebase';
 import { fsCall, nowIso } from './firebaseHelpers';
 import { notify } from './notification.service';
-import { CommunityImpact, EcoActionType, EcoSummary } from '../types';
-import { ACTION_PHRASES, ECO_ACTION_TYPES, ECO_POINTS, impactFor, normalizeDeviceCategory } from '../utils/eco';
+import { CommunityImpact, EcoAction, EcoActionType, EcoSummary } from '../types';
+import {
+  ACTION_PHRASES,
+  badgeFor,
+  ECO_ACTION_TYPES,
+  ECO_POINTS,
+  impactFor,
+  nextBadgeFor,
+  normalizeDeviceCategory,
+  toImpact,
+} from '../utils/eco';
 
 export interface EcoAwardResult {
   awarded: boolean;
@@ -52,9 +69,54 @@ export const awardEcoPoints = async (
   return { awarded, points: awarded ? points : 0 };
 };
 
-// The summary screens move to Firestore in Phase 2.
-export const ecoService = {
-  getMine: () => apiRequest<EcoSummary>('GET', '/eco/me'),
+type StoredEcoAction = EcoAction & { userId: string; ewasteKg: number };
 
-  getCommunity: () => apiRequest<CommunityImpact>('GET', '/eco/community'),
+const RECENT_LIMIT = 10;
+const ecoActions = collection(db, 'ecoActions');
+
+const toAction = (d: QueryDocumentSnapshot): StoredEcoAction => ({ id: d.id, ...(d.data() as Omit<StoredEcoAction, 'id'>) });
+
+export const ecoService = {
+  /** Eco impact of the signed-in user: points, badge, counts, estimated impact and recent activity. */
+  getMine: (): Promise<EcoSummary> =>
+    fsCall(async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) throw new ApiError('Authentication required', 401, 'UNAUTHORIZED');
+      const actions = (await getDocs(query(ecoActions, where('userId', '==', uid)))).docs
+        .map(toAction)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+      const counts = Object.fromEntries(ECO_ACTION_TYPES.map((t) => [t, 0])) as EcoSummary['counts'];
+      let totalPoints = 0;
+      let co2SavedKg = 0;
+      let ewasteKg = 0;
+      for (const action of actions) {
+        counts[action.type] += 1;
+        totalPoints += action.points;
+        co2SavedKg += action.co2SavedKg;
+        ewasteKg += action.ewasteKg;
+      }
+
+      return {
+        totalPoints,
+        badge: badgeFor(totalPoints),
+        nextBadge: nextBadgeFor(totalPoints),
+        counts,
+        impact: toImpact(co2SavedKg, ewasteKg),
+        recent: actions.slice(0, RECENT_LIMIT).map(({ userId: _u, ewasteKg: _e, ...action }) => action),
+      };
+    }),
+
+  /** Totals for all ReViveX users, shown as "community impact". */
+  getCommunity: (): Promise<CommunityImpact> =>
+    fsCall(async () => {
+      const actions = (await getDocs(ecoActions)).docs.map(toAction);
+      const co2SavedKg = actions.reduce((sum, a) => sum + a.co2SavedKg, 0);
+      const ewasteKg = actions.reduce((sum, a) => sum + a.ewasteKg, 0);
+      return {
+        ...toImpact(co2SavedKg, ewasteKg),
+        devicesCount: actions.length,
+        contributors: new Set(actions.map((a) => a.userId)).size,
+      };
+    }),
 };

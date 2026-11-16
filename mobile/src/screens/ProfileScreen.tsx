@@ -18,10 +18,13 @@ import { getErrorMessage } from '../utils';
 
 interface ProfileScreenProps {
   onBack: () => void;
+  /** Member 6 – opens the reviews this user has received. */
+  onOpenReviews?: () => void;
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
-  const { user, updateProfile, logout, isBiometricEnabled, setBiometricEnabled } = useAuth();
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenReviews }) => {
+  const { user, updateProfile, changePassword, logout, isBiometricEnabled, setBiometricEnabled } =
+    useAuth();
   const { status: biometricStatus } = useCapability('biometric');
   const { openReport } = useProblemReport();
   const [isTogglingBiometric, setIsTogglingBiometric] = useState(false);
@@ -29,6 +32,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
   const [name, setName] = useState(user?.name ?? '');
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
   if (!user) return null;
@@ -52,6 +59,37 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
       setIsEditing(false);
     } catch (error) {
       setMessage({ text: getErrorMessage(error), type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const startChangingPassword = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setMessage(null);
+    setIsChangingPassword(true);
+  };
+
+  const handleChangePassword = async () => {
+    setMessage(null);
+    if (newPassword !== confirmPassword) {
+      setMessage({ text: 'The new passwords do not match.', type: 'error' });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const fingerprintTurnedOff = await changePassword(currentPassword, newPassword);
+      setIsChangingPassword(false);
+      setMessage({
+        text: fingerprintTurnedOff
+          ? 'Password changed. Fingerprint login was turned off because it used the old password. Turn it on again below.'
+          : 'Password changed.',
+        type: 'success',
+      });
+    } catch (error) {
+      setMessage({ text: getErrorMessage(error, 'Could not change the password.'), type: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -123,7 +161,42 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
 
           <MessageBanner message={message?.text ?? null} type={message?.type} />
 
-          {isEditing ? (
+          {isChangingPassword ? (
+            <View>
+              <FormInput
+                label="Current password"
+                required
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                secureTextEntry
+                autoComplete="password"
+              />
+              <FormInput
+                label="New password"
+                required
+                placeholder="8+ characters, letters and numbers"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry
+                autoComplete="password-new"
+              />
+              <FormInput
+                label="Confirm new password"
+                required
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoComplete="password-new"
+              />
+              <PrimaryButton title="Change Password" onPress={handleChangePassword} loading={isSaving} />
+              <PrimaryButton
+                title="Cancel"
+                variant="outlined"
+                onPress={() => setIsChangingPassword(false)}
+                disabled={isSaving}
+              />
+            </View>
+          ) : isEditing ? (
             <View>
               <FormInput label="Full name" required value={name} onChangeText={setName} />
               <FormInput
@@ -170,6 +243,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack }) => {
                 </View>
               </View>
               <PrimaryButton title="Edit Profile" onPress={startEditing} />
+              <PrimaryButton title="Change password" variant="outlined" onPress={startChangingPassword} />
+              {onOpenReviews ? (
+                <PrimaryButton title="My reviews" variant="outlined" onPress={onOpenReviews} />
+              ) : null}
               <PrimaryButton title="Report a problem" variant="outlined" onPress={openReport} />
               <Text style={styles.hint}>Tip: you can also shake your phone on any screen.</Text>
               <PrimaryButton title="Log Out" variant="danger" onPress={logout} />

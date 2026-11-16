@@ -9,3 +9,4 @@ export * from './item.service';
 export * from './report.service';
 export * from './shake';
 export * from './offlineCache';
+export * from './review.service';
