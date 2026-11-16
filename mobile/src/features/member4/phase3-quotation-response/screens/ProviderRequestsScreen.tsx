@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,7 +12,8 @@ import { RepairRequest, RepairStatus } from '../../types';
 import { mobileQuotationService } from '../quotationService';
 import { QuotationModal } from '../components/QuotationModal';
 import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
-import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
+import { formatLKR } from '../../../../utils';
+import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
 
 interface ProviderRequestsScreenProps {
   providerId?: string;
@@ -33,7 +34,7 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
   const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');
   const [selectedRequestForModal, setSelectedRequestForModal] = useState<RepairRequest | null>(null);
 
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -48,11 +49,11 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [providerId]);
 
   useEffect(() => {
     loadRequests();
-  }, [providerId]);
+  }, [loadRequests]);
 
   const handleModalSubmit = async (payload: {
     action: 'ACCEPT' | 'REJECT';
@@ -137,7 +138,7 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
           renderItem={({ item }) => (
             <Card style={styles.requestCard}>
               <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
+                <View style={styles.flexOne}>
                   <Text style={styles.deviceTitle}>{item.itemSummary?.title || item.itemName || 'Electronic Device'}</Text>
                   <Text style={styles.customerName}>Customer: {item.customerSummary?.name || item.customerName || 'Customer'}</Text>
                 </View>
@@ -158,7 +159,7 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
               {item.estimatedPrice !== undefined && (
                 <View style={styles.quoteSummaryRow}>
                   <Text style={styles.quoteLabel}>Quoted Estimate:</Text>
-                  <Text style={styles.quotePrice}>${item.estimatedPrice.toFixed(2)} USD</Text>
+                  <Text style={styles.quotePrice}>{formatLKR(item.estimatedPrice)}</Text>
                 </View>
               )}
 
@@ -199,6 +200,7 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  flexOne: { flex: 1 },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

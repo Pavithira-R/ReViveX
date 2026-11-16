@@ -8,11 +8,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { RepairRequest, Booking, BookingStatus } from '../../types';
+import { RepairRequest, Booking } from '../../types';
 import { mobileBookingService } from '../bookingService';
 import { useAuth } from '../../../../context';
 import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
-import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
+import { formatLKR } from '../../../../utils';
+import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
 
 interface RepairBookingScreenProps {
   repairRequest: RepairRequest;
@@ -117,8 +118,8 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
 
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Agreed Quotation:</Text>
-                <Text style={[styles.detailValue, { color: COLORS.primaryDark, fontWeight: '700' }]}>
-                  ${repairRequest.estimatedPrice ? repairRequest.estimatedPrice.toFixed(2) : (repairRequest.quotation?.price || 85).toFixed(2)} USD
+                <Text style={[styles.detailValue, styles.detailValueStrong]}>
+                  {formatLKR(repairRequest.estimatedPrice ?? repairRequest.quotation?.price)}
                 </Text>
               </View>
 
@@ -177,7 +178,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
           <View style={styles.summaryItemRow}>
             <Text style={styles.summaryLabel}>Quoted Price:</Text>
             <Text style={[styles.summaryValue, styles.highlightPrice]}>
-              ${repairRequest.estimatedPrice ? repairRequest.estimatedPrice.toFixed(2) : (repairRequest.quotation?.price || 85).toFixed(2)} USD
+              {formatLKR(repairRequest.estimatedPrice ?? repairRequest.quotation?.price)}
             </Text>
           </View>
           {repairRequest.providerNotes ? (
@@ -270,6 +271,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  detailValueStrong: { color: COLORS.primaryDark, fontWeight: '700' },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

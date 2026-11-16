@@ -8,6 +8,12 @@ export const isValidEmail = (email: string): boolean => EMAIL_REGEX.test(email.t
 export const isValidPassword = (password: string): boolean =>
   password.length >= 8 && /[a-zA-Z]/.test(password) && /[0-9]/.test(password);
 
+/** Prices in Sri Lankan Rupees, e.g. formatLKR(18500) → "Rs. 18,500". Missing price → "To be confirmed". */
+export const formatLKR = (amount?: number | null): string =>
+  typeof amount === 'number' && Number.isFinite(amount)
+    ? `Rs. ${Math.round(amount).toLocaleString('en-US')}`
+    : 'To be confirmed';
+
 /** Turn any thrown error into a message suitable for the UI. */
 export const getErrorMessage = (error: unknown, fallback = 'Something went wrong. Please try again.'): string => {
   if (error instanceof ApiError) return error.displayMessage;
