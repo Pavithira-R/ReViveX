@@ -5,9 +5,10 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ListingSummary } from '../types';
+import { ListingSummary, RecommendationAction, DeviceCategory, DeviceCondition } from '../types';
 import {
   ACTION_THEMES,
+  NEUTRAL_ACTION_THEME,
   CATEGORY_META,
   CONDITION_META,
   COLORS,
@@ -28,9 +29,26 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   onPress,
   compact = false,
 }) => {
-  const actionTheme = ACTION_THEMES[listing.actionType];
-  const catMeta = CATEGORY_META[listing.category];
-  const condMeta = CONDITION_META[listing.condition];
+  if (!listing) return null;
+
+  // Robust action normalization: check actionType, type, or action
+  const rawActionStr = (listing.actionType || (listing as any).type || (listing as any).action || '')
+    .toString()
+    .trim()
+    .toUpperCase();
+
+  const isRecognizedAction = rawActionStr && Object.prototype.hasOwnProperty.call(ACTION_THEMES, rawActionStr);
+  const actionKey = isRecognizedAction ? (rawActionStr as RecommendationAction) : null;
+  const actionTheme = actionKey ? ACTION_THEMES[actionKey] : NEUTRAL_ACTION_THEME;
+  const badgeLabel = actionKey ? actionKey : (rawActionStr || 'LISTING');
+
+  const catKey = (listing.category || 'OTHER').toString().trim().toUpperCase() as DeviceCategory;
+  const catMeta = CATEGORY_META[catKey] || CATEGORY_META.OTHER;
+
+  const condKey = (listing.condition || 'WORKING_NORMALLY').toString().trim().toUpperCase() as DeviceCondition;
+  const condMeta = CONDITION_META[condKey] || CONDITION_META.WORKING_NORMALLY;
+
+  const isDonate = actionKey === 'DONATE' || badgeLabel === 'DONATE';
 
   return (
     <TouchableOpacity
@@ -39,10 +57,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({
       activeOpacity={0.8}
     >
       <View style={styles.topRow}>
-        {/* Action Type Badge */}
+        {/* Action Type Badge with Neutral Fallback */}
         <View style={[styles.badge, { backgroundColor: actionTheme.bgColor }]}>
           <Text style={[styles.badgeText, { color: actionTheme.badgeColor }]}>
-            {listing.actionType}
+            {badgeLabel}
           </Text>
         </View>
 
@@ -53,30 +71,30 @@ export const ListingCard: React.FC<ListingCardProps> = ({
       </View>
 
       <Text style={styles.title} numberOfLines={2}>
-        {listing.title}
+        {listing.title || 'Marketplace Item'}
       </Text>
 
       <View style={styles.metaRow}>
         <Text style={styles.categoryTag}>
-          {catMeta?.icon} {catMeta?.label || listing.category}
+          {catMeta?.icon || '📦'} {catMeta?.label || listing.category || 'Item'}
         </Text>
         <Text style={styles.dot}>•</Text>
         <Text style={[styles.conditionTag, { color: condMeta?.color || COLORS.textSecondary }]}>
-          {condMeta?.badge || listing.condition}
+          {condMeta?.badge || listing.condition || 'Used'}
         </Text>
       </View>
 
       <View style={styles.footer}>
         <View>
-          {listing.actionType === 'DONATE' ? (
+          {isDonate ? (
             <Text style={styles.freePrice}>FREE (Donation)</Text>
           ) : (
             <Text style={styles.price}>
-              ${(listing.price ?? 0).toFixed(2)}
+              ${(typeof listing.price === 'number' && !isNaN(listing.price) ? listing.price : 0).toFixed(2)}
             </Text>
           )}
           <Text style={styles.locationText} numberOfLines={1}>
-            📍 {listing.location}
+            📍 {listing.location || 'Sri Lanka'}
           </Text>
         </View>
 
