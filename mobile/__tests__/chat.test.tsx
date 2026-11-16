@@ -62,7 +62,7 @@ const button = (root: ReactTestInstance, text: string) =>
     (node) =>
       node.props.accessibilityRole === 'button' &&
       typeof node.props.onPress === 'function' &&
-      allText(node).includes(text)
+      (allText(node).includes(text) || node.props.accessibilityLabel === text)
   )[0];
 
 const press = async (root: ReactTestInstance, text: string) => {

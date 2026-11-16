@@ -38,7 +38,7 @@ const button = (root: ReactTestInstance, title: string) =>
     (node) =>
       node.props.accessibilityRole === 'button' &&
       typeof node.props.onPress === 'function' &&
-      allText(node) === title
+      (allText(node) === title || node.props.accessibilityLabel === title)
   )[0];
 
 let renderer: ReactTestRenderer.ReactTestRenderer;
