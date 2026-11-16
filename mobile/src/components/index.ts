@@ -11,3 +11,5 @@ export * from './OfflineBanner';
 export * from './RatingStars';
 export * from './ReviewCard';
 export * from './Card';
+export * from './Card';
+export * from './AppIcon';
