@@ -15,11 +15,30 @@ interface RecyclePointCardProps {
   compact?: boolean;
 }
 
+const safeString = (val: unknown, fallback: string): string => {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  if (typeof val === 'object') {
+    const obj = val as Record<string, unknown>;
+    if (typeof obj.name === 'string') return obj.name;
+    if (typeof obj.city === 'string') return obj.city;
+    if (typeof obj.address === 'string') return obj.address;
+    if (typeof obj.title === 'string') return obj.title;
+    if (typeof obj.label === 'string') return obj.label;
+  }
+  return fallback;
+};
+
 export const RecyclePointCard: React.FC<RecyclePointCardProps> = ({
   point,
   onPress,
   compact = false,
 }) => {
+  const displayName = safeString(point?.name, 'Certified E-Waste Recycler');
+  const displayAddress = safeString(point?.address, 'Colombo, Sri Lanka');
+  const displayHours = point?.openingHours ? safeString(point.openingHours, '') : '';
+
   return (
     <TouchableOpacity
       style={[styles.card, compact && styles.compactCard]}
@@ -30,27 +49,27 @@ export const RecyclePointCard: React.FC<RecyclePointCardProps> = ({
         <View style={styles.badge}>
           <Text style={styles.badgeText}>♻️ CERTIFIED E-WASTE</Text>
         </View>
-        <Text style={styles.distance}>{formatDistance(point.distanceKm)}</Text>
+        <Text style={styles.distance}>{formatDistance(point?.distanceKm)}</Text>
       </View>
 
       <Text style={styles.title} numberOfLines={1}>
-        {point.name}
+        {displayName}
       </Text>
       <Text style={styles.address} numberOfLines={1}>
-        📍 {point.address}
+        📍 {displayAddress}
       </Text>
 
-      {point.openingHours && (
-        <Text style={styles.hours}>🕒 {point.openingHours}</Text>
-      )}
+      {displayHours ? (
+        <Text style={styles.hours}>🕒 {displayHours}</Text>
+      ) : null}
 
-      {!compact && point.acceptedCategories?.length > 0 && (
+      {!compact && point?.acceptedCategories?.length > 0 && (
         <View style={styles.categoriesRow}>
           <Text style={styles.acceptedLabel}>Accepts: </Text>
           {point.acceptedCategories.slice(0, 4).map((cat) => (
             <View key={cat} style={styles.catChip}>
               <Text style={styles.catChipText}>
-                {CATEGORY_META[cat]?.label || cat}
+                {CATEGORY_META[cat]?.label || safeString(cat, 'E-Waste')}
               </Text>
             </View>
           ))}

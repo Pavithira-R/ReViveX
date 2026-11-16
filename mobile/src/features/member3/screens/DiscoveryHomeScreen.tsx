@@ -98,6 +98,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
   const userLon = userLocation.coordinates?.longitude;
 
   const loadFeed = useCallback(async (isRefresh = false) => {
+    console.log('[Discovery] loadFeed starting, isRefresh:', isRefresh, 'lat/lon:', userLat, userLon);
     if (isRefresh) {
       setRefreshing(true);
     } else {
@@ -112,12 +113,14 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
           : undefined;
 
       const response = await fetchDiscoveryFeed(coords);
+      console.log('[Discovery] fetchDiscoveryFeed completed, providers:', response.feed?.nearbyProviders?.length, 'listings:', response.feed?.featuredListings?.length);
       setFeed(response.feed);
       setIsOffline(response.isOfflineFallback);
     } catch (err: any) {
-      console.error('Failed to load discovery feed:', err);
+      console.error('[Discovery] Failed to load discovery feed:', err);
       setLoadError(err?.message || 'Unable to load discovery feed. Please try again.');
     } finally {
+      console.log('[Discovery] loadFeed finally block: setting loading=false, refreshing=false');
       setLoading(false);
       setRefreshing(false);
     }
@@ -128,6 +131,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
   }, [loadFeed]);
 
   const handleRefresh = async () => {
+    console.log('[Discovery] handleRefresh triggered by user');
     if (userLocation.permissionStatus === 'PROMPT') {
       await resolveUserLocation({
         coordinates: profileCoordinates,
@@ -178,185 +182,197 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
         </View>
       )}
 
-      {loading && !refreshing ? (
-        <View style={styles.centerLoading}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Curating your local discovery feed...</Text>
-        </View>
-      ) : (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[COLORS.primary]}
-              tintColor={COLORS.primary}
-            />
-          }
-        >
-          {/* Hero Banner: 60s Recommendation Questionnaire */}
-          {feed?.heroBanner && (
-            <DiscoveryFeedHero
-              banner={feed.heroBanner}
-              onPressStart={onStartQuestionnaire}
-            />
-          )}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
+        {/* Hero Banner: 60s Recommendation Questionnaire */}
+        {feed?.heroBanner ? (
+          <DiscoveryFeedHero
+            banner={feed.heroBanner}
+            onPressStart={onStartQuestionnaire}
+          />
+        ) : (
+          <DiscoveryFeedHero
+            banner={{
+              id: 'banner_rec_01',
+              title: 'Evaluate Your Old Tech in 60 Seconds',
+              subtitle: 'Unsure whether to repair, sell, donate, or recycle? Take the 4-step wizard.',
+              ctaAction: 'NAVIGATE_QUESTIONNAIRE',
+              badgeText: '60s SMART GUIDE',
+            }}
+            onPressStart={onStartQuestionnaire}
+          />
+        )}
 
-          {/* Quick Hardware Diagnostic Card */}
-          <View style={styles.diagnosticCard}>
-            <View style={styles.diagnosticCardHeader}>
-              <View style={styles.diagnosticCardBadge}>
-                <Text style={styles.diagnosticCardBadgeText}>HARDWARE DIAGNOSTICS</Text>
-              </View>
-              {latestHealthReport && (
-                <View style={styles.diagnosticScorePill}>
-                  <Text style={styles.diagnosticScorePillText}>
-                    Score: {latestHealthReport.overallScore}% ({latestHealthReport.derivedCondition})
-                  </Text>
-                </View>
-              )}
+        {/* Quick Hardware Diagnostic Card */}
+        <View style={styles.diagnosticCard}>
+          <View style={styles.diagnosticCardHeader}>
+            <View style={styles.diagnosticCardBadge}>
+              <Text style={styles.diagnosticCardBadgeText}>HARDWARE DIAGNOSTICS</Text>
             </View>
-            <Text style={styles.diagnosticCardTitle}>
-              🩺 Check Device Health & Repair Viability
+            {latestHealthReport && (
+              <View style={styles.diagnosticScorePill}>
+                <Text style={styles.diagnosticScorePillText}>
+                  Score: {latestHealthReport.overallScore}% ({latestHealthReport.derivedCondition})
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.diagnosticCardTitle}>
+            🩺 Check Device Health & Repair Viability
+          </Text>
+          <Text style={styles.diagnosticCardSubtitle}>
+            Self-test screen digitizer, battery retention, camera sensor, and motion gyroscopes before choosing whether to repair, sell, donate, or recycle.
+          </Text>
+          <TouchableOpacity
+            style={styles.diagnosticCardButton}
+            onPress={() => setHealthModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.diagnosticCardButtonText}>
+              {latestHealthReport ? 'Run Diagnostic Again ↻' : 'Run 30-Sec Health Check →'}
             </Text>
-            <Text style={styles.diagnosticCardSubtitle}>
-              Self-test screen digitizer, battery retention, camera sensor, and motion gyroscopes before choosing whether to repair, sell, donate, or recycle.
-            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Inline Section Loading Spinner if initial fetch is running */}
+        {loading && !refreshing && !feed && (
+          <View style={styles.inlineLoadingContainer}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <Text style={styles.inlineLoadingText}>Curating local providers, listings & drop-offs...</Text>
+          </View>
+        )}
+
+        {/* Error Banner / Retry Card */}
+        {loadError && !loading && (
+          <View style={styles.errorStateCard}>
+            <Text style={styles.errorStateTitle}>⚠️ Unable to Load Feed</Text>
+            <Text style={styles.errorStateSubtitle}>{loadError}</Text>
             <TouchableOpacity
-              style={styles.diagnosticCardButton}
-              onPress={() => setHealthModalVisible(true)}
+              style={styles.errorStateButton}
+              onPress={handleRefresh}
               activeOpacity={0.8}
             >
-              <Text style={styles.diagnosticCardButtonText}>
-                {latestHealthReport ? 'Run Diagnostic Again ↻' : 'Run 30-Sec Health Check →'}
-              </Text>
+              <Text style={styles.errorStateButtonText}>Tap to Retry ↻</Text>
             </TouchableOpacity>
           </View>
+        )}
 
-          {/* Error Banner / Retry Card */}
-          {loadError && (
-            <View style={styles.errorStateCard}>
-              <Text style={styles.errorStateTitle}>⚠️ Unable to Load Feed</Text>
-              <Text style={styles.errorStateSubtitle}>{loadError}</Text>
-              <TouchableOpacity
-                style={styles.errorStateButton}
-                onPress={handleRefresh}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.errorStateButtonText}>Tap to Retry ↻</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+        {/* Empty State Banner */}
+        {isFeedEmpty && !loadError && !loading && (
+          <View style={styles.emptyStateCard}>
+            <Text style={styles.emptyStateTitle}>🌱 Local Discovery Feed Ready</Text>
+            <Text style={styles.emptyStateSubtitle}>
+              No active listings or repair providers found nearby yet. Be the first to post an item or service on ReViveX!
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyStateButton}
+              onPress={handleRefresh}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.emptyStateButtonText}>Refresh Feed ↻</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-          {/* Empty State Banner */}
-          {isFeedEmpty && !loadError && (
-            <View style={styles.emptyStateCard}>
-              <Text style={styles.emptyStateTitle}>🌱 Local Discovery Feed Ready</Text>
-              <Text style={styles.emptyStateSubtitle}>
-                No active listings or repair providers found nearby yet. Be the first to post an item or service on ReViveX!
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyStateButton}
-                onPress={handleRefresh}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.emptyStateButtonText}>Refresh Feed ↻</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Section 1: Nearby Repair Providers */}
-          {feed?.nearbyProviders && feed.nearbyProviders.length > 0 && (
-            <View style={styles.sectionWrapper}>
-              <SectionHeader
-                title="🛠️ Nearby Repair Specialists"
-                subtitle="Top-rated technicians sorted by proximity"
-                onPressSeeAll={onSeeAllProviders || (() => onNavigateToSearch('repair'))}
-              />
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalScroll}
-              >
-                {feed.nearbyProviders.map((prov) => (
-                  <ProviderCard
-                    key={prov.id}
-                    provider={prov}
-                    compact
-                    onPress={() => onSelectProvider?.(prov)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Section 2: Featured Marketplace Listings */}
-          {feed?.featuredListings && feed.featuredListings.length > 0 && (
-            <View style={styles.sectionWrapper}>
-              <SectionHeader
-                title="🏷️ Available Marketplace Listings"
-                subtitle="Second-hand gadgets ready for reuse & purchase"
-                onPressSeeAll={onSeeAllListings || (() => onNavigateToSearch())}
-              />
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalScroll}
-              >
-                {feed.featuredListings.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    compact
-                    onPress={() => onSelectListing?.(listing)}
-                  />
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* Section 3: Urgent Donation Opportunities */}
-          {feed?.urgentDonations && feed.urgentDonations.length > 0 && (
-            <View style={styles.sectionWrapper}>
-              <SectionHeader
-                title="🎁 Urgent Community Donation Drives"
-                subtitle="Verified schools & non-profits requesting equipment"
-              />
-              <View style={styles.verticalContainer}>
-                {feed.urgentDonations.map((donation) => (
-                  <UrgentDonationCard
-                    key={donation.id}
-                    donation={donation}
-                    onPress={() => onSelectDonation?.(donation)}
-                  />
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Section 4: Nearest Certified E-Waste Drop-Off */}
-          {feed?.nearestRecyclePoint && (
-            <View style={styles.sectionWrapper}>
-              <SectionHeader
-                title="♻️ Nearest Certified E-Waste Drop-Off"
-                subtitle="Safe electronic recycling and zero-landfill disposal"
-              />
-              <View style={styles.verticalContainer}>
-                <RecyclePointCard
-                  point={feed.nearestRecyclePoint}
-                  onPress={() => onSelectRecyclePoint?.(feed.nearestRecyclePoint!)}
+        {/* Section 1: Nearby Repair Specialists */}
+        {feed?.nearbyProviders && feed.nearbyProviders.length > 0 && (
+          <View style={styles.sectionWrapper}>
+            <SectionHeader
+              title="🛠️ Nearby Repair Specialists"
+              subtitle="Top-rated technicians sorted by proximity"
+              onPressSeeAll={onSeeAllProviders || (() => onNavigateToSearch('repair'))}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {feed.nearbyProviders.map((prov) => (
+                <ProviderCard
+                  key={prov.id}
+                  provider={prov}
+                  compact
+                  onPress={() => onSelectProvider?.(prov)}
                 />
-              </View>
-            </View>
-          )}
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
-          {/* Bottom Spacing */}
-          <View style={styles.bottomPad} />
-        </ScrollView>
-      )}
+        {/* Section 2: Featured Marketplace Listings */}
+        {feed?.featuredListings && feed.featuredListings.length > 0 && (
+          <View style={styles.sectionWrapper}>
+            <SectionHeader
+              title="🏷️ Available Marketplace Listings"
+              subtitle="Second-hand gadgets ready for reuse & purchase"
+              onPressSeeAll={onSeeAllListings || (() => onNavigateToSearch())}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
+            >
+              {feed.featuredListings.map((listing) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  compact
+                  onPress={() => onSelectListing?.(listing)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Section 3: Urgent Donation Opportunities */}
+        {feed?.urgentDonations && feed.urgentDonations.length > 0 && (
+          <View style={styles.sectionWrapper}>
+            <SectionHeader
+              title="🎁 Urgent Community Donation Drives"
+              subtitle="Verified schools & non-profits requesting equipment"
+            />
+            <View style={styles.verticalContainer}>
+              {feed.urgentDonations.map((donation) => (
+                <UrgentDonationCard
+                  key={donation.id}
+                  donation={donation}
+                  onPress={() => onSelectDonation?.(donation)}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Section 4: Nearest Certified E-Waste Drop-Off */}
+        {feed?.nearestRecyclePoint && (
+          <View style={styles.sectionWrapper}>
+            <SectionHeader
+              title="♻️ Nearest Certified E-Waste Drop-Off"
+              subtitle="Safe electronic recycling and zero-landfill disposal"
+            />
+            <View style={styles.verticalContainer}>
+              <RecyclePointCard
+                point={feed.nearestRecyclePoint}
+                onPress={() => onSelectRecyclePoint?.(feed.nearestRecyclePoint!)}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Bottom Spacing */}
+        <View style={styles.bottomPad} />
+      </ScrollView>
 
       {/* Location Selector Modal */}
       <LocationSelectorModal
@@ -412,25 +428,6 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xs,
     marginLeft: 6,
   },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  locationPin: {
-    fontSize: 12,
-    marginRight: 4,
-  },
-  locationText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
   offlineBanner: {
     backgroundColor: '#FEF3C7',
     paddingVertical: 6,
@@ -445,16 +442,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  centerLoading: {
-    flex: 1,
+  inlineLoadingContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: SPACING.xl,
+    paddingVertical: SPACING.md,
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  loadingText: {
-    fontSize: 13,
+  inlineLoadingText: {
+    fontSize: 12,
     color: COLORS.textSecondary,
-    marginTop: SPACING.md,
+    marginLeft: SPACING.xs,
   },
   scrollView: {
     flex: 1,

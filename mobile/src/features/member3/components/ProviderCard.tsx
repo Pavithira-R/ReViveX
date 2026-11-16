@@ -20,6 +20,15 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
   onPress,
   compact = false,
 }) => {
+  if (!provider) return null;
+
+  const bName = provider.businessName || (provider as any).name || 'Repair Specialist';
+  const avatarLetter = (bName.charAt(0) || 'R').toUpperCase();
+  const ratingNum = typeof provider.rating === 'number' && !isNaN(provider.rating) ? provider.rating : 5.0;
+  const reviewNum = typeof provider.reviewCount === 'number' && !isNaN(provider.reviewCount) ? provider.reviewCount : 0;
+  const startPrice = typeof provider.startingPrice === 'number' && !isNaN(provider.startingPrice) ? provider.startingPrice.toFixed(2) : '20.00';
+  const services = Array.isArray(provider.servicesOffered) ? provider.servicesOffered : [];
+
   return (
     <TouchableOpacity
       style={[styles.card, compact && styles.compactCard]}
@@ -29,14 +38,14 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
-            {provider.businessName.charAt(0).toUpperCase()}
+            {avatarLetter}
           </Text>
         </View>
 
         <View style={styles.headerInfo}>
           <View style={styles.titleRow}>
             <Text style={styles.businessName} numberOfLines={1}>
-              {provider.businessName}
+              {bName}
             </Text>
             {provider.isVerified && (
               <Text style={styles.verifiedBadge} accessibilityLabel="Verified Provider">
@@ -47,8 +56,8 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
 
           <View style={styles.ratingRow}>
             <Text style={styles.star}>★</Text>
-            <Text style={styles.ratingText}>{provider.rating.toFixed(1)}</Text>
-            <Text style={styles.reviewCount}>({provider.reviewCount})</Text>
+            <Text style={styles.ratingText}>{ratingNum.toFixed(1)}</Text>
+            <Text style={styles.reviewCount}>({reviewNum})</Text>
             <Text style={styles.dot}>•</Text>
             <Text style={styles.distance}>{formatDistance(provider.distanceKm)}</Text>
           </View>
@@ -57,7 +66,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
 
       {!compact && (
         <View style={styles.servicesContainer}>
-          {provider.servicesOffered.slice(0, 2).map((srv, idx) => (
+          {services.slice(0, 2).map((srv, idx) => (
             <View key={idx} style={styles.serviceChip}>
               <Text style={styles.serviceText} numberOfLines={1}>
                 {srv}
@@ -71,7 +80,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         <Text style={styles.priceHint}>
           From{' '}
           <Text style={styles.priceValue}>
-            ${provider.startingPrice?.toFixed(2) || '20.00'}
+            ${startPrice}
           </Text>
         </Text>
         <Text style={styles.actionPrompt}>View & Book →</Text>

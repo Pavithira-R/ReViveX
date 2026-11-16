@@ -24,6 +24,21 @@ interface ListingCardProps {
   compact?: boolean;
 }
 
+const safeString = (val: unknown, fallback: string): string => {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  if (typeof val === 'object') {
+    const obj = val as Record<string, unknown>;
+    if (typeof obj.name === 'string') return obj.name;
+    if (typeof obj.city === 'string') return obj.city;
+    if (typeof obj.address === 'string') return obj.address;
+    if (typeof obj.title === 'string') return obj.title;
+    if (typeof obj.label === 'string') return obj.label;
+  }
+  return fallback;
+};
+
 export const ListingCard: React.FC<ListingCardProps> = ({
   listing,
   onPress,
@@ -42,13 +57,15 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   const actionTheme = actionKey ? ACTION_THEMES[actionKey] : NEUTRAL_ACTION_THEME;
   const badgeLabel = actionKey ? actionKey : (rawActionStr || 'LISTING');
 
-  const catKey = (listing.category || 'OTHER').toString().trim().toUpperCase() as DeviceCategory;
+  const catKey = safeString(listing.category, 'OTHER').trim().toUpperCase() as DeviceCategory;
   const catMeta = CATEGORY_META[catKey] || CATEGORY_META.OTHER;
 
-  const condKey = (listing.condition || 'WORKING_NORMALLY').toString().trim().toUpperCase() as DeviceCondition;
+  const condKey = safeString(listing.condition, 'WORKING_NORMALLY').trim().toUpperCase() as DeviceCondition;
   const condMeta = CONDITION_META[condKey] || CONDITION_META.WORKING_NORMALLY;
 
   const isDonate = actionKey === 'DONATE' || badgeLabel === 'DONATE';
+  const displayTitle = safeString(listing.title, 'Marketplace Item');
+  const displayLocation = safeString(listing.location, 'Sri Lanka');
 
   return (
     <TouchableOpacity
@@ -71,16 +88,16 @@ export const ListingCard: React.FC<ListingCardProps> = ({
       </View>
 
       <Text style={styles.title} numberOfLines={2}>
-        {listing.title || 'Marketplace Item'}
+        {displayTitle}
       </Text>
 
       <View style={styles.metaRow}>
         <Text style={styles.categoryTag}>
-          {catMeta?.icon || '📦'} {catMeta?.label || listing.category || 'Item'}
+          {catMeta?.icon || '📦'} {catMeta?.label || safeString(listing.category, 'Item')}
         </Text>
         <Text style={styles.dot}>•</Text>
         <Text style={[styles.conditionTag, { color: condMeta?.color || COLORS.textSecondary }]}>
-          {condMeta?.badge || listing.condition || 'Used'}
+          {condMeta?.badge || safeString(listing.condition, 'Used')}
         </Text>
       </View>
 
@@ -94,7 +111,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             </Text>
           )}
           <Text style={styles.locationText} numberOfLines={1}>
-            📍 {listing.location || 'Sri Lanka'}
+            📍 {displayLocation}
           </Text>
         </View>
 

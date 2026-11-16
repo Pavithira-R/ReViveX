@@ -15,13 +15,34 @@ interface UrgentDonationCardProps {
   compact?: boolean;
 }
 
+const safeString = (val: unknown, fallback: string): string => {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  if (typeof val === 'object') {
+    const obj = val as Record<string, unknown>;
+    if (typeof obj.name === 'string') return obj.name;
+    if (typeof obj.city === 'string') return obj.city;
+    if (typeof obj.address === 'string') return obj.address;
+    if (typeof obj.title === 'string') return obj.title;
+    if (typeof obj.label === 'string') return obj.label;
+  }
+  return fallback;
+};
+
 export const UrgentDonationCard: React.FC<UrgentDonationCardProps> = ({
   donation,
   onPress,
   compact = false,
 }) => {
+  if (!donation) return null;
+
   const isCritical = donation.urgencyLevel === 'CRITICAL';
   const catMeta = CATEGORY_META[donation.targetCategory];
+
+  const beneficiaryText = safeString(donation.beneficiary, 'Community Partner');
+  const displayTitle = safeString(donation.title, 'Donation Appeal');
+  const displayDesc = safeString(donation.description, 'Community donation appeal for educational devices.');
 
   return (
     <TouchableOpacity
@@ -52,15 +73,15 @@ export const UrgentDonationCard: React.FC<UrgentDonationCardProps> = ({
       </View>
 
       <Text style={styles.title} numberOfLines={2}>
-        {donation.title}
+        {displayTitle}
       </Text>
 
       <Text style={styles.beneficiary}>
-        🏫 Beneficiary: <Text style={styles.beneficiaryName}>{donation.beneficiary}</Text>
+        🏫 Beneficiary: <Text style={styles.beneficiaryName}>{beneficiaryText}</Text>
       </Text>
 
       <Text style={styles.description} numberOfLines={2}>
-        {donation.description}
+        {displayDesc}
       </Text>
 
       <View style={styles.footer}>
