@@ -5,7 +5,7 @@
 **Target Device / Emulator:** `emulator-5554` (`Medium_Phone`, Android 16 / API 37)  
 **Package Name:** `com.mobile`  
 **Working Branch:** `feature/member3-handoff-polish`  
-**Latest Commit SHA:** `f85f168`  
+**Latest Commit SHA:** `15794f7`
 **Status:** **DISCOVERY INFINITE LOADING LOOP FIXED & FULLY VERIFIED ON EMULATOR**
 
 ---
