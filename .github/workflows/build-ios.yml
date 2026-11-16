@@ -1,0 +1,72 @@
+name: Build iOS Package (ReViveX)
+
+on:
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/build-ios.yml'
+
+jobs:
+  build-ios:
+    name: Build iOS IPA Package
+    runs-on: macos-14 # Apple Silicon M1 runner with Xcode
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install JavaScript dependencies
+        run: |
+          cd mobile
+          npm ci
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: mobile/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('mobile/ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods
+        run: |
+          cd mobile/ios
+          pod install
+
+      - name: Build iOS Archive (Unsigned for Sideloading)
+        run: |
+          cd mobile/ios
+          xcodebuild -workspace mobile.xcworkspace \
+            -scheme mobile \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath $PWD/build/mobile.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean archive
+
+      - name: Package into IPA
+        run: |
+          cd mobile/ios/build
+          mkdir -p Payload
+          cp -r mobile.xcarchive/Products/Applications/mobile.app Payload/
+          zip -r ReViveX-iOS.ipa Payload
+
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReViveX-iOS-Package
+          path: mobile/ios/build/ReViveX-iOS.ipa
+          retention-days: 14
