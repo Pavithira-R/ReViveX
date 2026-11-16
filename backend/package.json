@@ -9,7 +9,7 @@
     "dev": "tsx watch src/app.ts",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:member3": "ts-node -T tests/runAllTests.ts",
+    "test:member3": "ts-node tests/runAllTests.ts",
     "test:recommendation": "ts-node tests/recommendation.test.ts",
     "test:adapters": "ts-node tests/adapters.test.ts",
     "prisma:generate": "prisma generate",

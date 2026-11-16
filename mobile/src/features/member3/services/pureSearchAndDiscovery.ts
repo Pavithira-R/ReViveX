@@ -3,6 +3,9 @@
 // Integrates Cloud Firestore getDocs snapshots wrapped in fsCall & withId
 // ============================================================================
 
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../../services/firebase';
+import { fsCall, withId } from '../../../services/firebaseHelpers';
 import {
   SearchFilters,
   LocationCoordinates,
@@ -10,31 +13,6 @@ import {
   HeroBannerData,
 } from '../types';
 import { calculateHaversineDistanceKm } from '../utils/location';
-
-let getFirestoreDocs: any = null;
-let getFirestoreCollection: any = null;
-let firestoreDb: any = null;
-let fsCallHelper: any = null;
-let withIdHelper: any = null;
-
-try {
-  const firestoreModule = require('firebase/firestore');
-  getFirestoreDocs = firestoreModule.getDocs;
-  getFirestoreCollection = firestoreModule.collection;
-
-  const fb = require('../../../services/firebase');
-  firestoreDb = fb.db;
-
-  const fbHelpers = require('../../../services/firebaseHelpers');
-  fsCallHelper = fbHelpers.fsCall;
-  withIdHelper = fbHelpers.withId;
-} catch {
-  // Gracefully fallback when executed in backend test environment without mobile node_modules
-}
-
-export function isFirestoreAvailable(): boolean {
-  return Boolean(getFirestoreDocs && getFirestoreCollection && firestoreDb && fsCallHelper);
-}
 
 export const MOCK_HERO_BANNER: HeroBannerData = {
   id: 'banner_rec_01',
@@ -48,13 +26,10 @@ export const MOCK_HERO_BANNER: HeroBannerData = {
  * Firestore Fetcher: Items collection (Member 2 schema)
  */
 export async function fetchFirestoreItems(): Promise<any[]> {
-  if (!isFirestoreAvailable()) {
-    return [];
-  }
   try {
-    return await fsCallHelper(async () => {
-      const snap = await getFirestoreDocs(getFirestoreCollection(firestoreDb, 'items'));
-      return snap.docs.map((doc: any) => (withIdHelper ? withIdHelper(doc) : { id: doc.id, ...doc.data() }));
+    return await fsCall(async () => {
+      const snap = await getDocs(collection(db, 'items'));
+      return snap.docs.map((d: any) => withId(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch items collection:', err);
@@ -63,19 +38,16 @@ export async function fetchFirestoreItems(): Promise<any[]> {
 }
 
 /**
- * Firestore Fetcher: Providers collection (Member 4 schema)
+ * Firestore Fetcher: ServiceProviders collection (Member 4 schema)
  */
 export async function fetchFirestoreProviders(): Promise<any[]> {
-  if (!isFirestoreAvailable()) {
-    return [];
-  }
   try {
-    return await fsCallHelper(async () => {
-      const snap = await getFirestoreDocs(getFirestoreCollection(firestoreDb, 'providers'));
-      return snap.docs.map((doc: any) => (withIdHelper ? withIdHelper(doc) : { id: doc.id, ...doc.data() }));
+    return await fsCall(async () => {
+      const snap = await getDocs(collection(db, 'serviceProviders'));
+      return snap.docs.map((d: any) => withId(d));
     });
   } catch (err) {
-    console.warn('[Firestore] Failed to fetch providers collection:', err);
+    console.warn('[Firestore] Failed to fetch serviceProviders collection:', err);
     return [];
   }
 }
@@ -84,13 +56,10 @@ export async function fetchFirestoreProviders(): Promise<any[]> {
  * Firestore Fetcher: Listings collection (Member 5 schema)
  */
 export async function fetchFirestoreListings(): Promise<any[]> {
-  if (!isFirestoreAvailable()) {
-    return [];
-  }
   try {
-    return await fsCallHelper(async () => {
-      const snap = await getFirestoreDocs(getFirestoreCollection(firestoreDb, 'listings'));
-      return snap.docs.map((doc: any) => (withIdHelper ? withIdHelper(doc) : { id: doc.id, ...doc.data() }));
+    return await fsCall(async () => {
+      const snap = await getDocs(collection(db, 'listings'));
+      return snap.docs.map((d: any) => withId(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch listings collection:', err);
@@ -99,19 +68,16 @@ export async function fetchFirestoreListings(): Promise<any[]> {
 }
 
 /**
- * Firestore Fetcher: Recycling requests collection (Member 5 schema)
+ * Firestore Fetcher: RecyclingRequests collection (Member 5 schema)
  */
 export async function fetchFirestoreRecyclingRequests(): Promise<any[]> {
-  if (!isFirestoreAvailable()) {
-    return [];
-  }
   try {
-    return await fsCallHelper(async () => {
-      const snap = await getFirestoreDocs(getFirestoreCollection(firestoreDb, 'recycling_requests'));
-      return snap.docs.map((doc: any) => (withIdHelper ? withIdHelper(doc) : { id: doc.id, ...doc.data() }));
+    return await fsCall(async () => {
+      const snap = await getDocs(collection(db, 'recyclingRequests'));
+      return snap.docs.map((d: any) => withId(d));
     });
   } catch (err) {
-    console.warn('[Firestore] Failed to fetch recycling_requests collection:', err);
+    console.warn('[Firestore] Failed to fetch recyclingRequests collection:', err);
     return [];
   }
 }
@@ -286,7 +252,7 @@ export function filterListings(listings: any[], params: Partial<SearchFilters>):
   if (params.actionType && params.actionType !== 'ALL') {
     const act = String(params.actionType).toUpperCase();
     results = results.filter(
-      (l) => String(l.actionType || l.action).toUpperCase() === act
+      (l) => String(l.actionType || l.action || l.type).toUpperCase() === act
     );
   }
 
@@ -361,6 +327,7 @@ export function filterRecyclingRequests(requests: any[], params: Partial<SearchF
     results = results.filter(
       (r) =>
         (r.itemType && String(r.itemType).toLowerCase().includes(q)) ||
+        (r.itemName && String(r.itemName).toLowerCase().includes(q)) ||
         (r.pickupAddress && String(r.pickupAddress).toLowerCase().includes(q)) ||
         (r.name && String(r.name).toLowerCase().includes(q))
     );
@@ -419,7 +386,7 @@ export function buildDiscoveryFeed(data: {
 
   // 2. Featured Listings (Member 5 - SELL or REUSE)
   const featuredListings = filterListings(data.listings || [], { actionType: 'ALL' })
-    .filter((l) => l.actionType === 'SELL' || l.actionType === 'REUSE' || !l.actionType)
+    .filter((l) => l.actionType === 'SELL' || l.actionType === 'REUSE' || l.type === 'SELL' || l.type === 'REUSE' || !l.actionType)
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, limit);
 

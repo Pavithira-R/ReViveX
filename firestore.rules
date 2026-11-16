@@ -125,29 +125,5 @@ service cloud.firestore {
                         || request.resource.data.toUserId == uid());
     }
     // ---------- Other modules: add your blocks below ----------
-
-    // ---------- Member 3 – Smart Recommendation, Discovery & Search ----------
-    match /items/{itemId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.ownerId == uid();
-      allow update, delete: if signedIn() && resource.data.ownerId == uid();
-    }
-
-    match /providers/{providerId} {
-      allow read: if signedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /listings/{listingId} {
-      allow read: if signedIn();
-      allow create: if signedIn();
-      allow update, delete: if signedIn() && (resource.data.ownerId == uid() || isAdmin());
-    }
-
-    match /recycling_requests/{requestId} {
-      allow read: if signedIn();
-      allow create: if signedIn();
-      allow update, delete: if signedIn() && (resource.data.userId == uid() || isAdmin());
-    }
   }
 }

@@ -112,8 +112,6 @@ export const DeviceHealthCheckModal: React.FC<DeviceHealthCheckModalProps> = ({
       setStep('REPORT');
     } catch (err) {
       console.error('Diagnostic error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 

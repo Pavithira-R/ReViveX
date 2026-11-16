@@ -27,7 +27,6 @@ Module.prototype.require = function (id: string) {
           DENIED: 'denied',
           NEVER_ASK_AGAIN: 'never_ask_again',
         },
-        check: async () => true,
         requestMultiple: async () => ({
           'android.permission.ACCESS_FINE_LOCATION': 'granted',
           'android.permission.ACCESS_COARSE_LOCATION': 'granted',
@@ -62,51 +61,50 @@ Module.prototype.require = function (id: string) {
 import app from '../src/app';
 
 // Import Mobile Feature Services, Utilities & Constants
-const {
+import {
   evaluateLocalRecommendation,
-} = require('../../mobile/src/features/member3/utils/ruleEngine');
-const {
+} from '../../mobile/src/features/member3/utils/ruleEngine';
+import {
   isValidCoordinate,
   calculateHaversineDistanceKm,
   formatDistance,
   SRI_LANKA_CITY_PRESETS,
   findNearestCityPreset,
   formatLocationSourceLabel,
-} = require('../../mobile/src/features/member3/utils/location');
-const {
+} from '../../mobile/src/features/member3/utils/location';
+import {
   resolveUserLocation,
   setManualCity,
   getLocationState,
   subscribeToLocation,
   requestAndroidLocationPermission,
-} = require('../../mobile/src/features/member3/services/locationService');
-const {
+} from '../../mobile/src/features/member3/services/locationService';
+import {
   evaluateTouchTest,
   probeCameraCapability,
   probeBatteryCapability,
   probeAccelerometer,
   probeGyroscope,
   compileHealthReport,
-} = require('../../mobile/src/features/member3/services/healthCheckService');
-const {
-  evaluateRecommendation,
-} = require('../../mobile/src/features/member3/services/recommendationService');
-const {
-  searchUnified,
-} = require('../../mobile/src/features/member3/services/searchService');
-const {
-  fetchDiscoveryFeed,
-} = require('../../mobile/src/features/member3/services/discoveryService');
-const {
-  setApiBaseUrl,
-} = require('../../mobile/src/features/member3/services/apiClient');
-
-import type {
+} from '../../mobile/src/features/member3/services/healthCheckService';
+import {
   FourCornerTouchState,
   HealthTestId,
   HealthTestResult,
 } from '../../mobile/src/features/member3/types/healthCheck.types';
-import type {
+import {
+  evaluateRecommendation,
+} from '../../mobile/src/features/member3/services/recommendationService';
+import {
+  searchUnified,
+} from '../../mobile/src/features/member3/services/searchService';
+import {
+  fetchDiscoveryFeed,
+} from '../../mobile/src/features/member3/services/discoveryService';
+import {
+  setApiBaseUrl,
+} from '../../mobile/src/features/member3/services/apiClient';
+import {
   RecommendationInput,
   SearchFilters,
 } from '../../mobile/src/features/member3/types';
@@ -283,16 +281,17 @@ export async function runMobileQaAudit(): Promise<void> {
   // Point to a non-listening port to guarantee offline fallback trigger
   setApiBaseUrl('http://127.0.0.1:19999/api');
 
-  // 3.1 Recommendation Service (Client-side Pure Rule Engine)
+  // 3.1 Recommendation Service Offline Fallback
   const offlineRec = await evaluateRecommendation({
     category: 'LAPTOP',
     condition: 'WORKING_NORMALLY',
     ageGroup: 'ONE_TO_THREE_YEARS',
     userIntention: 'SELL',
   });
-  assert(offlineRec.result.primaryAction === 'SELL', 'Recommendation: Primary action is SELL');
-  assert(offlineRec.result.ruleTriggered === 'R-SEL-01', 'Recommendation: Triggers R-SEL-01');
-  assert(Array.isArray(offlineRec.result.matchedListings), 'Recommendation: Populates matchedListings');
+  assert(offlineRec.isOfflineFallback === true, 'Offline Rec: Flags isOfflineFallback=true');
+  assert(offlineRec.result.primaryAction === 'SELL', 'Offline Rec: Primary action is SELL');
+  assert(offlineRec.result.ruleTriggered === 'R-SEL-01', 'Offline Rec: Triggers R-SEL-01');
+  assert(Array.isArray(offlineRec.result.matchedListings), 'Offline Rec: Populates matchedListings');
 
   // 3.2 Search Service Offline Fallback
   const offlineSearchAll = await searchUnified({ page: 1, limit: 10 });
@@ -309,7 +308,7 @@ export async function runMobileQaAudit(): Promise<void> {
     limit: 10,
   });
   assert(
-    offlineCategorySearch.data.listings.every((l: any) => l.category === 'LAPTOP'),
+    offlineCategorySearch.data.listings.every((l) => l.category === 'LAPTOP'),
     'Offline Search: Filter by LAPTOP returns only laptops'
   );
 
@@ -320,7 +319,7 @@ export async function runMobileQaAudit(): Promise<void> {
     limit: 10,
   });
   assert(
-    offlineActionSearch.data.listings.every((l: any) => l.actionType === 'DONATE'),
+    offlineActionSearch.data.listings.every((l) => l.actionType === 'DONATE'),
     'Offline Search: Filter by DONATE returns only donation listings'
   );
 
@@ -478,10 +477,10 @@ export async function runMobileQaAudit(): Promise<void> {
     SRI_LANKA_CITY_PRESETS.length === 12,
     `City Presets: Exactly 12 Sri Lankan regional hubs registered (found ${SRI_LANKA_CITY_PRESETS.length})`
   );
-  const colomboPreset = SRI_LANKA_CITY_PRESETS.find((c: any) => c.name === 'Colombo');
-  const kandyPreset = SRI_LANKA_CITY_PRESETS.find((c: any) => c.name === 'Kandy');
-  const gallePreset = SRI_LANKA_CITY_PRESETS.find((c: any) => c.name === 'Galle');
-  const jaffnaPreset = SRI_LANKA_CITY_PRESETS.find((c: any) => c.name === 'Jaffna');
+  const colomboPreset = SRI_LANKA_CITY_PRESETS.find((c) => c.name === 'Colombo');
+  const kandyPreset = SRI_LANKA_CITY_PRESETS.find((c) => c.name === 'Kandy');
+  const gallePreset = SRI_LANKA_CITY_PRESETS.find((c) => c.name === 'Galle');
+  const jaffnaPreset = SRI_LANKA_CITY_PRESETS.find((c) => c.name === 'Jaffna');
   assert(Boolean(colomboPreset && kandyPreset && gallePreset && jaffnaPreset), 'City Presets: Major provincial capitals covered');
 
   // 5.2 Nearest City Matcher
@@ -541,7 +540,7 @@ export async function runMobileQaAudit(): Promise<void> {
 
   // 5.6 Tier 3: Manual City Selection Fallback
   let listenerTriggered: boolean = false;
-  const unsubscribeLoc = subscribeToLocation((newLoc: any) => {
+  const unsubscribeLoc = subscribeToLocation((newLoc) => {
     if (newLoc.source === 'MANUAL' && newLoc.cityName === 'Galle') {
       listenerTriggered = true;
     }
@@ -610,11 +609,11 @@ export async function runMobileQaAudit(): Promise<void> {
   // 6.4 Motion Sensor Probes (Accelerometer & Gyroscope)
   const accelRes = await probeAccelerometer();
   assert(accelRes.id === 'ACCELEROMETER', 'Accelerometer Check: Safe evaluation in bare RN environment');
-  assert(accelRes.status === 'PASSED' || accelRes.status === 'UNSUPPORTED', 'Accelerometer Check: Accurately reports capability status');
+  assert(accelRes.status === 'PASSED', 'Accelerometer Check: Defaults safely to PASSED');
 
   const gyroRes = await probeGyroscope();
   assert(gyroRes.id === 'GYROSCOPE', 'Gyroscope Check: Safe evaluation in bare RN environment');
-  assert(gyroRes.status === 'PASSED' || gyroRes.status === 'UNSUPPORTED', 'Gyroscope Check: Accurately reports capability status');
+  assert(gyroRes.status === 'PASSED', 'Gyroscope Check: Defaults safely to PASSED');
 
   // 6.5 Full Report Compilation & Condition Derivation: Pristine Hardware
   const pristineResults: Record<HealthTestId, HealthTestResult> = {
@@ -630,26 +629,8 @@ export async function runMobileQaAudit(): Promise<void> {
       details: 'Camera operational.',
       defect: null,
     },
-    ACCELEROMETER: {
-      id: 'ACCELEROMETER',
-      name: 'Accelerometer Sensor',
-      description: '3-axis linear motion check',
-      status: 'PASSED',
-      maxScore: 15,
-      earnedScore: 15,
-      details: 'Motion sensor active.',
-      defect: null,
-    },
-    GYROSCOPE: {
-      id: 'GYROSCOPE',
-      name: 'Gyroscope Sensor',
-      description: 'Rotational orientation check',
-      status: 'PASSED',
-      maxScore: 15,
-      earnedScore: 15,
-      details: 'Gyroscope active.',
-      defect: null,
-    },
+    ACCELEROMETER: accelRes,
+    GYROSCOPE: gyroRes,
   };
   const pristineReport = compileHealthReport(pristineResults);
   assert(pristineReport.overallScore === 100, 'Health Report: Pristine hardware scores 100%');
