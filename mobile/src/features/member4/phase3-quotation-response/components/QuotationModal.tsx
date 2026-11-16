@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TextInput,
-  TouchableOpacity,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import { RepairRequest } from '../types';
-import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
-import { Button } from '../../../components/common/Button';
-import { Badge } from '../../../components/common/Badge';
+import { PrimaryButton } from '../../../../components';
+import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
 
 interface QuotationModalProps {
   visible: boolean;
@@ -97,30 +96,30 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
               <Text style={styles.modalTitle}>Respond to Repair Request</Text>
               <Text style={styles.modalSubtitle}>Device: {request.itemSummary?.title || 'Electronic Device'}</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Pressable onPress={onClose} style={styles.closeButton}>
               <Text style={styles.closeText}>✕</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {/* Action Selector Tabs */}
           <View style={styles.tabContainer}>
-            <TouchableOpacity
+            <Pressable
               style={[styles.tab, action === 'ACCEPT' && styles.activeAcceptTab]}
               onPress={() => setAction('ACCEPT')}
             >
               <Text style={[styles.tabText, action === 'ACCEPT' && styles.activeAcceptText]}>
                 ✓ Accept & Quote Price
               </Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
+            <Pressable
               style={[styles.tab, action === 'REJECT' && styles.activeRejectTab]}
               onPress={() => setAction('REJECT')}
             >
               <Text style={[styles.tabText, action === 'REJECT' && styles.activeRejectText]}>
                 ✕ Decline Request
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {action === 'ACCEPT' ? (
@@ -131,18 +130,20 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
                 <TextInput
                   style={styles.priceInput}
                   placeholder="0.00"
+                  placeholderTextColor={COLORS.textMuted}
                   keyboardType="decimal-pad"
                   value={estimatedPrice}
                   onChangeText={setEstimatedPrice}
                 />
               </View>
 
-              <Text style={[styles.label, { marginTop: Spacing.md }]}>
+              <Text style={[styles.label, { marginTop: SPACING.md }]}>
                 Provider Notes & Warranty Details
               </Text>
               <TextInput
                 style={styles.textArea}
                 placeholder="Details on diagnostic findings, replacement parts, turnaround time..."
+                placeholderTextColor={COLORS.textMuted}
                 multiline
                 numberOfLines={3}
                 value={providerNotes}
@@ -155,6 +156,7 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
               <TextInput
                 style={styles.textArea}
                 placeholder="e.g. Lack of OEM replacement parts in stock, outside service scope..."
+                placeholderTextColor={COLORS.textMuted}
                 multiline
                 numberOfLines={3}
                 value={rejectionReason}
@@ -167,21 +169,21 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
 
           {/* Action Buttons */}
           <View style={styles.footerRow}>
-            <Button
-              title="Cancel"
-              variant="outline"
-              size="md"
-              onPress={onClose}
-              style={styles.cancelBtn}
-            />
-            <Button
-              title={action === 'ACCEPT' ? 'Send Quotation' : 'Confirm Decline'}
-              variant={action === 'ACCEPT' ? 'primary' : 'danger'}
-              size="md"
-              loading={isSubmitting}
-              onPress={handleSubmit}
-              style={styles.submitBtn}
-            />
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                title="Cancel"
+                variant="outlined"
+                onPress={onClose}
+              />
+            </View>
+            <View style={{ flex: 2 }}>
+              <PrimaryButton
+                title={action === 'ACCEPT' ? 'Send Quotation' : 'Confirm Decline'}
+                variant={action === 'ACCEPT' ? 'filled' : 'danger'}
+                loading={isSubmitting}
+                onPress={handleSubmit}
+              />
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -196,123 +198,118 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    ...Shadows.lg,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    ...SHADOW.lg,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   modalTitle: {
-    fontSize: Typography.fontSizes.lg,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.lg,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   modalSubtitle: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     marginTop: 2,
   },
   closeButton: {
-    padding: Spacing.xs,
+    padding: SPACING.xs,
   },
   closeText: {
-    fontSize: Typography.fontSizes.md,
-    color: Colors.textMuted,
+    fontSize: FONT.md,
+    color: COLORS.textMuted,
   },
   tabContainer: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   tab: {
     flex: 1,
-    paddingVertical: Spacing.sm,
+    paddingVertical: SPACING.sm,
     alignItems: 'center',
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.surfaceSubtle,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceSubtle,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: COLORS.border,
   },
   activeAcceptTab: {
-    backgroundColor: Colors.primaryLight,
-    borderColor: Colors.primary,
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
   },
   activeRejectTab: {
-    backgroundColor: Colors.dangerLight,
-    borderColor: Colors.danger,
+    backgroundColor: COLORS.dangerLight,
+    borderColor: COLORS.danger,
   },
   tabText: {
-    fontSize: Typography.fontSizes.xs,
-    fontWeight: Typography.fontWeights.semibold,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    fontWeight: '600',
+    color: COLORS.textMuted,
   },
   activeAcceptText: {
-    color: Colors.primaryDark,
+    color: COLORS.primaryDark,
   },
   activeRejectText: {
-    color: Colors.danger,
+    color: COLORS.danger,
   },
   bodySection: {
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   label: {
-    fontSize: Typography.fontSizes.xs,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    fontSize: FONT.xs,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
   },
   priceInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceSubtle,
-    borderRadius: BorderRadius.md,
+    backgroundColor: COLORS.surfaceSubtle,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: Spacing.md,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.md,
   },
   currencyPrefix: {
-    fontSize: Typography.fontSizes.lg,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.primary,
-    marginRight: Spacing.xs,
+    fontSize: FONT.lg,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginRight: SPACING.xs,
   },
   priceInput: {
     flex: 1,
-    fontSize: Typography.fontSizes.lg,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    paddingVertical: Spacing.sm,
+    fontSize: FONT.lg,
+    fontWeight: '700',
+    color: COLORS.text,
+    paddingVertical: SPACING.sm,
   },
   textArea: {
-    backgroundColor: Colors.surfaceSubtle,
+    backgroundColor: COLORS.surfaceSubtle,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    fontSize: Typography.fontSizes.sm,
-    color: Colors.textPrimary,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    fontSize: FONT.sm,
+    color: COLORS.text,
     minHeight: 80,
     textAlignVertical: 'top',
   },
   errorText: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.danger,
-    marginBottom: Spacing.sm,
+    fontSize: FONT.xs,
+    color: COLORS.error,
+    marginBottom: SPACING.sm,
   },
   footerRow: {
     flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  cancelBtn: {
-    flex: 1,
-  },
-  submitBtn: {
-    flex: 2,
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
   },
 });

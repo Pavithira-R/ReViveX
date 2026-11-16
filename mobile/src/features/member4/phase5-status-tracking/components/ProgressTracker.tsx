@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { RepairStatus } from '../../types';
-import { Colors, Spacing, BorderRadius, Typography } from '../../../theme';
+import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
 
 interface ProgressTrackerProps {
   currentStatus: RepairStatus;
@@ -58,6 +58,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStatus 
       case RepairStatus.ON_THE_WAY:
         return 3;
       case RepairStatus.REPAIRING:
+      case RepairStatus.IN_PROGRESS:
         return 4;
       case RepairStatus.COMPLETED:
         return 5;
@@ -151,7 +152,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStatus 
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: Spacing.sm,
+    paddingVertical: SPACING.sm,
   },
   stepRow: {
     flexDirection: 'row',
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
   indicatorCol: {
     alignItems: 'center',
     width: 32,
-    marginRight: Spacing.md,
+    marginRight: SPACING.md,
   },
   circle: {
     width: 28,
@@ -171,32 +172,32 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   doneCircle: {
-    backgroundColor: Colors.success,
+    backgroundColor: COLORS.success,
   },
   currentCircle: {
-    backgroundColor: Colors.primary,
+    backgroundColor: COLORS.primary,
     borderWidth: 3,
-    borderColor: Colors.primaryLight,
+    borderColor: COLORS.primaryLight,
   },
   pendingCircle: {
-    backgroundColor: Colors.surfaceSubtle,
+    backgroundColor: COLORS.surfaceSubtle,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: COLORS.border,
   },
   doneText: {
-    color: Colors.textWhite,
+    color: COLORS.textWhite,
     fontSize: 14,
-    fontWeight: Typography.fontWeights.bold,
+    fontWeight: '700',
   },
   circleNumber: {
     fontSize: 12,
-    fontWeight: Typography.fontWeights.bold,
+    fontWeight: '700',
   },
   currentCircleNumber: {
-    color: Colors.textWhite,
+    color: COLORS.textWhite,
   },
   pendingCircleNumber: {
-    color: Colors.textMuted,
+    color: COLORS.textMuted,
   },
   connectorLine: {
     width: 2,
@@ -204,51 +205,51 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   doneLine: {
-    backgroundColor: Colors.success,
+    backgroundColor: COLORS.success,
   },
   pendingLine: {
-    backgroundColor: Colors.border,
+    backgroundColor: COLORS.border,
   },
   detailsCol: {
     flex: 1,
     paddingTop: 2,
   },
   stepTitle: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
+    fontSize: FONT.sm,
+    fontWeight: '700',
   },
   currentStepTitle: {
-    color: Colors.primaryDark,
+    color: COLORS.primaryDark,
   },
   doneStepTitle: {
-    color: Colors.textPrimary,
+    color: COLORS.text,
   },
   pendingStepTitle: {
-    color: Colors.textMuted,
+    color: COLORS.textMuted,
   },
   stepSubtitle: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: COLORS.textMuted,
     marginTop: 1,
   },
   terminalContainer: {
     alignItems: 'center',
-    backgroundColor: Colors.dangerLight,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
+    backgroundColor: COLORS.dangerLight,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
   },
   terminalIcon: {
     fontSize: 24,
     marginBottom: 4,
   },
   terminalTitle: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.danger,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.danger,
   },
   terminalSubtitle: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: COLORS.textMuted,
     textAlign: 'center',
     marginTop: 2,
   },

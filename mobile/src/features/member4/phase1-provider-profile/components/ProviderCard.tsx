@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { ServiceProvider } from '../types';
-import { Colors, Spacing, BorderRadius, Typography } from '../../../theme';
-import { Card } from '../../../components/common/Card';
-import { Badge } from '../../../components/common/Badge';
+import { Card, StatusBadge } from '../../../../components';
+import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
 
 interface ProviderCardProps {
   provider: ServiceProvider;
@@ -36,7 +35,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress })
               {provider.businessName}
             </Text>
             {provider.isVerified && (
-              <Badge label="Verified" variant="success" size="sm" style={styles.verifiedBadge} />
+              <StatusBadge status="VERIFIED" />
             )}
           </View>
 
@@ -82,33 +81,33 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress })
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
-    marginBottom: Spacing.sm,
+    marginBottom: SPACING.sm,
   },
   avatarContainer: {
-    marginRight: Spacing.md,
+    marginRight: SPACING.md,
   },
   avatar: {
     width: 54,
     height: 54,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.surfaceSubtle,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceSubtle,
   },
   avatarFallback: {
     width: 54,
     height: 54,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.primaryLight,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitials: {
-    fontSize: Typography.fontSizes.md,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.primaryDark,
+    fontSize: FONT.md,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
   },
   infoContainer: {
     flex: 1,
@@ -117,20 +116,17 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: SPACING.xs,
   },
   businessName: {
-    fontSize: Typography.fontSizes.md,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.md,
+    fontWeight: '700',
+    color: COLORS.text,
     flexShrink: 1,
   },
-  verifiedBadge: {
-    marginLeft: Spacing.xs,
-  },
   providerName: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     marginTop: 1,
   },
   ratingRow: {
@@ -139,73 +135,73 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   ratingStar: {
-    color: Colors.accent,
-    fontSize: Typography.fontSizes.sm,
+    color: COLORS.accent,
+    fontSize: FONT.sm,
     marginRight: 2,
   },
   ratingScore: {
-    fontSize: Typography.fontSizes.xs,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.xs,
+    fontWeight: '700',
+    color: COLORS.text,
     marginRight: 4,
   },
   reviewCount: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
-    marginRight: Spacing.xs,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
+    marginRight: SPACING.xs,
   },
   distance: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.primary,
-    fontWeight: Typography.fontWeights.medium,
+    fontSize: FONT.xs,
+    color: COLORS.primary,
+    fontWeight: '500',
   },
   description: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     lineHeight: 18,
-    marginBottom: Spacing.sm,
+    marginBottom: SPACING.sm,
   },
   servicesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
+    gap: SPACING.xs,
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: SPACING.sm,
   },
   serviceChip: {
-    backgroundColor: Colors.surfaceSubtle,
-    borderRadius: BorderRadius.sm,
+    backgroundColor: COLORS.surfaceSubtle,
+    borderRadius: RADIUS.sm,
     paddingVertical: 2,
-    paddingHorizontal: Spacing.xs + 2,
+    paddingHorizontal: SPACING.xs + 2,
   },
   serviceChipText: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: COLORS.textMuted,
   },
   moreServicesText: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: COLORS.textMuted,
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Spacing.sm,
+    paddingTop: SPACING.sm,
     borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
+    borderTopColor: COLORS.border,
   },
   pricing: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
   },
   priceHighlight: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.primaryDark,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
   },
   viewProfileText: {
-    fontSize: Typography.fontSizes.xs,
-    fontWeight: Typography.fontWeights.semibold,
-    color: Colors.primary,
+    fontSize: FONT.xs,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
 });

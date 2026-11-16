@@ -1,27 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
   FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
   TextInput,
-  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ServiceProvider } from '../types';
 import { mobileProviderService } from '../providerService';
 import { ProviderCard } from '../components/ProviderCard';
-import { Colors, Spacing, BorderRadius, Typography } from '../../../theme';
-import { Header } from '../../../components/common/Header';
-import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
-import { ErrorState } from '../../../components/common/ErrorState';
+import { MessageBanner, PrimaryButton } from '../../../../components';
+import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
 
 interface ProviderListScreenProps {
   onSelectProvider: (provider: ServiceProvider) => void;
+  onBack?: () => void;
 }
 
 const CATEGORIES = ['All', 'Laptops', 'Smartphones', 'Audio', 'Consoles', 'Tablets'];
 
-export const ProviderListScreen: React.FC<ProviderListScreenProps> = ({ onSelectProvider }) => {
+export const ProviderListScreen: React.FC<ProviderListScreenProps> = ({ onSelectProvider, onBack }) => {
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,11 +56,21 @@ export const ProviderListScreen: React.FC<ProviderListScreenProps> = ({ onSelect
   };
 
   return (
-    <View style={styles.container}>
-      <Header
-        title="Repair Service Providers"
-        subtitle="Find certified electronics technicians"
-      />
+    <SafeAreaView style={styles.container}>
+      {/* Top Bar */}
+      <View style={styles.topBar}>
+        {onBack ? (
+          <Pressable onPress={onBack} accessibilityRole="button" hitSlop={12}>
+            <Text style={styles.back}>‹ Back</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.topSpacer} />
+        )}
+        <Text style={styles.topTitle} numberOfLines={1}>
+          Repair Service Providers
+        </Text>
+        <View style={styles.topSpacer} />
+      </View>
 
       <View style={styles.searchContainer}>
         <View style={styles.searchInputWrapper}>
@@ -67,16 +78,16 @@ export const ProviderListScreen: React.FC<ProviderListScreenProps> = ({ onSelect
           <TextInput
             style={styles.searchInput}
             placeholder="Search providers, skills, brands..."
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={COLORS.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearchQuery(''); loadProviders('', activeCategory); }}>
+            <Pressable onPress={() => { setSearchQuery(''); loadProviders('', activeCategory); }}>
               <Text style={styles.clearIcon}>✕</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
 
@@ -90,23 +101,26 @@ export const ProviderListScreen: React.FC<ProviderListScreenProps> = ({ onSelect
           renderItem={({ item }) => {
             const isSelected = activeCategory === item;
             return (
-              <TouchableOpacity
+              <Pressable
                 style={[styles.categoryChip, isSelected && styles.activeCategoryChip]}
                 onPress={() => setActiveCategory(item)}
               >
                 <Text style={[styles.categoryText, isSelected && styles.activeCategoryText]}>
                   {item}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             );
           }}
         />
       </View>
 
       {isLoading ? (
-        <LoadingSpinner message="Searching verified providers..." />
+        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
       ) : error ? (
-        <ErrorState message={error} onRetry={() => loadProviders(searchQuery, activeCategory)} />
+        <View style={styles.errorBox}>
+          <MessageBanner message={error} />
+          <PrimaryButton title="Try again" variant="outlined" onPress={() => loadProviders(searchQuery, activeCategory)} />
+        </View>
       ) : (
         <FlatList
           data={providers}
@@ -127,90 +141,123 @@ export const ProviderListScreen: React.FC<ProviderListScreenProps> = ({ onSelect
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: COLORS.background,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  back: {
+    fontSize: 16,
+    color: COLORS.primary,
+    fontWeight: '600',
+    minWidth: 60,
+  },
+  topTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  topSpacer: {
+    minWidth: 60,
   },
   searchContainer: {
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.sm,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: COLORS.border,
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceSubtle,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.sm + 4,
-    paddingVertical: Spacing.xs,
-    marginBottom: Spacing.sm,
+    backgroundColor: COLORS.surfaceSubtle,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.sm + 4,
+    paddingVertical: SPACING.xs,
+    marginBottom: SPACING.sm,
   },
   searchIcon: {
-    marginRight: Spacing.xs,
+    marginRight: SPACING.xs,
     fontSize: 14,
   },
   searchInput: {
     flex: 1,
-    fontSize: Typography.fontSizes.sm,
-    color: Colors.textPrimary,
-    paddingVertical: Spacing.xs,
+    fontSize: FONT.sm,
+    color: COLORS.text,
+    paddingVertical: SPACING.xs,
   },
   clearIcon: {
-    color: Colors.textMuted,
+    color: COLORS.textMuted,
     fontSize: 14,
-    padding: Spacing.xs,
+    padding: SPACING.xs,
   },
   categoryList: {
-    gap: Spacing.xs,
-    paddingVertical: Spacing.xs,
+    gap: SPACING.xs,
+    paddingVertical: SPACING.xs,
   },
   categoryChip: {
-    paddingVertical: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surfaceSubtle,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceSubtle,
   },
   activeCategoryChip: {
-    backgroundColor: Colors.primary,
+    backgroundColor: COLORS.primary,
   },
   categoryText: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
-    fontWeight: Typography.fontWeights.medium,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
+    fontWeight: '500',
   },
   activeCategoryText: {
-    color: Colors.textWhite,
-    fontWeight: Typography.fontWeights.bold,
+    color: COLORS.textWhite,
+    fontWeight: '700',
   },
   listContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xl,
+    padding: SPACING.md,
+    paddingBottom: SPACING.xl,
+  },
+  loader: {
+    marginTop: 40,
+  },
+  errorBox: {
+    padding: SPACING.md,
+    gap: SPACING.md,
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: Spacing.xxl,
+    paddingVertical: SPACING.xxl,
   },
   emptyEmoji: {
     fontSize: 40,
-    marginBottom: Spacing.sm,
+    marginBottom: SPACING.sm,
   },
   emptyTitle: {
-    fontSize: Typography.fontSizes.md,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.md,
+    fontWeight: '700',
+    color: COLORS.text,
     marginBottom: 4,
   },
   emptySubtitle: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     textAlign: 'center',
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: SPACING.lg,
   },
 });

@@ -1,33 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
   FlatList,
-  TouchableOpacity,
-  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RepairRequest, RepairStatus } from '../../types';
 import { mobileQuotationService } from '../quotationService';
 import { QuotationModal } from '../components/QuotationModal';
-import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
-import { Header } from '../../../components/common/Header';
-import { Card } from '../../../components/common/Card';
-import { Badge } from '../../../components/common/Badge';
-import { Button } from '../../../components/common/Button';
-import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
-import { ErrorState } from '../../../components/common/ErrorState';
+import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
+import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
 
 interface ProviderRequestsScreenProps {
   providerId?: string;
   onNavigateToTracking?: (request: RepairRequest) => void;
+  onBack?: () => void;
 }
 
-type FilterTab = 'ALL' | 'POSTED' | 'ACCEPTED' | 'REJECTED';
+type FilterTab = 'ALL' | 'REQUESTED' | 'ACCEPTED' | 'REJECTED';
 
 export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
   providerId = 'prov_fixit_001',
   onNavigateToTracking,
+  onBack,
 }) => {
   const [requests, setRequests] = useState<RepairRequest[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -75,58 +73,52 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
     }
   };
 
-  const getStatusBadge = (status: RepairStatus) => {
-    switch (status) {
-      case RepairStatus.POSTED:
-      case RepairStatus.MATCHED:
-        return <Badge label="NEW REQUEST" variant="warning" size="sm" />;
-      case RepairStatus.ACCEPTED:
-        return <Badge label="QUOTED / ACCEPTED" variant="success" size="sm" />;
-      case RepairStatus.REJECTED:
-        return <Badge label="DECLINED" variant="danger" size="sm" />;
-      case RepairStatus.IN_PROGRESS:
-        return <Badge label="IN REPAIR" variant="info" size="sm" />;
-      case RepairStatus.COMPLETED:
-        return <Badge label="COMPLETED" variant="success" size="sm" />;
-      default:
-        return <Badge label={status} variant="neutral" size="sm" />;
-    }
-  };
-
   const filteredRequests = requests.filter((r) => {
     if (activeFilter === 'ALL') return true;
     return r.status === activeFilter;
   });
 
   return (
-    <View style={styles.container}>
-      <Header
-        title="Incoming Repair Requests"
-        subtitle="Provider Dashboard & Quotation Management"
-      />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.topBar}>
+        {onBack ? (
+          <Pressable onPress={onBack} accessibilityRole="button" hitSlop={12}>
+            <Text style={styles.back}>‹ Back</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.topSpacer} />
+        )}
+        <Text style={styles.topTitle} numberOfLines={1}>
+          Repair Requests
+        </Text>
+        <View style={styles.topSpacer} />
+      </View>
 
       {/* Filter Tabs */}
       <View style={styles.tabBar}>
-        {(['ALL', 'POSTED', 'ACCEPTED', 'REJECTED'] as FilterTab[]).map((tab) => {
+        {(['ALL', 'REQUESTED', 'ACCEPTED', 'REJECTED'] as FilterTab[]).map((tab) => {
           const isSelected = activeFilter === tab;
           return (
-            <TouchableOpacity
+            <Pressable
               key={tab}
               style={[styles.tabButton, isSelected && styles.activeTabButton]}
               onPress={() => setActiveFilter(tab)}
             >
               <Text style={[styles.tabText, isSelected && styles.activeTabText]}>
-                {tab === 'POSTED' ? 'Pending' : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                {tab === 'REQUESTED' ? 'Pending' : tab.charAt(0) + tab.slice(1).toLowerCase()}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         })}
       </View>
 
       {isLoading ? (
-        <LoadingSpinner message="Loading incoming customer requests..." />
+        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
       ) : error ? (
-        <ErrorState message={error} onRetry={loadRequests} />
+        <View style={styles.errorBox}>
+          <MessageBanner message={error} />
+          <PrimaryButton title="Try again" variant="outlined" onPress={loadRequests} />
+        </View>
       ) : (
         <FlatList
           data={filteredRequests}
@@ -145,20 +137,22 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
           renderItem={({ item }) => (
             <Card style={styles.requestCard}>
               <View style={styles.cardHeader}>
-                <View>
-                  <Text style={styles.deviceTitle}>{item.itemSummary?.title || 'Electronic Device'}</Text>
-                  <Text style={styles.customerName}>Customer: {item.customerSummary?.name || 'Customer'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.deviceTitle}>{item.itemSummary?.title || item.itemName || 'Electronic Device'}</Text>
+                  <Text style={styles.customerName}>Customer: {item.customerSummary?.name || item.customerName || 'Customer'}</Text>
                 </View>
-                {getStatusBadge(item.status)}
+                <StatusBadge status={item.status} />
               </View>
 
               <Text style={styles.descriptionLabel}>Problem Description:</Text>
               <Text style={styles.descriptionText} numberOfLines={3}>
-                {item.problemDescription}
+                {item.problem || item.problemDescription}
               </Text>
 
               <View style={styles.metaRow}>
-                <Text style={styles.metaText}>📅 Preferred: {item.preferredDate.substring(0, 10)} ({item.preferredTime})</Text>
+                <Text style={styles.metaText}>
+                  📅 Preferred: {item.preferredDate ? item.preferredDate.substring(0, 10) : 'Flexible'} ({item.preferredTime || 'Anytime'})
+                </Text>
               </View>
 
               {item.estimatedPrice !== undefined && (
@@ -175,21 +169,16 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
               )}
 
               <View style={styles.cardActions}>
-                {item.status === RepairStatus.POSTED ? (
-                  <Button
+                {item.status === RepairStatus.REQUESTED ? (
+                  <PrimaryButton
                     title="Review & Send Quotation"
-                    variant="primary"
-                    size="sm"
                     onPress={() => setSelectedRequestForModal(item)}
-                    style={styles.fullWidthBtn}
                   />
                 ) : (
-                  <Button
+                  <PrimaryButton
                     title="View Status & Track Progress →"
-                    variant="outline"
-                    size="sm"
+                    variant="outlined"
                     onPress={() => onNavigateToTracking?.(item)}
-                    style={styles.fullWidthBtn}
                   />
                 )}
               </View>
@@ -205,140 +194,172 @@ export const ProviderRequestsScreen: React.FC<ProviderRequestsScreenProps> = ({
         onClose={() => setSelectedRequestForModal(null)}
         onSubmit={handleModalSubmit}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: COLORS.background,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  back: {
+    fontSize: 16,
+    color: COLORS.primary,
+    fontWeight: '600',
+    minWidth: 60,
+  },
+  topTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  topSpacer: {
+    minWidth: 60,
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.xs,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    gap: Spacing.xs,
+    borderBottomColor: COLORS.border,
   },
   tabButton: {
-    paddingVertical: Spacing.xs + 2,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.surfaceSubtle,
+    flex: 1,
+    paddingVertical: SPACING.sm + 2,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   activeTabButton: {
-    backgroundColor: Colors.primary,
+    borderBottomColor: COLORS.primary,
   },
   tabText: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
-    fontWeight: Typography.fontWeights.medium,
+    fontSize: FONT.xs,
+    fontWeight: '600',
+    color: COLORS.textMuted,
   },
   activeTabText: {
-    color: Colors.textWhite,
-    fontWeight: Typography.fontWeights.bold,
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   listContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    padding: SPACING.md,
+    paddingBottom: SPACING.xl,
+  },
+  loader: {
+    marginTop: 40,
+  },
+  errorBox: {
+    padding: SPACING.md,
+    gap: SPACING.md,
   },
   requestCard: {
-    marginBottom: Spacing.md,
-    backgroundColor: Colors.surface,
+    marginBottom: SPACING.md,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.sm,
+    marginBottom: SPACING.xs,
   },
   deviceTitle: {
-    fontSize: Typography.fontSizes.md,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.md,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   customerName: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     marginTop: 2,
   },
   descriptionLabel: {
     fontSize: 11,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textMuted,
-    marginBottom: 2,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+    marginTop: SPACING.xs,
   },
   descriptionText: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textPrimary,
+    fontSize: FONT.xs,
+    color: COLORS.text,
+    marginTop: 2,
     lineHeight: 18,
-    marginBottom: Spacing.sm,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginTop: SPACING.xs,
   },
   metaText: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.primary,
+    fontWeight: '500',
   },
   quoteSummaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: Colors.successLight,
-    padding: Spacing.xs + 2,
-    borderRadius: BorderRadius.sm,
-    marginBottom: Spacing.sm,
+    backgroundColor: COLORS.surfaceSubtle,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.xs + 2,
+    marginTop: SPACING.xs,
   },
   quoteLabel: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.success,
-    fontWeight: Typography.fontWeights.bold,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
   },
   quotePrice: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.primaryDark,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
   },
   rejectReasonBox: {
-    backgroundColor: Colors.dangerLight,
-    padding: Spacing.xs + 2,
-    borderRadius: BorderRadius.sm,
-    marginBottom: Spacing.sm,
+    backgroundColor: COLORS.dangerLight,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.xs + 2,
+    marginTop: SPACING.xs,
   },
   rejectReasonLabel: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.danger,
+    fontSize: FONT.xs,
+    color: COLORS.danger,
+    fontWeight: '600',
   },
   cardActions: {
-    marginTop: Spacing.xs,
-  },
-  fullWidthBtn: {
-    width: '100%',
+    marginTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    paddingTop: SPACING.sm,
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: Spacing.xxl,
+    paddingVertical: SPACING.xxl,
   },
   emptyIcon: {
     fontSize: 40,
-    marginBottom: Spacing.sm,
+    marginBottom: SPACING.sm,
   },
   emptyTitle: {
-    fontSize: Typography.fontSizes.md,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.md,
+    fontWeight: '700',
+    color: COLORS.text,
     marginBottom: 4,
   },
   emptySubtitle: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     textAlign: 'center',
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: SPACING.lg,
   },
 });

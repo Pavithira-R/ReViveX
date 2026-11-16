@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  Pressable,
   ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
-  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RepairRequest, Booking, BookingStatus } from '../../types';
 import { mobileBookingService } from '../bookingService';
-import { useAuth } from '../../../context';
-import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
-import { Header } from '../../../components/common/Header';
-import { Card } from '../../../components/common/Card';
-import { Badge } from '../../../components/common/Badge';
-import { Button } from '../../../components/common/Button';
+import { useAuth } from '../../../../context';
+import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
+import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
 
 interface RepairBookingScreenProps {
   repairRequest: RepairRequest;
@@ -77,8 +75,12 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
 
   if (confirmedBooking) {
     return (
-      <View style={styles.container}>
-        <Header title="Booking Confirmed" />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.topBar}>
+          <View style={styles.topSpacer} />
+          <Text style={styles.topTitle}>Booking Confirmed</Text>
+          <View style={styles.topSpacer} />
+        </View>
         <ScrollView contentContainerStyle={styles.successContainer}>
           <View style={styles.successBadgeCircle}>
             <Text style={styles.successBadgeEmoji}>🎉</Text>
@@ -87,7 +89,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
           <Text style={styles.confirmedSubtitle}>
             Your repair appointment has been locked with{' '}
             <Text style={styles.boldText}>
-              {repairRequest.providerSummary?.businessName || 'FixIt Pro'}
+              {repairRequest.providerSummary?.businessName || repairRequest.providerName || 'Technician'}
             </Text>
             .
           </Text>
@@ -102,7 +104,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Device:</Text>
                 <Text style={styles.detailValue}>
-                  {repairRequest.itemSummary?.title || 'MacBook Pro 15"'}
+                  {repairRequest.itemSummary?.title || repairRequest.itemName || 'MacBook Pro 15"'}
                 </Text>
               </View>
 
@@ -115,14 +117,14 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
 
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Agreed Quotation:</Text>
-                <Text style={[styles.detailValue, { color: Colors.primaryDark, fontWeight: '700' }]}>
-                  ${repairRequest.estimatedPrice?.toFixed(2) || '85.00'} USD
+                <Text style={[styles.detailValue, { color: COLORS.primaryDark, fontWeight: '700' }]}>
+                  ${repairRequest.estimatedPrice ? repairRequest.estimatedPrice.toFixed(2) : (repairRequest.quotation?.price || 85).toFixed(2)} USD
                 </Text>
               </View>
 
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Booking Status:</Text>
-                <Badge label="CONFIRMED" variant="success" size="sm" />
+                <StatusBadge status="CONFIRMED" />
               </View>
             </View>
           </Card>
@@ -131,26 +133,30 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
             Please arrive 10 minutes early. Present your Confirmation Code upon device hand-off.
           </Text>
 
-          <Button
+          <PrimaryButton
             title="Track Repair Progress"
-            variant="primary"
-            size="lg"
             onPress={() => onBookingConfirmed?.(confirmedBooking)}
-            style={styles.fullWidthBtn}
           />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Header
-        title="Schedule Appointment"
-        subtitle="Step 2 of 3: Date & Drop-off Time"
-        showBack={Boolean(onNavigateBack)}
-        onBack={onNavigateBack}
-      />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.topBar}>
+        {onNavigateBack ? (
+          <Pressable onPress={onNavigateBack} accessibilityRole="button" hitSlop={12}>
+            <Text style={styles.back}>‹ Back</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.topSpacer} />
+        )}
+        <Text style={styles.topTitle} numberOfLines={1}>
+          Schedule Appointment
+        </Text>
+        <View style={styles.topSpacer} />
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Repair & Quotation Summary Card */}
@@ -159,19 +165,19 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
           <View style={styles.summaryItemRow}>
             <Text style={styles.summaryLabel}>Device:</Text>
             <Text style={styles.summaryValue}>
-              {repairRequest.itemSummary?.title || 'MacBook Pro 15"'}
+              {repairRequest.itemSummary?.title || repairRequest.itemName || 'Electronic Device'}
             </Text>
           </View>
           <View style={styles.summaryItemRow}>
             <Text style={styles.summaryLabel}>Provider:</Text>
             <Text style={styles.summaryValue}>
-              {repairRequest.providerSummary?.businessName || 'FixIt Pro Electronics'}
+              {repairRequest.providerSummary?.businessName || repairRequest.providerName || 'Technician'}
             </Text>
           </View>
           <View style={styles.summaryItemRow}>
             <Text style={styles.summaryLabel}>Quoted Price:</Text>
             <Text style={[styles.summaryValue, styles.highlightPrice]}>
-              ${repairRequest.estimatedPrice ? repairRequest.estimatedPrice.toFixed(2) : '85.00'} USD
+              ${repairRequest.estimatedPrice ? repairRequest.estimatedPrice.toFixed(2) : (repairRequest.quotation?.price || 85).toFixed(2)} USD
             </Text>
           </View>
           {repairRequest.providerNotes ? (
@@ -188,15 +194,15 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
           <Text style={styles.sectionHeader}>Customer Details</Text>
           <View style={styles.summaryItemRow}>
             <Text style={styles.summaryLabel}>Name:</Text>
-            <Text style={styles.summaryValue}>{customer.name}</Text>
+            <Text style={styles.summaryValue}>{user?.name || repairRequest.customerName || 'Customer'}</Text>
           </View>
           <View style={styles.summaryItemRow}>
             <Text style={styles.summaryLabel}>Email:</Text>
-            <Text style={styles.summaryValue}>{customer.email}</Text>
+            <Text style={styles.summaryValue}>{user?.email || 'N/A'}</Text>
           </View>
           <View style={styles.summaryItemRow}>
-            <Text style={styles.summaryLabel}>Phone:</Text>
-            <Text style={styles.summaryValue}>{customer.phone}</Text>
+            <Text style={styles.summaryLabel}>User ID:</Text>
+            <Text style={styles.summaryValue}>{user?.uid ? user.uid.substring(0, 8) + '...' : 'Signed In'}</Text>
           </View>
         </Card>
 
@@ -206,6 +212,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
           <TextInput
             style={styles.input}
             placeholder="YYYY-MM-DD"
+            placeholderTextColor={COLORS.textMuted}
             value={appointmentDate}
             onChangeText={setAppointmentDate}
           />
@@ -218,16 +225,15 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
             {AVAILABLE_TIMES.map((time) => {
               const isSelected = appointmentTime === time;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={time}
                   style={[styles.timeChip, isSelected && styles.selectedTimeChip]}
                   onPress={() => setAppointmentTime(time)}
-                  activeOpacity={0.7}
                 >
                   <Text style={[styles.timeChipText, isSelected && styles.selectedTimeChipText]}>
                     {time}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
@@ -239,6 +245,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
           <TextInput
             style={styles.textArea}
             placeholder="e.g. Bringing device in original box with charger..."
+            placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={2}
             value={bookingNotes}
@@ -247,227 +254,231 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
         </View>
 
         {errorMessage ? (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{errorMessage}</Text>
+          <View style={{ marginBottom: SPACING.md }}>
+            <MessageBanner message={errorMessage} />
           </View>
         ) : null}
 
-        <Button
+        <PrimaryButton
           title="Confirm & Lock Appointment"
           onPress={handleConfirmBooking}
           loading={isSubmitting}
-          variant="primary"
-          size="lg"
-          style={styles.confirmButton}
         />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: COLORS.background,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  back: {
+    fontSize: 16,
+    color: COLORS.primary,
+    fontWeight: '600',
+    minWidth: 60,
+  },
+  topTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  topSpacer: {
+    minWidth: 60,
   },
   scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    padding: SPACING.md,
+    paddingBottom: SPACING.xxl,
   },
   summaryCard: {
-    backgroundColor: Colors.surface,
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   sectionHeader: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    paddingBottom: Spacing.xs,
+    borderBottomColor: COLORS.border,
+    paddingBottom: SPACING.xs,
   },
   summaryItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xs,
+    paddingVertical: SPACING.xs,
   },
   summaryLabel: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
   },
   summaryValue: {
-    fontSize: Typography.fontSizes.xs,
-    fontWeight: Typography.fontWeights.semibold,
-    color: Colors.textPrimary,
+    fontSize: FONT.xs,
+    fontWeight: '600',
+    color: COLORS.text,
   },
   highlightPrice: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.primaryDark,
+    color: COLORS.primaryDark,
+    fontSize: FONT.sm,
+    fontWeight: '700',
   },
   providerNotesBox: {
-    backgroundColor: Colors.primaryLight,
-    padding: Spacing.xs + 2,
-    borderRadius: BorderRadius.sm,
-    marginTop: Spacing.xs,
+    backgroundColor: COLORS.surfaceSubtle,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.xs + 2,
+    marginTop: SPACING.xs,
   },
   providerNotesText: {
     fontSize: 11,
-    color: Colors.primaryDark,
+    color: COLORS.text,
   },
   formSection: {
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   formLabel: {
-    fontSize: Typography.fontSizes.xs,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    fontSize: FONT.xs,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
   },
   input: {
-    backgroundColor: Colors.surface,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
-    fontSize: Typography.fontSizes.sm,
-    color: Colors.textPrimary,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    fontSize: FONT.sm,
+    color: COLORS.text,
   },
   timeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.xs,
+    gap: SPACING.xs,
   },
   timeChip: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.surface,
+    paddingVertical: SPACING.xs + 2,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surfaceSubtle,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
+    borderColor: COLORS.border,
   },
   selectedTimeChip: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
   },
   timeChipText: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textPrimary,
-    fontWeight: Typography.fontWeights.medium,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
+    fontWeight: '500',
   },
   selectedTimeChipText: {
-    color: Colors.textWhite,
-    fontWeight: Typography.fontWeights.bold,
+    color: COLORS.primaryDark,
+    fontWeight: '700',
   },
   textArea: {
-    backgroundColor: Colors.surface,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    fontSize: Typography.fontSizes.sm,
-    color: Colors.textPrimary,
-    minHeight: 70,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    fontSize: FONT.sm,
+    color: COLORS.text,
+    minHeight: 60,
     textAlignVertical: 'top',
   },
-  errorBanner: {
-    backgroundColor: Colors.dangerLight,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-  },
-  errorBannerText: {
-    color: Colors.danger,
-    fontSize: Typography.fontSizes.sm,
-  },
-  confirmButton: {
-    marginTop: Spacing.sm,
-  },
   successContainer: {
-    padding: Spacing.xl,
     alignItems: 'center',
+    padding: SPACING.lg,
   },
   successBadgeCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: Colors.successLight,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   successBadgeEmoji: {
     fontSize: 32,
   },
   confirmedTitle: {
-    fontSize: Typography.fontSizes.xl,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    marginBottom: 4,
+    fontSize: FONT.xl,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
   },
   confirmedSubtitle: {
-    fontSize: Typography.fontSizes.sm,
-    color: Colors.textSecondary,
+    fontSize: FONT.sm,
+    color: COLORS.textMuted,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: SPACING.lg,
   },
   boldText: {
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   confirmationCard: {
     width: '100%',
-    marginBottom: Spacing.lg,
-    padding: 0,
-    overflow: 'hidden',
+    marginBottom: SPACING.lg,
   },
   codeBanner: {
-    backgroundColor: Colors.primary,
-    padding: Spacing.md,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     alignItems: 'center',
+    marginBottom: SPACING.md,
   },
   codeBannerLabel: {
-    color: Colors.primaryLight,
     fontSize: 11,
-    fontWeight: Typography.fontWeights.medium,
+    color: COLORS.primaryDark,
+    fontWeight: '600',
+    textTransform: 'uppercase',
   },
   codeBannerValue: {
-    color: Colors.textWhite,
-    fontSize: Typography.fontSizes.xl,
-    fontWeight: Typography.fontWeights.bold,
-    letterSpacing: 2,
+    fontSize: FONT.xl,
+    fontWeight: '800',
+    color: COLORS.primaryDark,
     marginTop: 2,
+    letterSpacing: 2,
   },
   cardDetails: {
-    padding: Spacing.md,
+    gap: SPACING.xs,
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.xs + 2,
+    paddingVertical: 2,
   },
   detailLabel: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
   },
   detailValue: {
-    fontSize: Typography.fontSizes.xs,
-    fontWeight: Typography.fontWeights.semibold,
-    color: Colors.textPrimary,
+    fontSize: FONT.xs,
+    fontWeight: '600',
+    color: COLORS.text,
   },
   instructionNotice: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-  },
-  fullWidthBtn: {
-    width: '100%',
+    marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
   },
 });

@@ -1,24 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
+  Pressable,
   ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
-  TouchableOpacity,
-  Alert,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { RepairRequest, RepairStatus } from '../../types';
 import { mobileStatusTrackingService } from '../statusTrackingService';
 import { ProgressTracker } from '../components/ProgressTracker';
-import { chatService } from '../../../services';
-import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
-import { Header } from '../../../components/common/Header';
-import { Card } from '../../../components/common/Card';
-import { Badge } from '../../../components/common/Badge';
-import { Button } from '../../../components/common/Button';
-import { LoadingSpinner } from '../../../components/common/LoadingSpinner';
-import { ErrorState } from '../../../components/common/ErrorState';
+import { chatService } from '../../../../services';
+import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
+import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
 
 interface RepairStatusTrackingScreenProps {
   requestId?: string;
@@ -31,7 +27,7 @@ interface RepairStatusTrackingScreenProps {
 
 export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProps> = ({
   requestId = 'req_rep_101',
-  isProviderView = true, // Toggleable for customer vs provider perspective
+  isProviderView = true,
   onNavigateBack,
   onNavigateToBooking,
   onLeaveReview,
@@ -94,58 +90,85 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
   };
 
   if (isLoading) {
-    return <LoadingSpinner message="Fetching repair progress..." />;
+    return (
+      <SafeAreaView style={styles.container}>
+        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+      </SafeAreaView>
+    );
   }
 
   if (error && !request) {
     return (
-      <View style={styles.container}>
-        <Header title="Repair Status" showBack onBack={onNavigateBack} />
-        <ErrorState message={error} onRetry={loadStatus} />
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.topBar}>
+          <Pressable onPress={onNavigateBack} accessibilityRole="button" hitSlop={12}>
+            <Text style={styles.back}>‹ Back</Text>
+          </Pressable>
+          <Text style={styles.topTitle}>Repair Status</Text>
+          <View style={styles.topSpacer} />
+        </View>
+        <View style={styles.errorBox}>
+          <MessageBanner message={error} />
+          <PrimaryButton title="Try again" variant="outlined" onPress={loadStatus} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!request) return null;
 
   return (
-    <View style={styles.container}>
-      <Header
-        title="Repair Live Tracking"
-        subtitle={`Request #${request.id.substring(0, 12)}`}
-        showBack={Boolean(onNavigateBack)}
-        onBack={onNavigateBack}
-      />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.topBar}>
+        {onNavigateBack ? (
+          <Pressable onPress={onNavigateBack} accessibilityRole="button" hitSlop={12}>
+            <Text style={styles.back}>‹ Back</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.topSpacer} />
+        )}
+        <Text style={styles.topTitle} numberOfLines={1}>
+          Repair Live Tracking
+        </Text>
+        <View style={styles.topSpacer} />
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Device & Status Overview */}
         <Card style={styles.overviewCard}>
           <View style={styles.cardHeaderRow}>
             <View style={styles.deviceInfo}>
-              <Text style={styles.deviceTitle}>{request.itemSummary?.title || 'MacBook Pro 15"'}</Text>
+              <Text style={styles.deviceTitle}>{request.itemSummary?.title || request.itemName || 'Electronic Device'}</Text>
               <Text style={styles.providerName}>
-                Technician: {request.providerSummary?.businessName || 'FixIt Pro Electronics'}
+                Technician: {request.providerSummary?.businessName || request.providerName || 'Certified Technician'}
               </Text>
             </View>
-            <Badge
-              label={request.status}
-              variant={
-                request.status === RepairStatus.COMPLETED
-                  ? 'success'
-                  : request.status === RepairStatus.IN_PROGRESS
-                  ? 'info'
-                  : request.status === RepairStatus.ACCEPTED
-                  ? 'primary'
-                  : 'warning'
-              }
-            />
+            <StatusBadge status={request.status} />
           </View>
 
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>Agreed Repair Quotation:</Text>
             <Text style={styles.priceValue}>
-              ${request.estimatedPrice ? request.estimatedPrice.toFixed(2) : '85.00'} USD
+              ${request.estimatedPrice ? request.estimatedPrice.toFixed(2) : (request.quotation?.price || 85).toFixed(2)} USD
             </Text>
+          </View>
+
+          <View style={{ marginTop: SPACING.sm }}>
+            <PrimaryButton
+              title="Chat with Technician 💬"
+              variant="outlined"
+              onPress={async () => {
+                if (onChatWithProvider) {
+                  onChatWithProvider(request.providerId);
+                } else {
+                  try {
+                    await chatService.startWithUser(request.providerId);
+                  } catch (e) {
+                    console.log('Chat start:', e);
+                  }
+                }
+              }}
+            />
           </View>
         </Card>
 
@@ -162,7 +185,7 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
             <View style={styles.ecoTextGroup}>
               <Text style={styles.ecoTitle}>Eco-Impact Milestone Ready</Text>
               <Text style={styles.ecoSubtitle}>
-                Repair complete. Ready for Member 6 Eco-Points calculation & Review submission.
+                Repair complete. Eco-Points have been awarded to your account!
               </Text>
             </View>
           </View>
@@ -190,51 +213,42 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
             <TextInput
               style={styles.noteInput}
               placeholder="Add status update note for the customer..."
+              placeholderTextColor={COLORS.textMuted}
               value={providerNoteInput}
               onChangeText={setProviderNoteInput}
             />
 
-            <View style={styles.actionButtonsRow}>
+            <View style={styles.actionButtonsCol}>
               {request.status === RepairStatus.ACCEPTED && (
                 <>
-                  <Button
-                    title="On The Way"
+                  <PrimaryButton
+                    title="Mark: On The Way"
+                    variant="outlined"
                     onPress={() => handleUpdateStatus(RepairStatus.ON_THE_WAY)}
                     loading={isUpdating}
-                    variant="outline"
-                    size="sm"
-                    style={styles.actionBtn}
                   />
-                  <Button
-                    title="Start Repairing"
+                  <View style={{ height: SPACING.xs }} />
+                  <PrimaryButton
+                    title="Mark: Repairing (In Progress)"
                     onPress={() => handleUpdateStatus(RepairStatus.REPAIRING)}
                     loading={isUpdating}
-                    variant="primary"
-                    size="sm"
-                    style={styles.actionBtn}
                   />
                 </>
               )}
 
               {request.status === RepairStatus.ON_THE_WAY && (
-                <Button
-                  title="Start Repairing"
+                <PrimaryButton
+                  title="Mark: Repairing (In Progress)"
                   onPress={() => handleUpdateStatus(RepairStatus.REPAIRING)}
                   loading={isUpdating}
-                  variant="primary"
-                  size="md"
-                  style={styles.actionBtn}
                 />
               )}
 
               {request.status === RepairStatus.REPAIRING && (
-                <Button
-                  title="Mark as Completed"
+                <PrimaryButton
+                  title="Mark as Completed 🎉"
                   onPress={() => handleUpdateStatus(RepairStatus.COMPLETED)}
                   loading={isUpdating}
-                  variant="primary"
-                  size="md"
-                  style={styles.actionBtn}
                 />
               )}
             </View>
@@ -243,171 +257,189 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
 
         {/* Customer Actions */}
         {!isProviderView && request.status === RepairStatus.ACCEPTED && (
-          <Button
+          <PrimaryButton
             title="Book Appointment for Drop-off →"
             onPress={() => onNavigateToBooking?.(request)}
-            variant="primary"
-            size="lg"
-            style={styles.customerBookingBtn}
           />
         )}
 
         {/* Leave Review Prompt when COMPLETED */}
         {request.status === RepairStatus.COMPLETED && (
-          <Card style={[styles.overviewCard, { marginTop: Spacing.md, borderColor: Colors.accent, borderWidth: 1 }]}>
+          <Card style={[styles.overviewCard, { marginTop: SPACING.md, borderColor: COLORS.accent }]}>
             <Text style={styles.deviceTitle}>Repair Finished! ⭐</Text>
-            <Text style={[styles.providerName, { marginBottom: Spacing.md }]}>
+            <Text style={[styles.providerName, { marginBottom: SPACING.md }]}>
               Help others in the community by rating {request.providerName || 'the technician'}.
             </Text>
-            <Button
+            <PrimaryButton
               title="Leave a Review"
               onPress={() => onLeaveReview?.(request)}
-              variant="primary"
-              size="md"
             />
           </Card>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: COLORS.background,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  back: {
+    fontSize: 16,
+    color: COLORS.primary,
+    fontWeight: '600',
+    minWidth: 60,
+  },
+  topTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  topSpacer: {
+    minWidth: 60,
   },
   scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    padding: SPACING.md,
+    paddingBottom: SPACING.xxl,
+  },
+  loader: {
+    marginTop: 40,
+  },
+  errorBox: {
+    padding: SPACING.md,
+    gap: SPACING.md,
   },
   overviewCard: {
-    backgroundColor: Colors.surface,
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.sm,
+    marginBottom: SPACING.sm,
   },
   deviceInfo: {
     flex: 1,
-    marginRight: Spacing.sm,
+    marginRight: SPACING.sm,
   },
   deviceTitle: {
-    fontSize: Typography.fontSizes.md,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.md,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   providerName: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     marginTop: 2,
   },
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Spacing.xs,
+    paddingTop: SPACING.xs,
     borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
+    borderTopColor: COLORS.borderLight,
   },
   priceLabel: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
   },
   priceValue: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.primaryDark,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
   },
   stepperCard: {
-    backgroundColor: Colors.surface,
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   sectionHeading: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
   },
   ecoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.successLight,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.md,
+    backgroundColor: COLORS.primaryLight,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: Colors.success,
+    borderColor: COLORS.primary,
   },
   ecoIcon: {
     fontSize: 28,
-    marginRight: Spacing.md,
+    marginRight: SPACING.md,
   },
   ecoTextGroup: {
     flex: 1,
   },
   ecoTitle: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.success,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
   },
   ecoSubtitle: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textPrimary,
+    fontSize: FONT.xs,
+    color: COLORS.text,
     marginTop: 2,
   },
   notesCard: {
-    backgroundColor: Colors.surfaceSubtle,
-    marginBottom: Spacing.md,
+    backgroundColor: COLORS.surfaceSubtle,
+    marginBottom: SPACING.md,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
+    borderLeftColor: COLORS.primary,
   },
   notesLabel: {
     fontSize: 11,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textSecondary,
+    fontWeight: '700',
+    color: COLORS.textMuted,
   },
   notesBody: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textPrimary,
+    fontSize: FONT.xs,
+    color: COLORS.text,
     marginTop: 4,
     lineHeight: 18,
   },
   notesTimestamp: {
     fontSize: 10,
-    color: Colors.textMuted,
+    color: COLORS.textMuted,
     marginTop: 4,
   },
   providerActionCard: {
-    backgroundColor: Colors.surface,
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   controlHint: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.sm,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.sm,
   },
   noteInput: {
-    backgroundColor: Colors.surfaceSubtle,
+    backgroundColor: COLORS.surfaceSubtle,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.sm,
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    fontSize: FONT.xs,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
   },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  actionBtn: {
-    flex: 1,
-  },
-  customerBookingBtn: {
-    marginTop: Spacing.sm,
+  actionButtonsCol: {
+    gap: SPACING.xs,
   },
 });

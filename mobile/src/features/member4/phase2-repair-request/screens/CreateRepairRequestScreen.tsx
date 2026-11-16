@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
   Image,
-  TouchableOpacity,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ServiceProvider, RepairRequest } from '../../types';
 import { mobileRepairRequestService } from '../repairRequestService';
-import { useAuth } from '../../../context';
-import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
-import { Header } from '../../../components/common/Header';
-import { Button } from '../../../components/common/Button';
-import { Card } from '../../../components/common/Card';
-import { Badge } from '../../../components/common/Badge';
+import { useAuth } from '../../../../context';
+import { Card, MessageBanner, PrimaryButton, StatusBadge } from '../../../../components';
+import { COLORS, FONT, RADIUS, SHADOW, SPACING } from '../../../../constants';
 
 export interface DeviceItemSummary {
   id: string;
@@ -111,8 +109,12 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
 
   if (submittedRequest) {
     return (
-      <View style={styles.container}>
-        <Header title="Request Submitted" />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.topBar}>
+          <View style={styles.topSpacer} />
+          <Text style={styles.topTitle}>Request Submitted</Text>
+          <View style={styles.topSpacer} />
+        </View>
         <ScrollView contentContainerStyle={styles.successContainer}>
           <View style={styles.successIconCircle}>
             <Text style={styles.successCheck}>✓</Text>
@@ -142,7 +144,7 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Status:</Text>
-              <Badge label="POSTED" variant="warning" size="sm" />
+              <StatusBadge status="REQUESTED" />
             </View>
           </Card>
 
@@ -150,26 +152,30 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
             The provider will review your request and submit a formal price quotation shortly.
           </Text>
 
-          <Button
+          <PrimaryButton
             title="View Request & Status"
             onPress={() => onRequestSubmitted?.(submittedRequest)}
-            variant="primary"
-            size="lg"
-            style={styles.doneButton}
           />
         </ScrollView>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Header
-        title="Request Repair"
-        subtitle="Step 1 of 3: Problem Description"
-        showBack={Boolean(onNavigateBack)}
-        onBack={onNavigateBack}
-      />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.topBar}>
+        {onNavigateBack ? (
+          <Pressable onPress={onNavigateBack} accessibilityRole="button" hitSlop={12}>
+            <Text style={styles.back}>‹ Back</Text>
+          </Pressable>
+        ) : (
+          <View style={styles.topSpacer} />
+        )}
+        <Text style={styles.topTitle} numberOfLines={1}>
+          Request Repair
+        </Text>
+        <View style={styles.topSpacer} />
+      </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Selected Item Summary */}
@@ -187,7 +193,7 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
               <View style={styles.itemDetails}>
                 <Text style={styles.itemTitle}>{item.title}</Text>
                 <Text style={styles.itemCategory}>Category: {item.category}</Text>
-                <Badge label={item.condition} variant="neutral" size="sm" style={styles.itemBadge} />
+                {item.condition && <StatusBadge status={item.condition} />}
               </View>
             </View>
           </Card>
@@ -206,7 +212,7 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
               <View style={styles.providerDetails}>
                 <View style={styles.providerTitleRow}>
                   <Text style={styles.providerBusinessName}>{provider.businessName}</Text>
-                  {provider.isVerified && <Badge label="Verified" variant="success" size="sm" />}
+                  {provider.isVerified && <StatusBadge status="VERIFIED" />}
                 </View>
                 <Text style={styles.providerLocation}>
                   📍 {typeof provider.location === 'object' ? provider.location?.city : (provider.location || 'Colombo')}
@@ -230,8 +236,8 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
               styles.textArea,
               Boolean(validationErrors.problemDescription) && styles.inputError,
             ]}
-            placeholder="e.g. Battery drains rapidly within 30 minutes, laptop overheats, and fans run at full speed..."
-            placeholderTextColor={Colors.textMuted}
+            placeholder="e.g. Battery drains rapidly within 30 minutes, laptop overheats, fans run full speed..."
+            placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={4}
             value={problemDescription}
@@ -256,7 +262,7 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
               Boolean(validationErrors.preferredDate) && styles.inputError,
             ]}
             placeholder="YYYY-MM-DD"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={COLORS.textMuted}
             value={preferredDate}
             onChangeText={(val) => {
               setPreferredDate(val);
@@ -269,21 +275,20 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
             <Text style={styles.errorText}>{validationErrors.preferredDate}</Text>
           ) : null}
 
-          <Text style={[styles.sectionLabel, { marginTop: Spacing.md }]}>Preferred Time Window</Text>
+          <Text style={[styles.sectionLabel, { marginTop: SPACING.md }]}>Preferred Time Window</Text>
           <View style={styles.timeSlotsContainer}>
             {TIME_SLOTS.map((slot) => {
               const isSelected = preferredTime === slot;
               return (
-                <TouchableOpacity
+                <Pressable
                   key={slot}
                   style={[styles.timeSlotOption, isSelected && styles.selectedTimeSlot]}
                   onPress={() => setPreferredTime(slot)}
-                  activeOpacity={0.7}
                 >
                   <Text style={[styles.timeSlotText, isSelected && styles.selectedTimeSlotText]}>
                     {slot}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               );
             })}
           </View>
@@ -295,7 +300,7 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
           <TextInput
             style={styles.textArea}
             placeholder="Any specific instructions, backup status, or urgency..."
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={COLORS.textMuted}
             multiline
             numberOfLines={2}
             value={notes}
@@ -305,50 +310,73 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
 
         {/* Global Error Banner */}
         {errorMessage ? (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{errorMessage}</Text>
+          <View style={{ marginBottom: SPACING.md }}>
+            <MessageBanner message={errorMessage} />
           </View>
         ) : null}
 
         {/* Submit Action */}
-        <Button
+        <PrimaryButton
           title="Submit Repair Request"
           onPress={handleSubmit}
           loading={isSubmitting}
-          variant="primary"
-          size="lg"
-          style={styles.submitButton}
         />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: COLORS.background,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  back: {
+    fontSize: 16,
+    color: COLORS.primary,
+    fontWeight: '600',
+    minWidth: 60,
+  },
+  topTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  topSpacer: {
+    minWidth: 60,
   },
   scrollContent: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.xxl,
+    padding: SPACING.md,
+    paddingBottom: SPACING.xxl,
   },
   section: {
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   sectionLabel: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
   },
   fieldHint: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs,
   },
   itemCard: {
-    backgroundColor: Colors.surface,
+    padding: SPACING.sm,
   },
   itemRow: {
     flexDirection: 'row',
@@ -357,37 +385,34 @@ const styles = StyleSheet.create({
   itemImage: {
     width: 60,
     height: 60,
-    borderRadius: BorderRadius.sm,
-    marginRight: Spacing.md,
-    backgroundColor: Colors.surfaceSubtle,
+    borderRadius: RADIUS.md,
+    marginRight: SPACING.md,
   },
   itemImageFallback: {
     width: 60,
     height: 60,
-    borderRadius: BorderRadius.sm,
-    backgroundColor: Colors.surfaceSubtle,
-    marginRight: Spacing.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceSubtle,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: SPACING.md,
   },
   itemDetails: {
     flex: 1,
   },
   itemTitle: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   itemCategory: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     marginTop: 2,
-  },
-  itemBadge: {
-    marginTop: 4,
+    marginBottom: 4,
   },
   providerCard: {
-    backgroundColor: Colors.surface,
+    padding: SPACING.sm,
   },
   providerRow: {
     flexDirection: 'row',
@@ -396,16 +421,16 @@ const styles = StyleSheet.create({
   providerAvatarCircle: {
     width: 48,
     height: 48,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.primaryLight,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
+    marginRight: SPACING.md,
   },
   providerAvatarText: {
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.primaryDark,
-    fontSize: Typography.fontSizes.sm,
+    fontSize: FONT.md,
+    fontWeight: '700',
+    color: COLORS.primaryDark,
   },
   providerDetails: {
     flex: 1,
@@ -413,162 +438,140 @@ const styles = StyleSheet.create({
   providerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: SPACING.xs,
   },
   providerBusinessName: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   providerLocation: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     marginTop: 2,
   },
   providerRating: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.accent,
-    marginTop: 1,
+    fontSize: FONT.xs,
+    color: COLORS.text,
+    marginTop: 2,
   },
   input: {
-    backgroundColor: Colors.surface,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 2,
-    fontSize: Typography.fontSizes.sm,
-    color: Colors.textPrimary,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    fontSize: FONT.sm,
+    color: COLORS.text,
   },
   textArea: {
-    backgroundColor: Colors.surface,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    fontSize: Typography.fontSizes.sm,
-    color: Colors.textPrimary,
-    minHeight: 90,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    fontSize: FONT.sm,
+    color: COLORS.text,
+    minHeight: 80,
     textAlignVertical: 'top',
   },
   inputError: {
-    borderColor: Colors.danger,
-    backgroundColor: Colors.dangerLight,
+    borderColor: COLORS.error,
   },
   errorText: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.danger,
+    color: COLORS.error,
+    fontSize: FONT.xs,
     marginTop: 4,
   },
   timeSlotsContainer: {
-    gap: Spacing.xs,
-    marginTop: Spacing.xs,
+    gap: SPACING.xs,
   },
   timeSlotOption: {
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.md,
+    padding: SPACING.sm,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceSubtle,
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
+    borderColor: COLORS.border,
   },
   selectedTimeSlot: {
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
   },
   timeSlotText: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textPrimary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
+    fontWeight: '500',
   },
   selectedTimeSlotText: {
-    color: Colors.primaryDark,
-    fontWeight: Typography.fontWeights.bold,
-  },
-  errorBanner: {
-    backgroundColor: Colors.dangerLight,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    marginBottom: Spacing.md,
-  },
-  errorBannerText: {
-    color: Colors.danger,
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.medium,
-  },
-  submitButton: {
-    marginTop: Spacing.sm,
+    color: COLORS.primaryDark,
+    fontWeight: '700',
   },
   successContainer: {
-    padding: Spacing.xl,
     alignItems: 'center',
+    padding: SPACING.lg,
   },
   successIconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: Colors.successLight,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: SPACING.md,
   },
   successCheck: {
     fontSize: 32,
-    color: Colors.success,
-    fontWeight: Typography.fontWeights.bold,
+    color: COLORS.primaryDark,
+    fontWeight: '700',
   },
   successTitle: {
-    fontSize: Typography.fontSizes.xl,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    marginBottom: 4,
+    fontSize: FONT.xl,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
   },
   successSubtitle: {
-    fontSize: Typography.fontSizes.sm,
-    color: Colors.textSecondary,
+    fontSize: FONT.sm,
+    color: COLORS.textMuted,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: SPACING.lg,
   },
   boldText: {
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   summaryCard: {
     width: '100%',
-    marginBottom: Spacing.lg,
+    marginBottom: SPACING.lg,
   },
   summaryHeading: {
-    fontSize: Typography.fontSizes.sm,
-    fontWeight: Typography.fontWeights.bold,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    fontSize: FONT.sm,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    paddingBottom: Spacing.xs,
+    borderBottomColor: COLORS.border,
+    paddingBottom: SPACING.xs,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.xs + 2,
+    paddingVertical: SPACING.xs,
   },
   summaryLabel: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
   },
   summaryValue: {
-    fontSize: Typography.fontSizes.xs,
-    fontWeight: Typography.fontWeights.semibold,
-    color: Colors.textPrimary,
+    fontSize: FONT.xs,
+    fontWeight: '600',
+    color: COLORS.text,
   },
   nextStepNotice: {
-    fontSize: Typography.fontSizes.xs,
-    color: Colors.textSecondary,
+    fontSize: FONT.xs,
+    color: COLORS.textMuted,
     textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: Spacing.lg,
-    paddingHorizontal: Spacing.md,
-  },
-  doneButton: {
-    width: '100%',
+    marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
   },
 });
