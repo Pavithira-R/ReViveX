@@ -2,7 +2,7 @@
 // Phase 1 - Service Provider Profile Types
 // ============================================================================
 
-import { ServiceProvider } from '../../../types';
+import { ServiceProvider } from '../types';
 
 export type { ServiceProvider };
 

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { ServiceProvider } from '../types';
 import { mobileProviderService } from '../providerService';
+import { chatService } from '../../../services';
 import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
 import { Header } from '../../../components/common/Header';
 import { Badge } from '../../../components/common/Badge';
@@ -103,7 +104,7 @@ export const ProviderProfileScreen: React.FC<ProviderProfileScreenProps> = ({
                 <Badge label="Eco-Certified" variant="primary" size="sm" />
               </View>
               <Text style={styles.heroBusinessName}>{provider.businessName}</Text>
-              <Text style={styles.heroTechName}>Technician: {provider.name}</Text>
+              <Text style={styles.heroTechName}>Technician: {provider.name || provider.businessName}</Text>
             </View>
           </View>
 
@@ -113,9 +114,11 @@ export const ProviderProfileScreen: React.FC<ProviderProfileScreenProps> = ({
               <Text style={styles.metricLabel}>Rating</Text>
               <View style={styles.ratingValueRow}>
                 <Text style={styles.metricStar}>★</Text>
-                <Text style={styles.metricValue}>{provider.rating.toFixed(1)}</Text>
+                <Text style={styles.metricValue}>
+                  {(provider.ratingAverage ?? provider.rating ?? 5.0).toFixed(1)}
+                </Text>
               </View>
-              <Text style={styles.metricSub}>{provider.reviewCount} reviews</Text>
+              <Text style={styles.metricSub}>{provider.ratingCount ?? provider.reviewCount ?? 0} reviews</Text>
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricBox}>
@@ -145,9 +148,9 @@ export const ProviderProfileScreen: React.FC<ProviderProfileScreenProps> = ({
         {/* Services Offered Section */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Services Offered</Text>
-          {provider.servicesOffered.length > 0 ? (
+          {(provider.servicesOffered || provider.services || []).length > 0 ? (
             <View style={styles.servicesGrid}>
-              {provider.servicesOffered.map((service, index) => (
+              {(provider.servicesOffered || provider.services || []).map((service, index) => (
                 <View key={index} style={styles.serviceItem}>
                   <Text style={styles.serviceCheck}>✓</Text>
                   <Text style={styles.serviceText}>{service}</Text>
@@ -166,14 +169,18 @@ export const ProviderProfileScreen: React.FC<ProviderProfileScreenProps> = ({
             <Text style={styles.infoIcon}>🕒</Text>
             <View style={styles.infoTextGroup}>
               <Text style={styles.infoLabel}>Working Hours</Text>
-              <Text style={styles.infoValue}>{provider.availability}</Text>
+              <Text style={styles.infoValue}>
+                {provider.availability || 'Mon - Sat: 9:00 AM - 6:00 PM'}
+              </Text>
             </View>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>📍</Text>
             <View style={styles.infoTextGroup}>
               <Text style={styles.infoLabel}>Workshop Location</Text>
-              <Text style={styles.infoValue}>{provider.location}</Text>
+              <Text style={styles.infoValue}>
+                {typeof provider.location === 'object' ? provider.location?.city : (provider.location || 'Colombo, Sri Lanka')}
+              </Text>
             </View>
           </View>
         </View>
@@ -188,9 +195,22 @@ export const ProviderProfileScreen: React.FC<ProviderProfileScreenProps> = ({
             style={styles.primaryActionButton}
           />
           <Button
+            title="Chat with Provider 💬"
+            onPress={async () => {
+              try {
+                await chatService.startWithUser(provider.id || provider.userId);
+              } catch (e) {
+                console.log('Chat error:', e);
+              }
+            }}
+            variant="outline"
+            size="md"
+            style={{ marginBottom: Spacing.sm }}
+          />
+          <Button
             title="Book Appointment"
             onPress={() => onBookDirectly?.(provider)}
-            variant="outline"
+            variant="neutral"
             size="md"
           />
         </View>

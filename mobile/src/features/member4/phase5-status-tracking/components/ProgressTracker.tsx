@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { RepairStatus } from '../../../types';
+import { RepairStatus } from '../../types';
 import { Colors, Spacing, BorderRadius, Typography } from '../../../theme';
 
 interface ProgressTrackerProps {
@@ -15,23 +15,33 @@ interface StepInfo {
 
 const STEPS: StepInfo[] = [
   {
-    status: RepairStatus.POSTED,
-    title: '1. Request Logged',
+    status: RepairStatus.REQUESTED,
+    title: '1. Request Sent',
     subtitle: 'Diagnostic request submitted',
   },
   {
-    status: RepairStatus.ACCEPTED,
-    title: '2. Quotation Accepted',
-    subtitle: 'Price agreed & appointment booked',
+    status: RepairStatus.QUOTED,
+    title: '2. Quoted',
+    subtitle: 'Price estimate received',
   },
   {
-    status: RepairStatus.IN_PROGRESS,
-    title: '3. Repair In Progress',
+    status: RepairStatus.ACCEPTED,
+    title: '3. Accepted',
+    subtitle: 'Quotation accepted & booked',
+  },
+  {
+    status: RepairStatus.ON_THE_WAY,
+    title: '4. On The Way',
+    subtitle: 'Technician transit / drop-off',
+  },
+  {
+    status: RepairStatus.REPAIRING,
+    title: '5. Repairing',
     subtitle: 'Technician working on device',
   },
   {
     status: RepairStatus.COMPLETED,
-    title: '4. Ready for Pickup',
+    title: '6. Completed',
     subtitle: 'Repair finished & tested',
   },
 ];
@@ -39,15 +49,18 @@ const STEPS: StepInfo[] = [
 export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStatus }) => {
   const getStepIndex = (status: RepairStatus): number => {
     switch (status) {
-      case RepairStatus.POSTED:
-      case RepairStatus.MATCHED:
+      case RepairStatus.REQUESTED:
         return 0;
-      case RepairStatus.ACCEPTED:
+      case RepairStatus.QUOTED:
         return 1;
-      case RepairStatus.IN_PROGRESS:
+      case RepairStatus.ACCEPTED:
         return 2;
-      case RepairStatus.COMPLETED:
+      case RepairStatus.ON_THE_WAY:
         return 3;
+      case RepairStatus.REPAIRING:
+        return 4;
+      case RepairStatus.COMPLETED:
+        return 5;
       default:
         return -1;
     }

@@ -2,9 +2,9 @@
 // Phase 5 - Repair Status Tracking Types
 // ============================================================================
 
-import { RepairRequest, RepairStatus } from '../../../types';
+import { RepairRequest, RepairStatus } from '../types';
 
-export type { RepairRequest };
+export type { RepairRequest, RepairStatus };
 
 export interface StatusStep {
   status: RepairStatus;

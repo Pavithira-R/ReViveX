@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { RepairRequest, RepairStatus } from '../../../types';
+import { RepairRequest, RepairStatus } from '../../types';
 import { mobileQuotationService } from '../quotationService';
 import { QuotationModal } from '../components/QuotationModal';
 import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';

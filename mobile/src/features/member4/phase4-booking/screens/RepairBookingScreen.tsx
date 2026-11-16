@@ -7,9 +7,9 @@ import {
   TextInput,
   TouchableOpacity,
 } from 'react-native';
-import { RepairRequest, Booking, BookingStatus } from '../../../types';
+import { RepairRequest, Booking, BookingStatus } from '../../types';
 import { mobileBookingService } from '../bookingService';
-import { MobileAuthAdapter } from '../../../adapters/mockIntegrationAdapters';
+import { useAuth } from '../../../context';
 import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
 import { Header } from '../../../components/common/Header';
 import { Card } from '../../../components/common/Card';
@@ -35,7 +35,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
   onNavigateBack,
   onBookingConfirmed,
 }) => {
-  const customer = MobileAuthAdapter.getCurrentCustomer();
+  const { user } = useAuth();
 
   const [appointmentDate, setAppointmentDate] = useState<string>('2025-04-12');
   const [appointmentTime, setAppointmentTime] = useState<string>(AVAILABLE_TIMES[0]);
@@ -56,7 +56,7 @@ export const RepairBookingScreen: React.FC<RepairBookingScreenProps> = ({
     try {
       const response = await mobileBookingService.createBooking({
         repairRequestId: repairRequest.id,
-        customerId: customer.id,
+        customerId: user?.uid || repairRequest.customerId,
         providerId: repairRequest.providerId,
         appointmentDate: new Date(appointmentDate).toISOString(),
         appointmentTime,

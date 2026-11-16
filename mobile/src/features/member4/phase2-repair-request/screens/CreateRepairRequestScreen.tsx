@@ -8,20 +8,37 @@ import {
   Image,
   TouchableOpacity,
 } from 'react-native';
-import { ServiceProvider, RepairRequest } from '../../../types';
+import { ServiceProvider, RepairRequest } from '../../types';
 import { mobileRepairRequestService } from '../repairRequestService';
-import { MobileItemAdapter } from '../../../adapters/mockIntegrationAdapters';
+import { useAuth } from '../../../context';
 import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
 import { Header } from '../../../components/common/Header';
 import { Button } from '../../../components/common/Button';
 import { Card } from '../../../components/common/Card';
 import { Badge } from '../../../components/common/Badge';
 
+export interface DeviceItemSummary {
+  id: string;
+  title: string;
+  category: string;
+  condition?: string;
+  imageUrl?: string;
+}
+
 interface CreateRepairRequestScreenProps {
   provider: ServiceProvider;
+  item?: DeviceItemSummary;
   onNavigateBack?: () => void;
   onRequestSubmitted?: (request: RepairRequest) => void;
 }
+
+const DEFAULT_ITEM: DeviceItemSummary = {
+  id: 'item_dev_001',
+  title: 'MacBook Pro 15" (2019)',
+  category: 'Laptops',
+  condition: 'Used - Good',
+  imageUrl: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8',
+};
 
 const TIME_SLOTS = [
   'Morning (9:00 AM - 12:00 PM)',
@@ -31,10 +48,11 @@ const TIME_SLOTS = [
 
 export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps> = ({
   provider,
+  item = DEFAULT_ITEM,
   onNavigateBack,
   onRequestSubmitted,
 }) => {
-  const item = MobileItemAdapter.getSelectedItem();
+  const { user } = useAuth();
 
   const [problemDescription, setProblemDescription] = useState<string>('');
   const [preferredDate, setPreferredDate] = useState<string>('2025-04-10');
@@ -190,8 +208,12 @@ export const CreateRepairRequestScreen: React.FC<CreateRepairRequestScreenProps>
                   <Text style={styles.providerBusinessName}>{provider.businessName}</Text>
                   {provider.isVerified && <Badge label="Verified" variant="success" size="sm" />}
                 </View>
-                <Text style={styles.providerLocation}>📍 {provider.location}</Text>
-                <Text style={styles.providerRating}>★ {provider.rating.toFixed(1)} ({provider.reviewCount} reviews)</Text>
+                <Text style={styles.providerLocation}>
+                  📍 {typeof provider.location === 'object' ? provider.location?.city : (provider.location || 'Colombo')}
+                </Text>
+                <Text style={styles.providerRating}>
+                  ★ {(provider.ratingAverage ?? provider.rating ?? 5.0).toFixed(1)} ({provider.ratingCount ?? provider.reviewCount ?? 0} reviews)
+                </Text>
               </View>
             </View>
           </Card>

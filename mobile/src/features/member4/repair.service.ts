@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../../services/firebase';
 import { fsCall, nowIso, withId } from '../../services/firebaseHelpers';
+import { awardEcoPoints, notify } from '../../services';
 import {
   ServiceProvider,
   RepairRequest,
@@ -50,92 +51,6 @@ const mapSnapWithId = <T>(snap: any): T => {
   }
   return { id: snap.id, ...snap.data() } as T;
 };
-
-// Integration helpers for Shared ReViveX Ecosystem
-async function sendNotification(
-  userId: string,
-  title: string,
-  message: string,
-  meta: { type: string; refId: string }
-): Promise<void> {
-  try {
-    await addDoc(collection(db, 'notifications'), {
-      userId,
-      type: meta.type || 'REPAIR',
-      title,
-      message,
-      refId: meta.refId,
-      isRead: false,
-      createdAt: getNowIso(),
-    });
-  } catch (err) {
-    console.warn('[Member 4] Notification write error (safe fallback):', err);
-  }
-}
-
-async function triggerEcoPoints(
-  userId: string,
-  type: string,
-  refId: string,
-  categoryName: string
-): Promise<void> {
-  try {
-    // Unique fixed document id prevents double-awarding
-    const fixedId = `${type}_${refId}`;
-    await setDoc(
-      doc(db, 'ecoActions', fixedId),
-      {
-        userId,
-        type,
-        points: 50,
-        refId,
-        deviceCategory: categoryName || 'Electronics',
-        co2SavedKg: 1.5,
-        ewasteKg: 1.8,
-        createdAt: getNowIso(),
-      },
-      { merge: true }
-    );
-  } catch (err) {
-    console.warn('[Member 4] EcoPoints write error (safe fallback):', err);
-  }
-}
-
-async function recordTransaction(
-  refId: string,
-  fromUserId: string,
-  toUserId: string,
-  amount: number
-): Promise<void> {
-  try {
-    await addDoc(collection(db, 'transactions'), {
-      kind: 'REPAIR',
-      refId,
-      fromUserId,
-      toUserId,
-      amount: amount || 0,
-      completedAt: getNowIso(),
-    });
-  } catch (err) {
-    console.warn('[Member 4] Transaction write error (safe fallback):', err);
-  }
-}
-
-async function updateLinkedItemStatus(itemId: string, status: string): Promise<void> {
-  if (!itemId) return;
-  try {
-    const itemRef = doc(db, 'items', itemId);
-    const snap = await getDoc(itemRef);
-    if (snap.exists()) {
-      await updateDoc(itemRef, {
-        status,
-        updatedAt: getNowIso(),
-      });
-    }
-  } catch (err) {
-    console.warn('[Member 4] Item status update error (safe fallback):', err);
-  }
-}
 
 // ============================================================================
 // Service Provider & Repair Request Core Firestore Service
@@ -319,7 +234,7 @@ export class RepairService {
       const docRef = await addDoc(collection(db, 'repairRequests'), requestDocData);
 
       // Notify the target service provider
-      await sendNotification(
+      await notify(
         payload.providerId,
         'New Repair Request 🛠️',
         `${customerName} requested a repair quote for "${payload.itemName}".`,
@@ -396,7 +311,7 @@ export class RepairService {
       });
 
       // Notify the customer
-      await sendNotification(
+      await notify(
         data.customerId,
         'Repair Quotation Ready 📋',
         `${data.providerName || 'Provider'} quoted $${quote.price} for "${data.itemName}". Please review and confirm your appointment.`,
@@ -427,7 +342,7 @@ export class RepairService {
       });
 
       // Notify the service provider
-      await sendNotification(
+      await notify(
         data.providerId,
         'Quotation Accepted! ✅',
         `${data.customerName || 'Customer'} accepted your quotation for "${data.itemName}" scheduled for ${appointmentAt}.`,
@@ -459,7 +374,7 @@ export class RepairService {
         updatedAt: now,
       });
 
-      await sendNotification(
+      await notify(
         recipientId,
         'Repair Request Declined',
         `Repair request for "${data.itemName}" was declined: ${reason || 'No reason provided'}.`,
@@ -534,26 +449,19 @@ export class RepairService {
 
       // On COMPLETED: Trigger all completion side-effects
       if (targetStatus === RepairStatus.COMPLETED) {
-        // 1. Award Eco Points to customer
-        await triggerEcoPoints(req.customerId, 'REPAIR', id, req.categoryName);
+        // 1. Award Eco Points to customer using shared service
+        await awardEcoPoints(req.customerId, 'REPAIR', id, req.categoryName);
 
-        // 2. Record financial/service transaction
-        const quotePrice = req.quotation?.price || req.estimatedPrice || 0;
-        await recordTransaction(id, req.customerId, req.providerId, quotePrice);
-
-        // 3. Mark the underlying electronic item as COMPLETED
-        await updateLinkedItemStatus(req.itemId, 'COMPLETED');
-
-        // 4. Notify customer with review prompt
-        await sendNotification(
+        // 2. Notify customer with review prompt
+        await notify(
           req.customerId,
           'Device Repaired! 🎉 Eco Points Awarded',
-          `Your ${req.itemName} repair is completed! 50 Eco Points have been credited. Please leave a review for ${req.providerName}.`,
+          `Your ${req.itemName} repair is completed! Eco Points have been credited. Please leave a review for ${req.providerName}.`,
           { type: 'REPAIR', refId: id }
         );
       } else {
         // Notify customer on each intermediate status change
-        await sendNotification(
+        await notify(
           req.customerId,
           'Repair Status Update 🔧',
           `Your repair for "${req.itemName}" is now: ${targetStatus}.`,

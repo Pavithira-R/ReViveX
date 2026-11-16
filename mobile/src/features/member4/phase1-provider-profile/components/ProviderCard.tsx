@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { ServiceProvider } from '../types';
-import { Colors, Spacing, BorderRadius, Typography } from '../../../../src/theme';
-import { Card } from '../../../../src/components/common/Card';
-import { Badge } from '../../../../src/components/common/Badge';
+import { Colors, Spacing, BorderRadius, Typography } from '../../../theme';
+import { Card } from '../../../components/common/Card';
+import { Badge } from '../../../components/common/Badge';
 
 interface ProviderCardProps {
   provider: ServiceProvider;
@@ -11,6 +11,10 @@ interface ProviderCardProps {
 }
 
 export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress }) => {
+  const services = provider.servicesOffered || provider.services || [];
+  const ratingVal = (provider.ratingAverage ?? provider.rating ?? 5.0).toFixed(1);
+  const reviewsVal = provider.ratingCount ?? provider.reviewCount ?? 0;
+
   return (
     <Card style={styles.card} onPress={() => onPress(provider)}>
       <View style={styles.headerRow}>
@@ -20,7 +24,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress })
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarInitials}>
-                {provider.businessName.substring(0, 2).toUpperCase()}
+                {(provider.businessName || 'SP').substring(0, 2).toUpperCase()}
               </Text>
             </View>
           )}
@@ -36,12 +40,12 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress })
             )}
           </View>
 
-          <Text style={styles.providerName}>Tech: {provider.name}</Text>
+          <Text style={styles.providerName}>Tech: {provider.name || provider.businessName}</Text>
 
           <View style={styles.ratingRow}>
             <Text style={styles.ratingStar}>★</Text>
-            <Text style={styles.ratingScore}>{provider.rating.toFixed(1)}</Text>
-            <Text style={styles.reviewCount}>({provider.reviewCount} reviews)</Text>
+            <Text style={styles.ratingScore}>{ratingVal}</Text>
+            <Text style={styles.reviewCount}>({reviewsVal} reviews)</Text>
             {provider.distanceKm !== undefined && (
               <Text style={styles.distance}>• {provider.distanceKm} km away</Text>
             )}
@@ -54,14 +58,14 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({ provider, onPress })
       </Text>
 
       <View style={styles.servicesRow}>
-        {provider.servicesOffered.slice(0, 3).map((service, index) => (
+        {services.slice(0, 3).map((service, index) => (
           <View key={index} style={styles.serviceChip}>
             <Text style={styles.serviceChipText}>{service}</Text>
           </View>
         ))}
-        {provider.servicesOffered.length > 3 && (
+        {services.length > 3 && (
           <Text style={styles.moreServicesText}>
-            +{provider.servicesOffered.length - 3} more
+            +{services.length - 3} more
           </Text>
         )}
       </View>

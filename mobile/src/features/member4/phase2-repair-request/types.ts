@@ -2,10 +2,16 @@
 // Phase 2 - Repair Request Types
 // ============================================================================
 
-import { RepairRequest, RepairStatus, ServiceProvider } from '../../../types';
-import { MockItemDetails } from '../../../adapters/mockIntegrationAdapters';
+import { RepairRequest, RepairStatus, ServiceProvider } from '../types';
 
-export type { RepairRequest };
+export type { RepairRequest, RepairStatus, ServiceProvider };
+
+export interface ItemSummaryDetails {
+  id: string;
+  title: string;
+  category: string;
+  imageUrl?: string;
+}
 
 export interface CreateRepairRequestFormData {
   itemId: string;
@@ -17,7 +23,7 @@ export interface CreateRepairRequestFormData {
 }
 
 export interface RepairRequestFormState {
-  item: MockItemDetails | null;
+  item: ItemSummaryDetails | null;
   provider: ServiceProvider | null;
   formData: CreateRepairRequestFormData;
   isSubmitting: boolean;

@@ -2,9 +2,9 @@
 // Phase 3 - Quotation & Provider Response Types
 // ============================================================================
 
-import { RepairRequest, RepairStatus } from '../../../types';
+import { RepairRequest, RepairStatus } from '../types';
 
-export type { RepairRequest };
+export type { RepairRequest, RepairStatus };
 
 export interface ProviderResponseFormData {
   action: 'ACCEPT' | 'REJECT';

@@ -2,9 +2,9 @@
 // Phase 4 - Repair Booking Types
 // ============================================================================
 
-import { Booking, BookingStatus, RepairRequest, ServiceProvider } from '../../../types';
+import { Booking, BookingStatus, RepairRequest, ServiceProvider } from '../types';
 
-export type { Booking };
+export type { Booking, BookingStatus, RepairRequest, ServiceProvider };
 
 export interface CreateBookingFormData {
   repairRequestId: string;

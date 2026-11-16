@@ -8,9 +8,10 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import { RepairRequest, RepairStatus } from '../../../types';
+import { RepairRequest, RepairStatus } from '../../types';
 import { mobileStatusTrackingService } from '../statusTrackingService';
 import { ProgressTracker } from '../components/ProgressTracker';
+import { chatService } from '../../../services';
 import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../../../theme';
 import { Header } from '../../../components/common/Header';
 import { Card } from '../../../components/common/Card';
@@ -24,6 +25,8 @@ interface RepairStatusTrackingScreenProps {
   isProviderView?: boolean;
   onNavigateBack?: () => void;
   onNavigateToBooking?: (request: RepairRequest) => void;
+  onLeaveReview?: (request: RepairRequest) => void;
+  onChatWithProvider?: (providerId: string) => void;
 }
 
 export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProps> = ({
@@ -31,6 +34,8 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
   isProviderView = true, // Toggleable for customer vs provider perspective
   onNavigateBack,
   onNavigateToBooking,
+  onLeaveReview,
+  onChatWithProvider,
 }) => {
   const [request, setRequest] = useState<RepairRequest | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -191,9 +196,30 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
 
             <View style={styles.actionButtonsRow}>
               {request.status === RepairStatus.ACCEPTED && (
+                <>
+                  <Button
+                    title="On The Way"
+                    onPress={() => handleUpdateStatus(RepairStatus.ON_THE_WAY)}
+                    loading={isUpdating}
+                    variant="outline"
+                    size="sm"
+                    style={styles.actionBtn}
+                  />
+                  <Button
+                    title="Start Repairing"
+                    onPress={() => handleUpdateStatus(RepairStatus.REPAIRING)}
+                    loading={isUpdating}
+                    variant="primary"
+                    size="sm"
+                    style={styles.actionBtn}
+                  />
+                </>
+              )}
+
+              {request.status === RepairStatus.ON_THE_WAY && (
                 <Button
-                  title="Start Repair (In Progress)"
-                  onPress={() => handleUpdateStatus(RepairStatus.IN_PROGRESS)}
+                  title="Start Repairing"
+                  onPress={() => handleUpdateStatus(RepairStatus.REPAIRING)}
                   loading={isUpdating}
                   variant="primary"
                   size="md"
@@ -201,7 +227,7 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
                 />
               )}
 
-              {request.status === RepairStatus.IN_PROGRESS && (
+              {request.status === RepairStatus.REPAIRING && (
                 <Button
                   title="Mark as Completed"
                   onPress={() => handleUpdateStatus(RepairStatus.COMPLETED)}
@@ -215,7 +241,7 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
           </Card>
         )}
 
-        {/* Customer Action (if customer view and accepted, prompt booking) */}
+        {/* Customer Actions */}
         {!isProviderView && request.status === RepairStatus.ACCEPTED && (
           <Button
             title="Book Appointment for Drop-off →"
@@ -224,6 +250,22 @@ export const RepairStatusTrackingScreen: React.FC<RepairStatusTrackingScreenProp
             size="lg"
             style={styles.customerBookingBtn}
           />
+        )}
+
+        {/* Leave Review Prompt when COMPLETED */}
+        {request.status === RepairStatus.COMPLETED && (
+          <Card style={[styles.overviewCard, { marginTop: Spacing.md, borderColor: Colors.accent, borderWidth: 1 }]}>
+            <Text style={styles.deviceTitle}>Repair Finished! ⭐</Text>
+            <Text style={[styles.providerName, { marginBottom: Spacing.md }]}>
+              Help others in the community by rating {request.providerName || 'the technician'}.
+            </Text>
+            <Button
+              title="Leave a Review"
+              onPress={() => onLeaveReview?.(request)}
+              variant="primary"
+              size="md"
+            />
+          </Card>
         )}
       </ScrollView>
     </View>
