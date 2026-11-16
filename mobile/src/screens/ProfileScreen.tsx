@@ -21,9 +21,15 @@ interface ProfileScreenProps {
   onBack: () => void;
   /** Member 6 – opens the reviews this user has received. */
   onOpenReviews?: () => void;
+  /** Member 4 – opens the service provider business profile editor. */
+  onEditProviderProfile?: () => void;
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenReviews }) => {
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({
+  onBack,
+  onOpenReviews,
+  onEditProviderProfile,
+}) => {
   const { user, updateProfile, changePassword, logout, isBiometricEnabled, setBiometricEnabled } =
     useAuth();
   const { status: biometricStatus } = useCapability('biometric');
@@ -267,6 +273,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onBack, onOpenRevi
                 </View>
               </View>
               <PrimaryButton title="Edit Profile" onPress={startEditing} />
+              {user.role === 'SERVICE_PROVIDER' && onEditProviderProfile ? (
+                <PrimaryButton
+                  title="Technician Business Profile 🛠️"
+                  variant="outlined"
+                  onPress={onEditProviderProfile}
+                />
+              ) : null}
               <PrimaryButton title="Change password" variant="outlined" onPress={startChangingPassword} />
               {onOpenReviews ? (
                 <PrimaryButton title="My reviews" variant="outlined" onPress={onOpenReviews} />

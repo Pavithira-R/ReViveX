@@ -90,6 +90,7 @@ export class RepairService {
         servicesOffered: data.services || data.servicesOffered || [],
         categoryIds: data.categoryIds || ['laptops', 'smartphones'],
         phone: data.phone || data.phoneNumber || '',
+        startingPrice: data.startingPrice !== undefined ? data.startingPrice : 2500,
         location: data.location || {
           city: 'Colombo',
           latitude: 6.9271,
