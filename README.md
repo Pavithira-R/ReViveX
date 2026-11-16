@@ -149,7 +149,7 @@ mobile/
 
 Module guides: [README_MEMBER_1.md](README_MEMBER_1.md) (Firebase setup, accounts, capability layer, problem reports) and [README_MEMBER_6.md](README_MEMBER_6.md) (notifications, chat, reviews, eco points, offline mode).
 
-> The `backend/` folder is the earlier Express + PostgreSQL version. It is no longer used by the screens that have moved to Firebase and will be removed once every module has moved.
+> The earlier Express + PostgreSQL backend was replaced by Firebase and removed from the repository. The last version that used it is kept under the Git tag `express-backend-final`.
 
 ## Team modules
 
