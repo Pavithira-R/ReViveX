@@ -3,7 +3,7 @@
 // Integrates Cloud Firestore getDocs snapshots wrapped in fsCall & withId
 // ============================================================================
 
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, DocumentData } from 'firebase/firestore';
 import { db } from '../../../services/firebase';
 import { fsCall, withId } from '../../../services/firebaseHelpers';
 import {
@@ -11,8 +11,38 @@ import {
   LocationCoordinates,
   DiscoveryFeedData,
   HeroBannerData,
+  RecyclePointSummary,
 } from '../types';
 import { calculateHaversineDistanceKm } from '../utils/location';
+
+export interface GenericDomainItem {
+  id: string;
+  name?: string;
+  title?: string;
+  brand?: string;
+  description?: string;
+  categoryId?: string;
+  categoryName?: string;
+  category?: string;
+  condition?: string;
+  action?: string;
+  actionType?: string;
+  type?: string;
+  price?: number;
+  rating?: number;
+  businessName?: string;
+  services?: string[];
+  itemType?: string;
+  itemName?: string;
+  pickupAddress?: string;
+  location?: { latitude?: number; longitude?: number; city?: string; district?: string };
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number | null;
+  createdAt?: string;
+  acceptedCategories?: string[];
+  isCertified?: boolean;
+}
 
 export const MOCK_HERO_BANNER: HeroBannerData = {
   id: 'banner_rec_01',
@@ -25,11 +55,11 @@ export const MOCK_HERO_BANNER: HeroBannerData = {
 /**
  * Firestore Fetcher: Items collection (Member 2 schema)
  */
-export async function fetchFirestoreItems(): Promise<any[]> {
+export async function fetchFirestoreItems(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'items'));
-      return snap.docs.map((d: any) => withId(d));
+      return snap.docs.map((d: DocumentData) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch items collection:', err);
@@ -40,11 +70,11 @@ export async function fetchFirestoreItems(): Promise<any[]> {
 /**
  * Firestore Fetcher: ServiceProviders collection (Member 4 schema)
  */
-export async function fetchFirestoreProviders(): Promise<any[]> {
+export async function fetchFirestoreProviders(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'serviceProviders'));
-      return snap.docs.map((d: any) => withId(d));
+      return snap.docs.map((d: DocumentData) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch serviceProviders collection:', err);
@@ -55,11 +85,11 @@ export async function fetchFirestoreProviders(): Promise<any[]> {
 /**
  * Firestore Fetcher: Listings collection (Member 5 schema)
  */
-export async function fetchFirestoreListings(): Promise<any[]> {
+export async function fetchFirestoreListings(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'listings'));
-      return snap.docs.map((d: any) => withId(d));
+      return snap.docs.map((d: DocumentData) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch listings collection:', err);
@@ -70,11 +100,11 @@ export async function fetchFirestoreListings(): Promise<any[]> {
 /**
  * Firestore Fetcher: RecyclingRequests collection (Member 5 schema)
  */
-export async function fetchFirestoreRecyclingRequests(): Promise<any[]> {
+export async function fetchFirestoreRecyclingRequests(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'recyclingRequests'));
-      return snap.docs.map((d: any) => withId(d));
+      return snap.docs.map((d: DocumentData) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch recyclingRequests collection:', err);
@@ -85,17 +115,17 @@ export async function fetchFirestoreRecyclingRequests(): Promise<any[]> {
 /**
  * Firestore Fetcher: Users with role == 'RECYCLER' (for nearest recycler drop-off section in Discovery)
  */
-export async function fetchFirestoreRecyclers(): Promise<any[]> {
+export async function fetchFirestoreRecyclers(): Promise<RecyclePointSummary[]> {
   try {
     return await fsCall(async () => {
       const q = query(collection(db, 'users'), where('role', '==', 'RECYCLER'));
       const snap = await getDocs(q);
-      return snap.docs.map((d: any) => {
-        const item = withId(d) as any;
+      return snap.docs.map((d: DocumentData) => {
+        const item = withId<GenericDomainItem>(d);
         return {
           id: item.id,
           name: item.name || 'Certified E-Waste Recycler',
-          address: item.location?.city || item.address || 'Registered Recycler Depot',
+          address: item.location?.city || item.pickupAddress || 'Registered Recycler Depot',
           location: item.location,
           latitude: item.location?.latitude ?? item.latitude,
           longitude: item.location?.longitude ?? item.longitude,
@@ -113,7 +143,7 @@ export async function fetchFirestoreRecyclers(): Promise<any[]> {
 /**
  * Pure function: Filters array of items (Member 2 schema) by search criteria
  */
-export function filterItems(items: any[], params: Partial<SearchFilters>): any[] {
+export function filterItems(items: GenericDomainItem[], params: Partial<SearchFilters>): GenericDomainItem[] {
   if (!Array.isArray(items)) return [];
   let results = [...items];
 
@@ -197,10 +227,10 @@ export function filterItems(items: any[], params: Partial<SearchFilters>): any[]
  * Pure function: Ranks repair providers (Member 4 schema) by spatial distance & rating
  */
 export function rankProvidersByDistance(
-  providers: any[],
+  providers: GenericDomainItem[],
   userLocation?: LocationCoordinates | null,
   filters?: Partial<SearchFilters>
-): any[] {
+): GenericDomainItem[] {
   if (!Array.isArray(providers)) return [];
   let results = [...providers];
 
@@ -212,7 +242,7 @@ export function rankProvidersByDistance(
         (p.businessName && String(p.businessName).toLowerCase().includes(q)) ||
         (p.name && String(p.name).toLowerCase().includes(q)) ||
         (Array.isArray(p.services) &&
-          p.services.some((s: any) => String(s).toLowerCase().includes(q)))
+          p.services.some((s: string) => String(s).toLowerCase().includes(q)))
     );
   }
 
@@ -261,7 +291,7 @@ export function rankProvidersByDistance(
 /**
  * Pure function: Filters marketplace listings (Member 5 schema) by price, condition, actionType
  */
-export function filterListings(listings: any[], params: Partial<SearchFilters>): any[] {
+export function filterListings(listings: GenericDomainItem[], params: Partial<SearchFilters>): GenericDomainItem[] {
   if (!Array.isArray(listings)) return [];
   let results = [...listings];
 
@@ -346,7 +376,7 @@ export function filterListings(listings: any[], params: Partial<SearchFilters>):
 /**
  * Pure function: Filters e-waste recycling requests (Member 5 schema) or recycler profiles
  */
-export function filterRecyclingRequests(requests: any[], params: Partial<SearchFilters>): any[] {
+export function filterRecyclingRequests(requests: GenericDomainItem[], params: Partial<SearchFilters>): GenericDomainItem[] {
   if (!Array.isArray(requests)) return [];
   let results = [...requests];
 
@@ -397,10 +427,10 @@ export function filterRecyclingRequests(requests: any[], params: Partial<SearchF
  * Pure function: Builds the Discovery Feed structure using array inputs (fitted for Firestore getDocs)
  */
 export function buildDiscoveryFeed(data: {
-  items?: any[];
-  listings?: any[];
-  providers?: any[];
-  recyclingRequests?: any[];
+  items?: GenericDomainItem[];
+  listings?: GenericDomainItem[];
+  providers?: GenericDomainItem[];
+  recyclingRequests?: GenericDomainItem[];
   userLocation?: LocationCoordinates | null;
   sectionLimit?: number;
 }): DiscoveryFeedData {
@@ -435,11 +465,11 @@ export function buildDiscoveryFeed(data: {
 
   return {
     heroBanner: MOCK_HERO_BANNER,
-    nearbyProviders,
-    featuredListings,
-    urgentDonations,
-    nearestRecyclePoint,
-    communityItems,
+    nearbyProviders: nearbyProviders as any[],
+    featuredListings: featuredListings as any[],
+    urgentDonations: urgentDonations as any[],
+    nearestRecyclePoint: nearestRecyclePoint as any,
+    communityItems: communityItems as any[],
     sourceStatus: {
       providers: Array.isArray(data.providers) ? 'OK' : 'UNAVAILABLE',
       listings: Array.isArray(data.listings) ? 'OK' : 'UNAVAILABLE',
