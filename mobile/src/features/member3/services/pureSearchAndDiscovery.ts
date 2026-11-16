@@ -3,7 +3,7 @@
 // Integrates Cloud Firestore getDocs snapshots wrapped in fsCall & withId
 // ============================================================================
 
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../services/firebase';
 import { fsCall, withId } from '../../../services/firebaseHelpers';
 import {
@@ -11,8 +11,39 @@ import {
   LocationCoordinates,
   DiscoveryFeedData,
   HeroBannerData,
+  RecyclePointSummary,
+  DeviceCategory,
 } from '../types';
 import { calculateHaversineDistanceKm } from '../utils/location';
+
+export interface GenericDomainItem {
+  id: string;
+  name?: string;
+  title?: string;
+  brand?: string;
+  description?: string;
+  categoryId?: string;
+  categoryName?: string;
+  category?: string;
+  condition?: string;
+  action?: string;
+  actionType?: string;
+  type?: string;
+  price?: number;
+  rating?: number;
+  businessName?: string;
+  services?: string[];
+  itemType?: string;
+  itemName?: string;
+  pickupAddress?: string;
+  location?: { latitude?: number; longitude?: number; city?: string; district?: string };
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number | null;
+  createdAt?: string;
+  acceptedCategories?: DeviceCategory[];
+  isCertified?: boolean;
+}
 
 export const MOCK_HERO_BANNER: HeroBannerData = {
   id: 'banner_rec_01',
@@ -25,11 +56,11 @@ export const MOCK_HERO_BANNER: HeroBannerData = {
 /**
  * Firestore Fetcher: Items collection (Member 2 schema)
  */
-export async function fetchFirestoreItems(): Promise<any[]> {
+export async function fetchFirestoreItems(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'items'));
-      return snap.docs.map((d: any) => withId(d));
+      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch items collection:', err);
@@ -40,11 +71,11 @@ export async function fetchFirestoreItems(): Promise<any[]> {
 /**
  * Firestore Fetcher: ServiceProviders collection (Member 4 schema)
  */
-export async function fetchFirestoreProviders(): Promise<any[]> {
+export async function fetchFirestoreProviders(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'serviceProviders'));
-      return snap.docs.map((d: any) => withId(d));
+      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch serviceProviders collection:', err);
@@ -55,11 +86,11 @@ export async function fetchFirestoreProviders(): Promise<any[]> {
 /**
  * Firestore Fetcher: Listings collection (Member 5 schema)
  */
-export async function fetchFirestoreListings(): Promise<any[]> {
+export async function fetchFirestoreListings(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'listings'));
-      return snap.docs.map((d: any) => withId(d));
+      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch listings collection:', err);
@@ -70,11 +101,11 @@ export async function fetchFirestoreListings(): Promise<any[]> {
 /**
  * Firestore Fetcher: RecyclingRequests collection (Member 5 schema)
  */
-export async function fetchFirestoreRecyclingRequests(): Promise<any[]> {
+export async function fetchFirestoreRecyclingRequests(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const snap = await getDocs(collection(db, 'recyclingRequests'));
-      return snap.docs.map((d: any) => withId(d));
+      return snap.docs.map((d: any) => withId<GenericDomainItem>(d));
     });
   } catch (err) {
     console.warn('[Firestore] Failed to fetch recyclingRequests collection:', err);
@@ -83,9 +114,35 @@ export async function fetchFirestoreRecyclingRequests(): Promise<any[]> {
 }
 
 /**
+ * Firestore Fetcher: Users with role == 'RECYCLER' (for nearest recycler drop-off section in Discovery)
+ */
+export async function fetchFirestoreRecyclers(): Promise<RecyclePointSummary[]> {
+  try {
+    return await fsCall(async () => {
+      const q = query(collection(db, 'users'), where('role', '==', 'RECYCLER'));
+      const snap = await getDocs(q);
+      return snap.docs.map((d: any): RecyclePointSummary => {
+        const item = withId<GenericDomainItem>(d);
+        return {
+          id: item.id,
+          name: item.name || 'Certified E-Waste Recycler',
+          address: item.location?.city || item.pickupAddress || 'Registered Recycler Depot',
+          distanceKm: item.distanceKm ?? null,
+          acceptedCategories: (item.acceptedCategories as DeviceCategory[]) || ['LAPTOP', 'PHONE', 'TABLET'],
+          isCertified: true,
+        };
+      });
+    });
+  } catch (err) {
+    console.warn('[Firestore] Failed to fetch RECYCLER users:', err);
+    return [];
+  }
+}
+
+/**
  * Pure function: Filters array of items (Member 2 schema) by search criteria
  */
-export function filterItems(items: any[], params: Partial<SearchFilters>): any[] {
+export function filterItems(items: GenericDomainItem[], params: Partial<SearchFilters>): GenericDomainItem[] {
   if (!Array.isArray(items)) return [];
   let results = [...items];
 
@@ -141,11 +198,14 @@ export function filterItems(items: any[], params: Partial<SearchFilters>): any[]
     results = results.map((item) => {
       const lat = item.location?.latitude ?? item.latitude;
       const lon = item.location?.longitude ?? item.longitude;
-      const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
-      return {
-        ...item,
-        distanceKm: dist < Infinity ? dist : item.distanceKm ?? null,
-      };
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...item,
+          distanceKm: dist < Infinity ? dist : item.distanceKm ?? null,
+        };
+      }
+      return item;
     });
 
     if (typeof params.radiusKm === 'number' && params.radiusKm > 0) {
@@ -169,10 +229,10 @@ export function filterItems(items: any[], params: Partial<SearchFilters>): any[]
  * Pure function: Ranks repair providers (Member 4 schema) by spatial distance & rating
  */
 export function rankProvidersByDistance(
-  providers: any[],
+  providers: GenericDomainItem[],
   userLocation?: LocationCoordinates | null,
   filters?: Partial<SearchFilters>
-): any[] {
+): GenericDomainItem[] {
   if (!Array.isArray(providers)) return [];
   let results = [...providers];
 
@@ -184,7 +244,7 @@ export function rankProvidersByDistance(
         (p.businessName && String(p.businessName).toLowerCase().includes(q)) ||
         (p.name && String(p.name).toLowerCase().includes(q)) ||
         (Array.isArray(p.services) &&
-          p.services.some((s: any) => String(s).toLowerCase().includes(q)))
+          p.services.some((s: string) => String(s).toLowerCase().includes(q)))
     );
   }
 
@@ -202,11 +262,14 @@ export function rankProvidersByDistance(
     results = results.map((p) => {
       const lat = p.location?.latitude ?? p.latitude;
       const lon = p.location?.longitude ?? p.longitude;
-      const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
-      return {
-        ...p,
-        distanceKm: dist < Infinity ? dist : p.distanceKm ?? null,
-      };
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...p,
+          distanceKm: dist < Infinity ? dist : p.distanceKm ?? null,
+        };
+      }
+      return p;
     });
 
     const radius = filters?.radiusKm;
@@ -233,7 +296,7 @@ export function rankProvidersByDistance(
 /**
  * Pure function: Filters marketplace listings (Member 5 schema) by price, condition, actionType
  */
-export function filterListings(listings: any[], params: Partial<SearchFilters>): any[] {
+export function filterListings(listings: GenericDomainItem[], params: Partial<SearchFilters>): GenericDomainItem[] {
   if (!Array.isArray(listings)) return [];
   let results = [...listings];
 
@@ -295,11 +358,14 @@ export function filterListings(listings: any[], params: Partial<SearchFilters>):
     results = results.map((l) => {
       const lat = l.location?.latitude ?? l.latitude;
       const lon = l.location?.longitude ?? l.longitude;
-      const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
-      return {
-        ...l,
-        distanceKm: dist < Infinity ? dist : l.distanceKm ?? null,
-      };
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...l,
+          distanceKm: dist < Infinity ? dist : l.distanceKm ?? null,
+        };
+      }
+      return l;
     });
 
     if (typeof params.radiusKm === 'number' && params.radiusKm > 0) {
@@ -316,9 +382,9 @@ export function filterListings(listings: any[], params: Partial<SearchFilters>):
 }
 
 /**
- * Pure function: Filters e-waste recycling requests (Member 5 schema)
+ * Pure function: Filters e-waste recycling requests (Member 5 schema) or recycler profiles
  */
-export function filterRecyclingRequests(requests: any[], params: Partial<SearchFilters>): any[] {
+export function filterRecyclingRequests(requests: GenericDomainItem[], params: Partial<SearchFilters>): GenericDomainItem[] {
   if (!Array.isArray(requests)) return [];
   let results = [...requests];
 
@@ -345,11 +411,14 @@ export function filterRecyclingRequests(requests: any[], params: Partial<SearchF
     results = results.map((r) => {
       const lat = r.location?.latitude ?? r.latitude;
       const lon = r.location?.longitude ?? r.longitude;
-      const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
-      return {
-        ...r,
-        distanceKm: dist < Infinity ? dist : r.distanceKm ?? null,
-      };
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...r,
+          distanceKm: dist < Infinity ? dist : r.distanceKm ?? null,
+        };
+      }
+      return r;
     });
 
     if (typeof params.radiusKm === 'number' && params.radiusKm > 0) {
@@ -369,10 +438,10 @@ export function filterRecyclingRequests(requests: any[], params: Partial<SearchF
  * Pure function: Builds the Discovery Feed structure using array inputs (fitted for Firestore getDocs)
  */
 export function buildDiscoveryFeed(data: {
-  items?: any[];
-  listings?: any[];
-  providers?: any[];
-  recyclingRequests?: any[];
+  items?: GenericDomainItem[];
+  listings?: GenericDomainItem[];
+  providers?: GenericDomainItem[];
+  recyclingRequests?: GenericDomainItem[];
   userLocation?: LocationCoordinates | null;
   sectionLimit?: number;
 }): DiscoveryFeedData {
@@ -395,7 +464,7 @@ export function buildDiscoveryFeed(data: {
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, limit);
 
-  // 4. E-Waste Drop-Off Kiosks (Member 5 - RECYCLING)
+  // 4. E-Waste Drop-Off Kiosks / Recyclers (Member 5 - RECYCLING)
   const recyclingList = filterRecyclingRequests(data.recyclingRequests || [], {})
     .slice(0, 1);
   const nearestRecyclePoint = recyclingList[0] || null;
@@ -407,11 +476,11 @@ export function buildDiscoveryFeed(data: {
 
   return {
     heroBanner: MOCK_HERO_BANNER,
-    nearbyProviders,
-    featuredListings,
-    urgentDonations,
-    nearestRecyclePoint,
-    communityItems,
+    nearbyProviders: nearbyProviders as any[],
+    featuredListings: featuredListings as any[],
+    urgentDonations: urgentDonations as any[],
+    nearestRecyclePoint: nearestRecyclePoint as any,
+    communityItems: communityItems as any[],
     sourceStatus: {
       providers: Array.isArray(data.providers) ? 'OK' : 'UNAVAILABLE',
       listings: Array.isArray(data.listings) ? 'OK' : 'UNAVAILABLE',
@@ -427,17 +496,17 @@ export function buildDiscoveryFeed(data: {
 export async function fetchFirestoreDiscoveryFeed(
   userLocation?: LocationCoordinates | null
 ): Promise<DiscoveryFeedData> {
-  const [itemsRes, providersRes, listingsRes, recyclingRes] = await Promise.allSettled([
+  const [itemsRes, providersRes, listingsRes, recyclersRes] = await Promise.allSettled([
     fetchFirestoreItems(),
     fetchFirestoreProviders(),
     fetchFirestoreListings(),
-    fetchFirestoreRecyclingRequests(),
+    fetchFirestoreRecyclers(),
   ]);
 
   const items = itemsRes.status === 'fulfilled' ? itemsRes.value : [];
   const providers = providersRes.status === 'fulfilled' ? providersRes.value : [];
   const listings = listingsRes.status === 'fulfilled' ? listingsRes.value : [];
-  const recyclingRequests = recyclingRes.status === 'fulfilled' ? recyclingRes.value : [];
+  const recyclingRequests = recyclersRes.status === 'fulfilled' ? recyclersRes.value : [];
 
   return buildDiscoveryFeed({
     items,
