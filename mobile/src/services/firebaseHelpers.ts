@@ -6,6 +6,17 @@ import { ApiError } from './api';
 /** Dates are stored as ISO text, like the rest of the app. */
 export const nowIso = (): string => new Date().toISOString();
 
+/** Member 2 – accepts an ISO string, a millisecond number or a Firestore Timestamp; returns ISO text. */
+export const normalizeTimestamp = (value: unknown): string => {
+  if (!value) return nowIso();
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return new Date(value).toISOString();
+  if (typeof value === 'object' && 'toDate' in value && typeof (value as { toDate: () => Date }).toDate === 'function') {
+    return (value as { toDate: () => Date }).toDate().toISOString();
+  }
+  return nowIso();
+};
+
 /**
  * `{ id, ...data }` for a Firestore document.
  * Throws a 404 ApiError when the document doesn't exist.
