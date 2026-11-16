@@ -5,7 +5,7 @@
 **Target Device / Emulator:** `emulator-5554` (`Medium_Phone`, Android 16 / API 37)  
 **Package Name:** `com.mobile`  
 **Working Branch:** `feature/member3-handoff-polish`  
-**Latest Commit SHA:** `3d82f01`  
+**Latest Commit SHA:** `e3b1bac`
 **Status:** **DISCOVERY RENDER EXCEPTION RESOLVED & FULLY VERIFIED ON EMULATOR**
 
 ---
