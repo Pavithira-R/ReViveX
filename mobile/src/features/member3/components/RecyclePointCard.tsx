@@ -20,6 +20,12 @@ export const RecyclePointCard: React.FC<RecyclePointCardProps> = ({
   onPress,
   compact = false,
 }) => {
+  const name = point?.name || 'Certified E-Waste Drop-Off Depot';
+  const addressStr = typeof point?.address === 'object'
+    ? (point.address as any)?.city || (point.address as any)?.district || 'Colombo'
+    : String(point?.address || 'Colombo');
+  const categories = Array.isArray(point?.acceptedCategories) ? point.acceptedCategories : [];
+
   return (
     <TouchableOpacity
       style={[styles.card, compact && styles.compactCard]}
@@ -30,24 +36,24 @@ export const RecyclePointCard: React.FC<RecyclePointCardProps> = ({
         <View style={styles.badge}>
           <Text style={styles.badgeText}>♻️ CERTIFIED E-WASTE</Text>
         </View>
-        <Text style={styles.distance}>{formatDistance(point.distanceKm)}</Text>
+        <Text style={styles.distance}>{formatDistance(point?.distanceKm)}</Text>
       </View>
 
       <Text style={styles.title} numberOfLines={1}>
-        {point.name}
+        {name}
       </Text>
       <Text style={styles.address} numberOfLines={1}>
-        📍 {point.address}
+        📍 {addressStr}
       </Text>
 
-      {point.openingHours && (
+      {point?.openingHours && (
         <Text style={styles.hours}>🕒 {point.openingHours}</Text>
       )}
 
-      {!compact && point.acceptedCategories?.length > 0 && (
+      {!compact && categories.length > 0 && (
         <View style={styles.categoriesRow}>
           <Text style={styles.acceptedLabel}>Accepts: </Text>
-          {point.acceptedCategories.slice(0, 4).map((cat) => (
+          {categories.slice(0, 4).map((cat) => (
             <View key={cat} style={styles.catChip}>
               <Text style={styles.catChipText}>
                 {CATEGORY_META[cat]?.label || cat}

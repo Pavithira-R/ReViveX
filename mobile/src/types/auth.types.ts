@@ -28,6 +28,14 @@ export interface User {
   updatedAt: string;
 }
 
+/** Sanitized user profile safe to share publicly across modules (Member 1 / Privacy). */
+export interface PublicUser {
+  id: string;
+  name: string;
+  role: UserRole;
+  profileImage: string | null;
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;

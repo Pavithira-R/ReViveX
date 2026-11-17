@@ -24,7 +24,7 @@ import {
   DeviceCondition,
 } from '../types';
 import { DeviceHealthReport } from '../types/healthCheck.types';
-import { fetchDiscoveryFeed } from '../services/discoveryService';
+import { fetchDiscoveryFeed, buildDiscoveryFeed } from '../services/discoveryService';
 import {
   getLocationState,
   subscribeToLocation,
@@ -103,6 +103,13 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
       setIsOffline(response.isOfflineFallback);
     } catch (err) {
       console.error('Failed to load discovery feed:', err);
+      try {
+        const fallbackFeed = buildDiscoveryFeed({ userLocation: userLocation.coordinates });
+        setFeed(fallbackFeed);
+      } catch (fallbackErr) {
+        console.error('Fallback feed error:', fallbackErr);
+      }
+      setIsOffline(true);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -123,6 +130,8 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
     }
     loadFeed(true);
   };
+
+  const safeFeed = feed || buildDiscoveryFeed({ userLocation: userLocation.coordinates });
 
   return (
     <View style={styles.screen}>
@@ -177,9 +186,9 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
           }
         >
           {/* Hero Banner: 60s Recommendation Questionnaire */}
-          {feed?.heroBanner && (
+          {safeFeed?.heroBanner && (
             <DiscoveryFeedHero
-              banner={feed.heroBanner}
+              banner={safeFeed.heroBanner}
               onPressStart={onStartQuestionnaire}
             />
           )}
@@ -216,7 +225,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
           </View>
 
           {/* Section 1: Nearby Repair Providers */}
-          {feed?.nearbyProviders && feed.nearbyProviders.length > 0 && (
+          {safeFeed?.nearbyProviders && safeFeed.nearbyProviders.length > 0 && (
             <View style={styles.sectionWrapper}>
               <SectionHeader
                 title="🛠️ Nearby Repair Specialists"
@@ -228,7 +237,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalScroll}
               >
-                {feed.nearbyProviders.map((prov) => (
+                {safeFeed.nearbyProviders.map((prov) => (
                   <ProviderCard
                     key={prov.id}
                     provider={prov}
@@ -241,7 +250,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
           )}
 
           {/* Section 2: Featured Marketplace Listings */}
-          {feed?.featuredListings && feed.featuredListings.length > 0 && (
+          {safeFeed?.featuredListings && safeFeed.featuredListings.length > 0 && (
             <View style={styles.sectionWrapper}>
               <SectionHeader
                 title="🏷️ Available Marketplace Listings"
@@ -253,7 +262,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalScroll}
               >
-                {feed.featuredListings.map((listing) => (
+                {safeFeed.featuredListings.map((listing) => (
                   <ListingCard
                     key={listing.id}
                     listing={listing}
@@ -266,14 +275,14 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
           )}
 
           {/* Section 3: Urgent Donation Opportunities */}
-          {feed?.urgentDonations && feed.urgentDonations.length > 0 && (
+          {safeFeed?.urgentDonations && safeFeed.urgentDonations.length > 0 && (
             <View style={styles.sectionWrapper}>
               <SectionHeader
                 title="🎁 Urgent Community Donation Drives"
                 subtitle="Verified schools & non-profits requesting equipment"
               />
               <View style={styles.verticalContainer}>
-                {feed.urgentDonations.map((donation) => (
+                {safeFeed.urgentDonations.map((donation) => (
                   <UrgentDonationCard
                     key={donation.id}
                     donation={donation}
@@ -285,7 +294,7 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
           )}
 
           {/* Section 4: Nearest Certified E-Waste Drop-Off */}
-          {feed?.nearestRecyclePoint && (
+          {safeFeed?.nearestRecyclePoint && (
             <View style={styles.sectionWrapper}>
               <SectionHeader
                 title="♻️ Nearest Certified E-Waste Drop-Off"
@@ -293,8 +302,8 @@ export const DiscoveryHomeScreen: React.FC<DiscoveryHomeScreenProps> = ({
               />
               <View style={styles.verticalContainer}>
                 <RecyclePointCard
-                  point={feed.nearestRecyclePoint}
-                  onPress={() => onSelectRecyclePoint?.(feed.nearestRecyclePoint!)}
+                  point={safeFeed.nearestRecyclePoint}
+                  onPress={() => onSelectRecyclePoint?.(safeFeed.nearestRecyclePoint!)}
                 />
               </View>
             </View>

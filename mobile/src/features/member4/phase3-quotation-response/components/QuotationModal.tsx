@@ -32,7 +32,7 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
   onSubmit,
 }) => {
   const [action, setAction] = useState<'ACCEPT' | 'REJECT'>('ACCEPT');
-  const [estimatedPrice, setEstimatedPrice] = useState<string>('65');
+  const [estimatedPrice, setEstimatedPrice] = useState<string>('3500');
   const [providerNotes, setProviderNotes] = useState<string>('Includes replacement OEM battery and 90-day warranty.');
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
