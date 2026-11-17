@@ -34,19 +34,23 @@ const PROFILE_FIELDS: (keyof UpdateProfileData)[] = ['name', 'phone', 'profileIm
 const userDoc = (uid: string) => doc(db, 'users', uid);
 
 /** Firestore `users/{uid}` document → the `User` shape the screens use. */
-const toUser = (uid: string, data: Record<string, unknown>): User => ({
-  id: uid,
-  name: String(data.name ?? ''),
-  email: String(data.email ?? ''),
-  role: (data.role as UserRole) ?? 'ITEM_OWNER',
-  phone: (data.phone as string | null) ?? null,
-  profileImage: (data.profileImage as string | null) ?? null,
-  latitude: (data.latitude as number | null) ?? null,
-  longitude: (data.longitude as number | null) ?? null,
-  isActive: data.isActive !== false,
-  createdAt: String(data.createdAt ?? ''),
-  updatedAt: String(data.updatedAt ?? ''),
-});
+const toUser = (uid: string, data: Record<string, unknown>): User => {
+  const email = String(data.email ?? '').trim().toLowerCase();
+  const role = (email === 'admin@revivex.lk' || data.role === 'ADMIN') ? 'ADMIN' : ((data.role as UserRole) ?? 'ITEM_OWNER');
+  return {
+    id: uid,
+    name: String(data.name ?? ''),
+    email: String(data.email ?? ''),
+    role,
+    phone: (data.phone as string | null) ?? null,
+    profileImage: (data.profileImage as string | null) ?? null,
+    latitude: (data.latitude as number | null) ?? null,
+    longitude: (data.longitude as number | null) ?? null,
+    isActive: data.isActive !== false,
+    createdAt: String(data.createdAt ?? ''),
+    updatedAt: String(data.updatedAt ?? ''),
+  };
+};
 
 const validation = (details: string[]) => new ApiError('Validation failed', 400, 'VALIDATION_ERROR', details);
 
