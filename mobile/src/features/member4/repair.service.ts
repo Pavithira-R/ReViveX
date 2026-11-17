@@ -83,6 +83,17 @@ export class RepairService {
       const providerRef = doc(db, 'serviceProviders', user.uid);
       const now = getNowIso();
 
+      const existingSnap = await getDoc(providerRef);
+      const isExisting = existingSnap.exists();
+      const existingData = isExisting ? (existingSnap.data() as Partial<ServiceProvider>) : null;
+
+      // PROVIDER SECURITY (Step 4.1): Providers cannot verify themselves; only admins can set isVerified = true.
+      const isVerified = existingData ? Boolean(existingData.isVerified === true) : false;
+
+      // PROVIDER SECURITY: Ratings and review counts cannot be self-inflated by providers.
+      const ratingAverage = existingData?.ratingAverage ?? existingData?.rating ?? 0;
+      const ratingCount = existingData?.ratingCount ?? existingData?.reviewCount ?? 0;
+
       const profilePayload: Partial<ServiceProvider> = {
         userId: user.uid,
         businessName: data.businessName || 'Certified Technician',
@@ -97,16 +108,15 @@ export class RepairService {
           latitude: 6.9271,
           longitude: 79.8612,
         },
-        ratingAverage: data.ratingAverage ?? data.rating ?? 5.0,
-        ratingCount: data.ratingCount ?? data.reviewCount ?? 0,
-        rating: data.ratingAverage ?? data.rating ?? 5.0,
-        reviewCount: data.ratingCount ?? data.reviewCount ?? 0,
-        isVerified: data.isVerified ?? false,
+        ratingAverage,
+        ratingCount,
+        rating: ratingAverage,
+        reviewCount: ratingCount,
+        isVerified,
         updatedAt: now,
       };
 
-      const existingSnap = await getDoc(providerRef);
-      if (!existingSnap.exists()) {
+      if (!isExisting) {
         profilePayload.createdAt = now;
       }
 
@@ -428,6 +438,9 @@ export class RepairService {
   ): Promise<RepairRequest> {
     return wrapFs(async () => {
       const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Authentication required to submit quotation.');
+      }
       const requestRef = doc(db, 'repairRequests', id);
       const current = await getDoc(requestRef);
       const now = getNowIso();
@@ -483,6 +496,11 @@ export class RepairService {
 
       const data = current.data() as RepairRequest;
 
+      // PROVIDER SECURITY (Step 4.3): Only the assigned provider can submit quotation
+      if (data.providerId && data.providerId !== user.uid) {
+        throw new Error('Unauthorized: Only the assigned provider can submit quotations.');
+      }
+
       await updateDoc(requestRef, {
         status: RepairStatus.QUOTED,
         quotation: quotationData,
@@ -509,6 +527,10 @@ export class RepairService {
   // 9. Customer accepts quotation and picks appointment time (QUOTED -> ACCEPTED)
   async acceptQuotation(id: string, appointmentAt: string): Promise<RepairRequest> {
     return wrapFs(async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Authentication required to accept quotation.');
+      }
       const requestRef = doc(db, 'repairRequests', id);
       const current = await getDoc(requestRef);
       if (!current.exists()) {
@@ -516,6 +538,12 @@ export class RepairService {
       }
 
       const data = current.data() as RepairRequest;
+
+      // CUSTOMER SECURITY: Only the customer who created this request can accept
+      if (data.customerId && data.customerId !== user.uid) {
+        throw new Error('Unauthorized: Only the customer who submitted the request can accept quotations.');
+      }
+
       const now = getNowIso();
 
       await updateDoc(requestRef, {
@@ -541,6 +569,9 @@ export class RepairService {
   async rejectQuotation(id: string, reason?: string): Promise<RepairRequest> {
     return wrapFs(async () => {
       const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Authentication required.');
+      }
       const requestRef = doc(db, 'repairRequests', id);
       const current = await getDoc(requestRef);
       if (!current.exists()) {
@@ -548,8 +579,14 @@ export class RepairService {
       }
 
       const data = current.data() as RepairRequest;
+
+      // SECURITY: Must be either customer or provider
+      if (user.uid !== data.customerId && user.uid !== data.providerId) {
+        throw new Error('Unauthorized: You are not a participant in this repair request.');
+      }
+
       const now = getNowIso();
-      const recipientId = user?.uid === data.customerId ? data.providerId : data.customerId;
+      const recipientId = user.uid === data.customerId ? data.providerId : data.customerId;
 
       await updateDoc(requestRef, {
         status: RepairStatus.REJECTED,
@@ -577,6 +614,10 @@ export class RepairService {
     providerNotes?: string
   ): Promise<RepairRequest> {
     return wrapFs(async () => {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Authentication required to update repair status.');
+      }
       const requestRef = doc(db, 'repairRequests', id);
       const now = getNowIso();
 
@@ -589,6 +630,11 @@ export class RepairService {
         }
 
         const current = snap.data() as RepairRequest;
+
+        // PROVIDER SECURITY (Step 4.3): Only assigned provider can advance status
+        if (current.providerId && current.providerId !== user.uid) {
+          throw new Error('Unauthorized: Only the assigned provider can update repair status.');
+        }
 
         if (current.status === RepairStatus.COMPLETED) {
           throw new Error('This repair is already COMPLETED and cannot be modified.');
@@ -760,6 +806,9 @@ export class RepairService {
   }): Promise<ApiResponse<Booking>> {
     try {
       const user = auth.currentUser;
+      if (!user) {
+        return { success: false, statusCode: 401, error: 'Authentication required to create a booking.' };
+      }
       const appointmentCombined = `${data.appointmentDate} ${data.appointmentTime || ''}`.trim();
       const updatedReq = await this.acceptQuotation(data.repairRequestId, appointmentCombined);
 
@@ -770,7 +819,7 @@ export class RepairService {
       const booking: Booking = {
         id: `book_${Date.now()}`,
         repairRequestId: data.repairRequestId,
-        customerId: user?.uid || updatedReq.customerId,
+        customerId: user.uid || updatedReq.customerId,
         providerId: updatedReq.providerId,
         appointmentDate: data.appointmentDate,
         appointmentTime: data.appointmentTime,
@@ -781,7 +830,22 @@ export class RepairService {
         updatedAt: now,
       };
 
+      // PERSISTENCE (Step 4.5): Persist booking record to Cloud Firestore
+      await setDoc(doc(db, 'bookings', booking.id), booking);
+
       return { success: true, statusCode: 201, data: booking };
+    } catch (err: any) {
+      return { success: false, statusCode: 500, error: err.message };
+    }
+  }
+
+  async getBooking(bookingId: string): Promise<ApiResponse<Booking>> {
+    try {
+      const snap = await getDoc(doc(db, 'bookings', bookingId));
+      if (!snap.exists()) {
+        return { success: false, statusCode: 404, error: 'Booking not found' };
+      }
+      return { success: true, statusCode: 200, data: mapSnapWithId<Booking>(snap) };
     } catch (err: any) {
       return { success: false, statusCode: 500, error: err.message };
     }

@@ -139,7 +139,7 @@ export async function fetchFirestoreRecyclers(): Promise<RecyclePointSummary[]> 
           address: item.location?.city || item.pickupAddress || 'Registered Recycler Depot',
           distanceKm: item.distanceKm ?? null,
           acceptedCategories: (item.acceptedCategories as DeviceCategory[]) || ['LAPTOP', 'PHONE', 'TABLET'],
-          isCertified: true,
+          isCertified: Boolean(item.isCertified === true),
         };
       });
     });
@@ -494,10 +494,10 @@ export function normalizeProvider(raw: any): ServiceProviderSummary {
   const businessName = raw.businessName || raw.name || 'Certified Repair Specialist';
   const rating = typeof raw.rating === 'number'
     ? raw.rating
-    : (typeof raw.ratingAverage === 'number' ? raw.ratingAverage : 4.8);
+    : (typeof raw.ratingAverage === 'number' ? raw.ratingAverage : 0);
   const reviewCount = typeof raw.reviewCount === 'number'
     ? raw.reviewCount
-    : (typeof raw.ratingCount === 'number' ? raw.ratingCount : 15);
+    : (typeof raw.ratingCount === 'number' ? raw.ratingCount : 0);
   const servicesOffered = Array.isArray(raw.servicesOffered) && raw.servicesOffered.length > 0
     ? raw.servicesOffered
     : (Array.isArray(raw.services) && raw.services.length > 0
@@ -510,7 +510,8 @@ export function normalizeProvider(raw: any): ServiceProviderSummary {
     id: raw.id || `prov_${Math.random().toString(36).substring(2, 9)}`,
     businessName,
     profileImage: raw.profileImage || undefined,
-    isVerified: Boolean(raw.isVerified ?? true),
+    // Step 9: Never default missing verification to true
+    isVerified: Boolean(raw.isVerified === true),
     servicesOffered,
     rating,
     reviewCount,
@@ -575,7 +576,7 @@ export function normalizeRecyclePoint(raw: any): RecyclePointSummary {
     acceptedCategories,
     openingHours: raw.openingHours || 'Mon-Sat: 8:30 AM - 5:30 PM',
     contactNumber: raw.contactNumber || raw.phone || '+94 11 234 5678',
-    isCertified: Boolean(raw.isCertified ?? true),
+    isCertified: Boolean(raw.isCertified === true),
   };
 }
 

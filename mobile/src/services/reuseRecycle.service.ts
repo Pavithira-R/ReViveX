@@ -1,4 +1,4 @@
-﻿import {
+import {
   addDoc,
   getDocs,
   collection,
@@ -186,6 +186,10 @@ export const createOffer = async (
       throw new Error('You cannot make an offer on your own listing.');
     }
 
+    if (listing.status !== 'ACTIVE') {
+      throw new Error('Offers can only be placed on ACTIVE listings.');
+    }
+
     const timestamp = nowIso();
 
     await addDoc(offersRef, {
@@ -265,6 +269,11 @@ export const respondToOffer = async (
 
       if (offer.ownerId !== ownerId || offer.status !== 'PENDING') {
         throw new Error('This offer cannot be processed.');
+      }
+
+      // INTEGRITY CHECK (Step 5.2): Buyers must not approve their own offers
+      if (offer.buyerId === ownerId) {
+        throw new Error('Unauthorized: You cannot accept an offer on your own listing.');
       }
 
       buyerId = offer.buyerId;
