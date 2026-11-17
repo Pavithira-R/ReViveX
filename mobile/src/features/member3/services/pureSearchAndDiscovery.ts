@@ -40,6 +40,7 @@ export interface GenericDomainItem {
   itemType?: string;
   itemName?: string;
   pickupAddress?: string;
+  address?: string;
   location?: { latitude?: number; longitude?: number; city?: string; district?: string };
   latitude?: number;
   longitude?: number;
@@ -120,18 +121,17 @@ export async function fetchFirestoreRecyclingRequests(): Promise<GenericDomainIt
 /**
  * Firestore Fetcher: Users with role == 'RECYCLER' (for nearest recycler drop-off section in Discovery)
  */
-export async function fetchFirestoreRecyclers(): Promise<RecyclePointSummary[]> {
+export async function fetchFirestoreRecyclers(): Promise<GenericDomainItem[]> {
   try {
     return await fsCall(async () => {
       const q = query(collection(db, 'users'), where('role', '==', 'RECYCLER'));
       const snap = await getDocs(q);
-      return snap.docs.map((d: any): RecyclePointSummary => {
+      return snap.docs.map((d: any): GenericDomainItem => {
         const item = withId<GenericDomainItem>(d);
         return {
-          id: item.id,
-          name: item.name || 'Certified E-Waste Recycler',
-          address: item.location?.city || item.pickupAddress || 'Registered Recycler Depot',
-          distanceKm: item.distanceKm ?? null,
+          ...item,
+          name: item.name || item.businessName || 'Certified E-Waste Recycler',
+          pickupAddress: formatLocationString(item.location || item.pickupAddress || item.address),
           acceptedCategories: (item.acceptedCategories as DeviceCategory[]) || ['LAPTOP', 'PHONE', 'TABLET'],
           isCertified: true,
         };
@@ -609,10 +609,30 @@ export function buildDiscoveryFeed(data: {
     .slice(0, limit);
   const urgentDonations: UrgentDonationSummary[] = filteredDonations.map(normalizeUrgentDonation);
 
-  // 4. E-Waste Drop-Off Kiosks / Recyclers (Member 5 - RECYCLING)
-  const recyclingList = filterRecyclingRequests(data.recyclingRequests || [], {}).slice(0, 1);
-  const nearestRecyclePoint: RecyclePointSummary | null = recyclingList.length > 0
-    ? normalizeRecyclePoint(recyclingList[0])
+  // 4. E-Waste Drop-Off Kiosks / Recyclers (Certified RECYCLER profiles or requests)
+  let recyclersList = [...(data.recyclingRequests || [])];
+  const userLat = data.userLocation?.latitude;
+  const userLon = data.userLocation?.longitude;
+
+  if (typeof userLat === 'number' && typeof userLon === 'number' && !isNaN(userLat) && !isNaN(userLon)) {
+    recyclersList = recyclersList.map((r: any) => {
+      const lat = r.latitude ?? r.location?.latitude;
+      const lon = r.longitude ?? r.location?.longitude;
+      if (typeof lat === 'number' && typeof lon === 'number') {
+        const dist = calculateHaversineDistanceKm(userLat, userLon, lat, lon);
+        return {
+          ...r,
+          distanceKm: dist < Infinity ? dist : r.distanceKm ?? null,
+        };
+      }
+      return r;
+    });
+
+    recyclersList.sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999));
+  }
+
+  const nearestRecyclePoint: RecyclePointSummary | null = recyclersList.length > 0
+    ? normalizeRecyclePoint(recyclersList[0])
     : null;
 
   // 5. Community Items (Member 2)
