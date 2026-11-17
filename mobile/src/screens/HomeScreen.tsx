@@ -189,7 +189,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           />
         </View>
 
-        {hasRole('SERVICE_PROVIDER') ? (
+        {hasRole('SERVICE_PROVIDER') || hasRole('ADMIN') ? (
           <>
             <Text style={styles.sectionTitle}>Technician Portal</Text>
             <View style={styles.grid}>

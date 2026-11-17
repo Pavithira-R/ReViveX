@@ -273,7 +273,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 </View>
               </View>
               <PrimaryButton title="Edit Profile" onPress={startEditing} />
-              {user.role === 'SERVICE_PROVIDER' && onEditProviderProfile ? (
+              {(user.role === 'SERVICE_PROVIDER' || user.role === 'ADMIN') && onEditProviderProfile ? (
                 <PrimaryButton
                   title="Technician Business Profile 🛠️"
                   variant="outlined"

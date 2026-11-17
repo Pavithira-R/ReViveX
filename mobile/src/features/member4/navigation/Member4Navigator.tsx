@@ -66,6 +66,14 @@ export const Member4Navigator: React.FC<Member4NavigatorProps> = ({
     initialRoute === 'PROVIDER_REQUESTS'
   );
 
+  // Synchronize internal state when navigation props change
+  useEffect(() => {
+    setCurrentRoute(initialRoute);
+    setIsProviderView(initialRoute === 'PROVIDER_REQUESTS' || initialRoute === 'EDIT_PROVIDER_PROFILE');
+    if (initialProviderId) setSelectedProviderId(initialProviderId);
+    if (initialRequestId) setSelectedRequestId(initialRequestId);
+  }, [initialRoute, initialProviderId, initialRequestId]);
+
   // Hardware back press handler within Member4
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -193,7 +201,7 @@ export const Member4Navigator: React.FC<Member4NavigatorProps> = ({
       {/* 4. Service Provider: Incoming Requests & Quotations */}
       {currentRoute === 'PROVIDER_REQUESTS' && (
         <ProviderRequestsScreen
-          providerId={user?.id || 'prov_fixit_001'}
+          providerId={selectedProviderId || user?.id || 'prov_fixit_001'}
           onNavigateToTracking={handleProviderOpenTracking}
           onBack={onBack}
         />
