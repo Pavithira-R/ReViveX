@@ -289,6 +289,7 @@ export const AppNavigator: React.FC = () => {
   if (appRoute === 'Member4') {
     return (
       <Member4Navigator
+        key={`${repairInitialRoute}-${repairInitialProviderId || ''}-${repairInitialRequestId || ''}`}
         initialRoute={repairInitialRoute}
         initialProviderId={repairInitialProviderId}
         initialRequestId={repairInitialRequestId}

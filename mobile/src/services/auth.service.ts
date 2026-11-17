@@ -18,6 +18,7 @@ import {
   LoginCredentials,
   Paginated,
   PUBLIC_ROLES,
+  PublicUser,
   RegisterData,
   UpdateProfileData,
   User,
@@ -79,6 +80,16 @@ const loadProfile = async (uid: string): Promise<User> => {
   const snapshot = await fsCall(() => getDoc(userDoc(uid)));
   if (!snapshot.exists()) throw new ApiError('User not found', 404, 'NOT_FOUND');
   return toUser(uid, snapshot.data());
+};
+
+/** Ensure the caller is authenticated as an active ADMIN before sensitive operations. */
+const requireAdmin = async (): Promise<User> => {
+  const uid = currentUid();
+  const caller = await loadProfile(uid);
+  if (caller.role !== 'ADMIN' || !caller.isActive) {
+    throw new ApiError('Admin authorization required', 403, 'FORBIDDEN');
+  }
+  return caller;
 };
 
 const validateRegister = (data: RegisterData) => {
@@ -204,6 +215,20 @@ export const authService = {
 
   getMe: (): Promise<User> => loadProfile(currentUid()),
 
+  /**
+   * Safe public profile query (Member 1 / Privacy - Step 8).
+   * Strips out sensitive fields (email, phone, exact coordinates, account activity flags).
+   */
+  getPublicProfile: async (userId: string): Promise<PublicUser> => {
+    const profile = await loadProfile(userId);
+    return {
+      id: profile.id,
+      name: profile.name,
+      role: profile.role,
+      profileImage: profile.profileImage,
+    };
+  },
+
   /** Users may change only their own name, phone, photo and location. */
   updateMe: async (data: UpdateProfileData): Promise<User> => {
     const uid = currentUid();
@@ -227,9 +252,10 @@ export interface AdminUserFilters {
   limit?: number;
 }
 
-/** Admin user management (US-37). Security rules allow these writes only for admins. */
+/** Admin user management (US-37). Security rules and service methods allow these writes only for verified admins. */
 export const adminService = {
   listUsers: async (filters: AdminUserFilters = {}): Promise<Paginated<User>> => {
+    await requireAdmin();
     const page = Math.max(1, filters.page ?? 1);
     const limit = Math.min(100, Math.max(1, filters.limit ?? 20));
     const snapshot = await fsCall(() => getDocs(collection(db, 'users')));
@@ -249,6 +275,7 @@ export const adminService = {
   },
 
   changeRole: async (userId: string, role: UserRole): Promise<User> => {
+    await requireAdmin();
     if (!ALL_ROLES.includes(role)) throw validation(['A valid role is required']);
     if (userId === currentUid()) throw new ApiError('Admins cannot change their own role', 400, 'SELF_MODIFICATION');
     await fsCall(() => updateDoc(userDoc(userId), { role, updatedAt: nowIso() }));
@@ -256,6 +283,7 @@ export const adminService = {
   },
 
   setActive: async (userId: string, isActive: boolean): Promise<User> => {
+    await requireAdmin();
     if (userId === currentUid()) {
       throw new ApiError('Admins cannot deactivate their own account', 400, 'SELF_MODIFICATION');
     }

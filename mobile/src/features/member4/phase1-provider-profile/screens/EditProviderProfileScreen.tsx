@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, FormInput, MessageBanner, PrimaryButton } from '../../../../components';
 import { COLORS, FONT, RADIUS, SPACING } from '../../../../constants';
+import { useAuth } from '../../../../context';
 import { repairService } from '../../repair.service';
 import { ServiceProvider } from '../../types';
 
@@ -56,6 +57,7 @@ export const EditProviderProfileScreen: React.FC<EditProviderProfileScreenProps>
   onBack,
   onProfileSaved,
 }) => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [businessName, setBusinessName] = useState('');
@@ -92,13 +94,21 @@ export const EditProviderProfileScreen: React.FC<EditProviderProfileScreenProps>
         if (s && s.length > 0) {
           setSelectedServices(s);
         }
+      } else {
+        setBusinessName(user?.name ? `${user.name} TechFix` : 'Kasun TechFix Repairs');
+        setDescription('Certified electronics technician specializing in component diagnostics, screen repairs, and motherboard servicing.');
+        setPhone(user?.phone || '+94 77 123 4567');
+        setSelectedCity('Maharagama');
+        setStartingPrice('2500');
+        setSelectedCategories(['Laptops', 'Smartphones', 'Tablets']);
+        setSelectedServices(['Screen Replacement', 'Battery Replacement', 'Water Damage Repair']);
       }
     } catch (err: any) {
       setMessage({ text: err.message || 'Could not load existing profile.', type: 'error' });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     loadProfile();
