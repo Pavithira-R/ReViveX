@@ -82,18 +82,22 @@ service cloud.firestore {
     // ---------- Member 4 – Repair & Service Providers ----------
     match /serviceProviders/{providerId} {
       allow read: if signedIn();
-      allow create, update: if signedIn() && providerId == uid();
+      allow create, update: if signedIn() && (providerId == uid() || hasRole('SERVICE_PROVIDER') || isAdmin());
     }
 
     match /repairRequests/{id} {
       allow read: if signedIn()
                   && (resource.data.customerId == uid()
-                      || resource.data.providerId == uid());
+                      || resource.data.providerId == uid()
+                      || hasRole('SERVICE_PROVIDER')
+                      || isAdmin());
       allow create: if signedIn()
                     && request.resource.data.customerId == uid();
       allow update: if signedIn()
                     && (resource.data.customerId == uid()
-                        || resource.data.providerId == uid());
+                        || resource.data.providerId == uid()
+                        || hasRole('SERVICE_PROVIDER')
+                        || isAdmin());
     }
 
     // ---------- Member 5 – Reuse, Sell, Donate and Recycle ----------

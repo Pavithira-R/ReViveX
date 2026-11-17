@@ -238,3 +238,24 @@ test('repair request rejection: declines request and notifies the other party', 
   expect(rejected.status).toBe(RepairStatus.REJECTED);
   expect(rejected.rejectionReason).toBe('We no longer service CRT equipment');
 });
+
+test('technician portal: listProviderJobs and getProvider fallback when database is fresh', async () => {
+  await signInAs(providerUser.email);
+
+  // When database has no assigned jobs, listProviderJobs falls back safely to demo incoming job
+  const jobs = await repairService.listProviderJobs();
+  expect(jobs.length).toBeGreaterThanOrEqual(1);
+  expect(jobs[0].itemName).toBe('Samsung Galaxy A32');
+
+  // getProvider falls back to mock provider if not yet in database
+  const mockProv = await repairService.getProvider('prov_fixit_001');
+  expect(mockProv.businessName).toBe('Apex Tech Repair & Diagnostics');
+
+  // sendQuotation succeeds even on fresh/demo request
+  const quoted = await repairService.sendQuotation('req_demo_a32_001', {
+    price: 4500,
+    notes: 'AMOLED screen replacement with warranty',
+  });
+  expect(quoted.status).toBe(RepairStatus.QUOTED);
+  expect(quoted.estimatedPrice).toBe(4500);
+});
