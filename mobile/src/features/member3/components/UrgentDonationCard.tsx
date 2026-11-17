@@ -20,8 +20,11 @@ export const UrgentDonationCard: React.FC<UrgentDonationCardProps> = ({
   onPress,
   compact = false,
 }) => {
-  const isCritical = donation.urgencyLevel === 'CRITICAL';
-  const catMeta = CATEGORY_META[donation.targetCategory];
+  const isCritical = donation?.urgencyLevel === 'CRITICAL';
+  const categoryKey = (donation?.targetCategory || 'OTHER').toUpperCase() as keyof typeof CATEGORY_META;
+  const catMeta = CATEGORY_META[categoryKey] || CATEGORY_META.OTHER;
+  const beneficiaryName = donation?.beneficiary || 'Community Student';
+  const quantity = typeof donation?.quantityNeeded === 'number' ? donation.quantityNeeded : 1;
 
   return (
     <TouchableOpacity
@@ -47,26 +50,26 @@ export const UrgentDonationCard: React.FC<UrgentDonationCardProps> = ({
         </View>
 
         <Text style={styles.distanceText}>
-          {formatDistance(donation.distanceKm)}
+          {formatDistance(donation?.distanceKm)}
         </Text>
       </View>
 
       <Text style={styles.title} numberOfLines={2}>
-        {donation.title}
+        {donation?.title || 'Community Equipment Drive'}
       </Text>
 
       <Text style={styles.beneficiary}>
-        🏫 Beneficiary: <Text style={styles.beneficiaryName}>{donation.beneficiary}</Text>
+        🏫 Beneficiary: <Text style={styles.beneficiaryName}>{beneficiaryName}</Text>
       </Text>
 
       <Text style={styles.description} numberOfLines={2}>
-        {donation.description}
+        {donation?.description || 'Requesting functional electronics for students.'}
       </Text>
 
       <View style={styles.footer}>
         <View style={styles.targetContainer}>
           <Text style={styles.targetCategory}>
-            {catMeta?.icon} Need {donation.quantityNeeded} units
+            {catMeta.icon} Need {quantity} {quantity === 1 ? 'unit' : 'units'}
           </Text>
         </View>
         <Text style={styles.ctaPrompt}>Support Drive →</Text>
