@@ -131,6 +131,7 @@ export const ReuseRecycleScreen: React.FC<{
 
   const [tab, setTab] = useState<Tab>(() => {
     if (initialTab) return initialTab;
+    if (hasRole('RECYCLER')) return 'RECYCLE';
     if (initialActionType === 'RECYCLE') return 'RECYCLE';
     if (initialActionType === 'SELL' || initialActionType === 'DONATE') return 'CREATE';
     return 'BROWSE';
@@ -224,7 +225,7 @@ export const ReuseRecycleScreen: React.FC<{
   const loadRequests = async () => {
     if (!user) return;
     try {
-      setRequests(await listMyRecyclingRequests(user.id));
+      setRequests(await listMyRecyclingRequests(user.id, user.role));
     } catch (error) {
       Alert.alert('Could not load recycling requests', error instanceof Error ? error.message : 'Please try again.');
     }
