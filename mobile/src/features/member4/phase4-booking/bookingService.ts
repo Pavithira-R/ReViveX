@@ -2,7 +2,7 @@
 // Phase 4 - Client Booking Service
 // ============================================================================
 
-import { Booking, BookingStatus, ApiResponse } from '../types';
+import { Booking, ApiResponse } from '../types';
 import { CreateBookingFormData } from './types';
 import { repairService } from '../repair.service';
 
