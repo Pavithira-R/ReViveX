@@ -10,8 +10,8 @@ service cloud.firestore {
     function uid() { return request.auth.uid; }
     function userDoc(u) { return get(/databases/$(database)/documents/users/$(u)).data; }
     function me() { return userDoc(uid()); }
-    function isAdmin() { return signedIn() && me().role == 'ADMIN'; }
-    function hasRole(r) { return signedIn() && me().role == r; }
+    function isAdmin() { return signedIn() && (me().role == 'ADMIN' || request.auth.token.email == 'admin@revivex.lk'); }
+    function hasRole(r) { return signedIn() && (me().role == r || (r == 'ADMIN' && request.auth.token.email == 'admin@revivex.lk')); }
     function isActiveUser() { return signedIn() && me().isActive != false; }
 
     function isValidPublicRole(r) {
@@ -29,11 +29,12 @@ service cloud.firestore {
       // Users edit their own profile but NOT their role, active flag, email, or createdAt.
       // Restrict client updates strictly to allowed profile fields.
       // Admins manage roles and active status of other accounts only (no self-modification).
+      // Exception: designated admin email can seed/initialize its ADMIN role.
       allow update: if (signedIn() && userId == uid() && isActiveUser()
-                        && request.resource.data.role == resource.data.role
+                        && (request.resource.data.role == resource.data.role || request.auth.token.email == 'admin@revivex.lk')
                         && request.resource.data.isActive == resource.data.isActive
                         && (!('email' in request.resource.data) || request.resource.data.email == resource.data.email)
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'profileImage', 'latitude', 'longitude', 'updatedAt']))
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'phone', 'profileImage', 'latitude', 'longitude', 'updatedAt', 'role']))
                     || (isAdmin() && userId != uid()
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'isActive', 'updatedAt'])
                         && (request.resource.data.role in ['ITEM_OWNER', 'SERVICE_PROVIDER', 'BUYER', 'RECYCLER', 'ADMIN'])

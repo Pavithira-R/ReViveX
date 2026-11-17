@@ -215,6 +215,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </>
         ) : null}
 
+        {hasRole('RECYCLER') || hasRole('ADMIN') ? (
+          <>
+            <Text style={styles.sectionTitle}>Recycler Portal</Text>
+            <View style={styles.grid}>
+              {onOpenReuseRecycle ? (
+                <Tile
+                  label="E-Waste Pickups"
+                  hint="Accept & manage pickups"
+                  icon="truck-delivery-outline"
+                  tint="teal"
+                  onPress={onOpenReuseRecycle}
+                />
+              ) : null}
+            </View>
+          </>
+        ) : null}
+
         {hasRole('ADMIN') ? (
           <>
             <Text style={styles.sectionTitle}>Admin</Text>
