@@ -378,7 +378,7 @@ export class RepairService {
           if (!snapDemo.empty) {
             list = snapDemo.docs.map((d) => mapSnapWithId<RepairRequest>(d));
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
       }
