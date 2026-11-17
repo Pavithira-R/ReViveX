@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -576,7 +576,7 @@ export const ReuseRecycleScreen: React.FC<{
 
               {listing.price != null ? (
                 <Text style={styles.body}>
-                  Price: {listing.price}
+                  Price: {typeof listing.price === 'number' ? `Rs. ${Math.round(listing.price).toLocaleString('en-US')}` : listing.price}
                 </Text>
               ) : null}
 
@@ -613,7 +613,7 @@ export const ReuseRecycleScreen: React.FC<{
 
               <TextInput
                 style={styles.input}
-                placeholder="Offer amount (required for Sell)"
+                placeholder="Offer amount in Rs. (required for Sell)"
                 keyboardType="decimal-pad"
                 value={amount}
                 onChangeText={setAmount}
@@ -655,7 +655,7 @@ export const ReuseRecycleScreen: React.FC<{
                   </Text>
 
                   <Text style={styles.body}>
-                    Amount: {offer.amount ?? 'No amount'}
+                    Amount: {typeof offer.amount === 'number' ? `Rs. ${Math.round(offer.amount).toLocaleString('en-US')}` : (offer.amount ?? 'No amount')}
                   </Text>
 
                   <Text style={styles.body}>
@@ -777,7 +777,7 @@ export const ReuseRecycleScreen: React.FC<{
           {type === 'SELL' ? (
             <TextInput
               style={styles.input}
-              placeholder="Selling price"
+              placeholder="Selling price in Rs. (e.g. 45000)"
               keyboardType="decimal-pad"
               value={price}
               onChangeText={setPrice}
@@ -841,7 +841,7 @@ export const ReuseRecycleScreen: React.FC<{
                   </Text>
 
                   <Text style={styles.body}>
-                    Amount: {offer.amount ?? 'No amount'}
+                    Amount: {typeof offer.amount === 'number' ? `Rs. ${Math.round(offer.amount).toLocaleString('en-US')}` : (offer.amount ?? 'No amount')}
                   </Text>
 
                   <Text style={styles.body}>

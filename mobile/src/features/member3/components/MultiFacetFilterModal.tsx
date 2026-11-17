@@ -256,11 +256,11 @@ export const MultiFacetFilterModal: React.FC<MultiFacetFilterModalProps> = ({
             {/* 5. Price Range (Visible for Sell / Providers) */}
             {actionType !== 'DONATE' && actionType !== 'RECYCLE' && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Price Range ($)</Text>
+                <Text style={styles.sectionTitle}>Price Range (Rs. / LKR)</Text>
                 <View style={styles.priceRow}>
                   <TextInput
                     style={styles.priceInput}
-                    placeholder="Min $"
+                    placeholder="Min Rs."
                     placeholderTextColor={COLORS.textMuted}
                     keyboardType="numeric"
                     value={minPrice}
@@ -269,7 +269,7 @@ export const MultiFacetFilterModal: React.FC<MultiFacetFilterModalProps> = ({
                   <Text style={styles.priceTo}>to</Text>
                   <TextInput
                     style={styles.priceInput}
-                    placeholder="Max $"
+                    placeholder="Max Rs."
                     placeholderTextColor={COLORS.textMuted}
                     keyboardType="numeric"
                     value={maxPrice}

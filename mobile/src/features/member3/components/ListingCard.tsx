@@ -81,7 +81,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             <Text style={styles.freePrice}>FREE (Donation)</Text>
           ) : (
             <Text style={styles.price}>
-              {priceVal > 500 ? `Rs. ${priceVal.toLocaleString()}` : `$${priceVal.toFixed(2)}`}
+              {priceVal > 0 ? `Rs. ${Math.round(priceVal).toLocaleString('en-US')}` : 'FREE'}
             </Text>
           )}
           <Text style={styles.locationText} numberOfLines={1}>
