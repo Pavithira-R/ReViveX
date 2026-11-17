@@ -66,7 +66,7 @@ export const Member3Navigator: React.FC<Member3NavigatorProps> = ({
     } else {
       Alert.alert(
         'Service Provider Selected',
-        `Provider: ${provider.businessName}\nRating: ${provider.rating}★\nStarting: $${provider.startingPrice}\n\n[Member 4 Hand-off Triggered]`,
+        `Provider: ${provider.businessName}\nRating: ${provider.rating}★\nStarting: Rs. ${(provider.startingPrice || 2500).toLocaleString('en-US')}\n\n[Member 4 Hand-off Triggered]`,
         [{ text: 'OK' }]
       );
     }
@@ -79,7 +79,7 @@ export const Member3Navigator: React.FC<Member3NavigatorProps> = ({
     } else {
       Alert.alert(
         'Listing Selected',
-        `Item: ${listing.title}\nAction: ${listing.actionType}\nPrice: $${listing.price || 0}\n\n[Member 5 Hand-off Triggered]`,
+        `Item: ${listing.title}\nAction: ${listing.actionType}\nPrice: ${listing.price ? `Rs. ${listing.price.toLocaleString('en-US')}` : 'FREE'}\n\n[Member 5 Hand-off Triggered]`,
         [{ text: 'OK' }]
       );
     }

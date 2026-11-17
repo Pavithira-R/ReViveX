@@ -88,7 +88,7 @@ export const ProviderCard: React.FC<ProviderCardProps> = ({
         <Text style={styles.priceHint}>
           From{' '}
           <Text style={styles.priceValue}>
-            {startingPriceVal > 500 ? `Rs. ${startingPriceVal.toLocaleString()}` : `$${startingPriceVal.toFixed(2)}`}
+            Rs. {Math.round(startingPriceVal).toLocaleString('en-US')}
           </Text>
         </Text>
         <Text style={styles.actionPrompt}>View & Book →</Text>
