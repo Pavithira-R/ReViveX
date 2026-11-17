@@ -28,9 +28,18 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   onPress,
   compact = false,
 }) => {
-  const actionTheme = ACTION_THEMES[listing.actionType];
-  const catMeta = CATEGORY_META[listing.category];
-  const condMeta = CONDITION_META[listing.condition];
+  const actionKey = (listing?.actionType || 'REUSE').toUpperCase() as keyof typeof ACTION_THEMES;
+  const actionTheme = ACTION_THEMES[actionKey] || ACTION_THEMES.REUSE;
+  const categoryKey = (listing?.category || 'OTHER').toUpperCase() as keyof typeof CATEGORY_META;
+  const catMeta = CATEGORY_META[categoryKey] || CATEGORY_META.OTHER;
+  const conditionKey = (listing?.condition || 'WORKING_NORMALLY').toUpperCase() as keyof typeof CONDITION_META;
+  const condMeta = CONDITION_META[conditionKey] || CONDITION_META.WORKING_NORMALLY;
+
+  const locationStr = typeof listing?.location === 'object'
+    ? (listing.location as any)?.city || (listing.location as any)?.district || 'Colombo'
+    : String(listing?.location || 'Colombo');
+
+  const priceVal = typeof listing?.price === 'number' ? listing.price : (Number(listing?.price) || 0);
 
   return (
     <TouchableOpacity
@@ -42,41 +51,41 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         {/* Action Type Badge */}
         <View style={[styles.badge, { backgroundColor: actionTheme.bgColor }]}>
           <Text style={[styles.badgeText, { color: actionTheme.badgeColor }]}>
-            {listing.actionType}
+            {listing?.actionType || actionKey}
           </Text>
         </View>
 
         {/* Distance Badge */}
         <Text style={styles.distanceText}>
-          {formatDistance(listing.distanceKm)}
+          {formatDistance(listing?.distanceKm)}
         </Text>
       </View>
 
       <Text style={styles.title} numberOfLines={2}>
-        {listing.title}
+        {listing?.title || 'Electronic Device'}
       </Text>
 
       <View style={styles.metaRow}>
         <Text style={styles.categoryTag}>
-          {catMeta?.icon} {catMeta?.label || listing.category}
+          {catMeta.icon} {catMeta.label}
         </Text>
         <Text style={styles.dot}>•</Text>
-        <Text style={[styles.conditionTag, { color: condMeta?.color || COLORS.textSecondary }]}>
-          {condMeta?.badge || listing.condition}
+        <Text style={[styles.conditionTag, { color: condMeta.color }]}>
+          {condMeta.badge}
         </Text>
       </View>
 
       <View style={styles.footer}>
         <View>
-          {listing.actionType === 'DONATE' ? (
+          {actionKey === 'DONATE' ? (
             <Text style={styles.freePrice}>FREE (Donation)</Text>
           ) : (
             <Text style={styles.price}>
-              ${(listing.price ?? 0).toFixed(2)}
+              {priceVal > 500 ? `Rs. ${priceVal.toLocaleString()}` : `$${priceVal.toFixed(2)}`}
             </Text>
           )}
           <Text style={styles.locationText} numberOfLines={1}>
-            📍 {listing.location}
+            📍 {locationStr}
           </Text>
         </View>
 

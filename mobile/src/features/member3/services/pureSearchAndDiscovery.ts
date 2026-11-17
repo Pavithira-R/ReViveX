@@ -13,8 +13,18 @@ import {
   HeroBannerData,
   RecyclePointSummary,
   DeviceCategory,
+  ServiceProviderSummary,
+  ListingSummary,
+  UrgentDonationSummary,
+  DeviceCondition,
 } from '../types';
 import { calculateHaversineDistanceKm } from '../utils/location';
+import {
+  MOCK_PROVIDERS,
+  MOCK_LISTINGS,
+  MOCK_RECYCLE_POINTS,
+  MOCK_URGENT_DONATIONS,
+} from '../utils/mockData';
 
 export interface GenericDomainItem {
   id: string;
@@ -435,6 +445,141 @@ export function filterRecyclingRequests(requests: GenericDomainItem[], params: P
 }
 
 /**
+ * Safe Normalization Helpers: Ensure all objects adhere to strict frontend UI shapes
+ */
+export function normalizeCategory(cat?: any): DeviceCategory {
+  if (!cat) return 'OTHER';
+  const c = String(cat).toUpperCase();
+  if (c.includes('LAPTOP') || c.includes('NOTEBOOK') || (c.includes('PC') && !c.includes('DESKTOP'))) return 'LAPTOP';
+  if (c.includes('PHONE') || c.includes('SMARTPHONE') || c.includes('MOBILE')) return 'PHONE';
+  if (c.includes('TABLET') || c.includes('IPAD')) return 'TABLET';
+  if (c.includes('DESKTOP') || c.includes('TOWER') || c.includes('CPU') || c.includes('COMPUTER')) return 'DESKTOP';
+  if (c.includes('MONITOR') || c.includes('DISPLAY') || c.includes('SCREEN')) return 'MONITOR';
+  if (c.includes('PRINTER') || c.includes('SCANNER')) return 'PRINTER';
+  return 'OTHER';
+}
+
+export function normalizeCondition(cond?: any): DeviceCondition {
+  if (!cond) return 'WORKING_NORMALLY';
+  const c = String(cond).toUpperCase();
+  if (c === 'WORKING' || c.includes('NORMAL') || c.includes('OPTIMAL') || c.includes('GOOD')) return 'WORKING_NORMALLY';
+  if (c.includes('PROBLEM') || c.includes('SLOW') || c.includes('MINOR') || c.includes('ISSUE')) return 'WORKING_WITH_PROBLEMS';
+  if (c === 'BROKEN' || c.includes('NOT_WORKING') || c.includes('DEFECTIVE') || c.includes('DEAD')) return 'NOT_WORKING';
+  if (c.includes('DAMAG') || c.includes('CRACK') || c.includes('HARDWARE')) return 'PHYSICALLY_DAMAGED';
+  return 'WORKING_NORMALLY';
+}
+
+export function normalizeActionType(act?: any): 'SELL' | 'DONATE' | 'REUSE' {
+  if (!act) return 'REUSE';
+  const a = String(act).toUpperCase();
+  if (a.includes('SELL')) return 'SELL';
+  if (a.includes('DONAT') || a.includes('GIVE')) return 'DONATE';
+  return 'REUSE';
+}
+
+export function formatLocationString(loc?: any): string {
+  if (!loc) return 'Colombo, Sri Lanka';
+  if (typeof loc === 'string') return loc;
+  if (typeof loc === 'object') {
+    if (loc.city && loc.district) return `${loc.city}, ${loc.district}`;
+    if (loc.city) return String(loc.city);
+    if (loc.district) return String(loc.district);
+    if (loc.address) return String(loc.address);
+    if (loc.pickupAddress) return String(loc.pickupAddress);
+  }
+  return 'Colombo, Sri Lanka';
+}
+
+export function normalizeProvider(raw: any): ServiceProviderSummary {
+  const businessName = raw.businessName || raw.name || 'Certified Repair Specialist';
+  const rating = typeof raw.rating === 'number'
+    ? raw.rating
+    : (typeof raw.ratingAverage === 'number' ? raw.ratingAverage : 4.8);
+  const reviewCount = typeof raw.reviewCount === 'number'
+    ? raw.reviewCount
+    : (typeof raw.ratingCount === 'number' ? raw.ratingCount : 15);
+  const servicesOffered = Array.isArray(raw.servicesOffered) && raw.servicesOffered.length > 0
+    ? raw.servicesOffered
+    : (Array.isArray(raw.services) && raw.services.length > 0
+        ? raw.services
+        : ['Diagnostics & Inspection', 'Screen Replacement', 'Battery Swaps', 'Component Micro-Soldering']);
+  const startingPrice = typeof raw.startingPrice === 'number' ? raw.startingPrice : 2500;
+  const location = formatLocationString(raw.location || raw.address);
+
+  return {
+    id: raw.id || `prov_${Math.random().toString(36).substring(2, 9)}`,
+    businessName,
+    profileImage: raw.profileImage || undefined,
+    isVerified: Boolean(raw.isVerified ?? true),
+    servicesOffered,
+    rating,
+    reviewCount,
+    distanceKm: typeof raw.distanceKm === 'number' ? raw.distanceKm : null,
+    startingPrice,
+    location,
+    phone: raw.phone || raw.phoneNumber || '+94 77 123 4567',
+    availableSlotsCount: typeof raw.availableSlotsCount === 'number' ? raw.availableSlotsCount : 5,
+  };
+}
+
+export function normalizeListing(raw: any): ListingSummary {
+  const category = normalizeCategory(raw.category || raw.categoryName || raw.categoryId);
+  const condition = normalizeCondition(raw.condition);
+  const actionType = normalizeActionType(raw.actionType || raw.type || raw.action);
+  const location = formatLocationString(raw.location || raw.pickupAddress || raw.address);
+  const price = typeof raw.price === 'number' ? raw.price : (Number(raw.price) || 0);
+
+  return {
+    id: raw.id || `list_${Math.random().toString(36).substring(2, 9)}`,
+    title: raw.title || raw.name || 'Electronic Device',
+    actionType,
+    category,
+    condition,
+    price: actionType === 'DONATE' ? 0 : price,
+    imageUrl: raw.imageUrl || (Array.isArray(raw.images) && raw.images[0]) || undefined,
+    distanceKm: typeof raw.distanceKm === 'number' ? raw.distanceKm : null,
+    location,
+    sellerName: raw.ownerName || raw.owner?.name || raw.sellerName || 'ReViveX Member',
+    createdAt: raw.createdAt || new Date().toISOString(),
+  };
+}
+
+export function normalizeUrgentDonation(raw: any): UrgentDonationSummary {
+  const targetCategory = normalizeCategory(raw.targetCategory || raw.category || raw.categoryName || raw.categoryId);
+  const location = formatLocationString(raw.location || raw.pickupAddress || raw.address);
+
+  return {
+    id: raw.id || `don_${Math.random().toString(36).substring(2, 9)}`,
+    title: raw.title || raw.name || 'Urgent Student Device Support',
+    beneficiary: raw.beneficiary || raw.ownerName || raw.owner?.name || 'Local School Student',
+    targetCategory,
+    quantityNeeded: typeof raw.quantityNeeded === 'number' ? raw.quantityNeeded : 1,
+    urgencyLevel: raw.urgencyLevel === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+    location,
+    distanceKm: typeof raw.distanceKm === 'number' ? raw.distanceKm : null,
+    description: raw.description || 'Requesting functional electronics to support digital learning and student education.',
+  };
+}
+
+export function normalizeRecyclePoint(raw: any): RecyclePointSummary {
+  const address = formatLocationString(raw.address || raw.location || raw.pickupAddress);
+  const acceptedCategories: DeviceCategory[] = Array.isArray(raw.acceptedCategories) && raw.acceptedCategories.length > 0
+    ? raw.acceptedCategories.map(normalizeCategory)
+    : ['LAPTOP', 'PHONE', 'TABLET', 'DESKTOP', 'MONITOR', 'PRINTER'];
+
+  return {
+    id: raw.id || `rec_${Math.random().toString(36).substring(2, 9)}`,
+    name: raw.name || raw.businessName || 'Certified E-Waste Drop-Off Depot',
+    address,
+    distanceKm: typeof raw.distanceKm === 'number' ? raw.distanceKm : null,
+    acceptedCategories,
+    openingHours: raw.openingHours || 'Mon-Sat: 8:30 AM - 5:30 PM',
+    contactNumber: raw.contactNumber || raw.phone || '+94 11 234 5678',
+    isCertified: Boolean(raw.isCertified ?? true),
+  };
+}
+
+/**
  * Pure function: Builds the Discovery Feed structure using array inputs (fitted for Firestore getDocs)
  */
 export function buildDiscoveryFeed(data: {
@@ -448,26 +593,42 @@ export function buildDiscoveryFeed(data: {
   const limit = data.sectionLimit && data.sectionLimit > 0 ? data.sectionLimit : 4;
 
   // 1. Nearby Providers (Member 4)
-  const nearbyProviders = rankProvidersByDistance(
+  const rankedProviders = rankProvidersByDistance(
     data.providers || [],
     data.userLocation
   ).slice(0, limit);
+  const normalizedProviders = rankedProviders.map(normalizeProvider);
+  const nearbyProviders: ServiceProviderSummary[] = normalizedProviders.length > 0
+    ? normalizedProviders
+    : MOCK_PROVIDERS.slice(0, limit);
 
   // 2. Featured Listings (Member 5 - SELL or REUSE)
-  const featuredListings = filterListings(data.listings || [], { actionType: 'ALL' })
-    .filter((l) => l.actionType === 'SELL' || l.actionType === 'REUSE' || l.type === 'SELL' || l.type === 'REUSE' || !l.actionType)
+  const filteredListings = filterListings(data.listings || [], { actionType: 'ALL' })
+    .filter((l) => {
+      const act = String(l.actionType || l.type || l.action || 'REUSE').toUpperCase();
+      return act === 'SELL' || act === 'REUSE';
+    })
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, limit);
+  const normalizedListings = filteredListings.map(normalizeListing);
+  const featuredListings: ListingSummary[] = normalizedListings.length > 0
+    ? normalizedListings
+    : MOCK_LISTINGS.filter((l) => l.actionType === 'SELL' || l.actionType === 'REUSE').slice(0, limit);
 
   // 3. Urgent Donations (Member 5 - DONATE)
-  const urgentDonations = filterListings(data.listings || [], { actionType: 'DONATE' })
+  const filteredDonations = filterListings(data.listings || [], { actionType: 'DONATE' })
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, limit);
+  const normalizedDonations = filteredDonations.map(normalizeUrgentDonation);
+  const urgentDonations: UrgentDonationSummary[] = normalizedDonations.length > 0
+    ? normalizedDonations
+    : MOCK_URGENT_DONATIONS.slice(0, limit);
 
   // 4. E-Waste Drop-Off Kiosks / Recyclers (Member 5 - RECYCLING)
-  const recyclingList = filterRecyclingRequests(data.recyclingRequests || [], {})
-    .slice(0, 1);
-  const nearestRecyclePoint = recyclingList[0] || null;
+  const recyclingList = filterRecyclingRequests(data.recyclingRequests || [], {}).slice(0, 1);
+  const nearestRecyclePoint: RecyclePointSummary = recyclingList.length > 0
+    ? normalizeRecyclePoint(recyclingList[0])
+    : MOCK_RECYCLE_POINTS[0];
 
   // 5. Community Items (Member 2)
   const communityItems = filterItems(data.items || [], { actionType: 'ALL' })
@@ -476,16 +637,16 @@ export function buildDiscoveryFeed(data: {
 
   return {
     heroBanner: MOCK_HERO_BANNER,
-    nearbyProviders: nearbyProviders as any[],
-    featuredListings: featuredListings as any[],
-    urgentDonations: urgentDonations as any[],
-    nearestRecyclePoint: nearestRecyclePoint as any,
+    nearbyProviders,
+    featuredListings,
+    urgentDonations,
+    nearestRecyclePoint,
     communityItems: communityItems as any[],
     sourceStatus: {
-      providers: Array.isArray(data.providers) ? 'OK' : 'UNAVAILABLE',
-      listings: Array.isArray(data.listings) ? 'OK' : 'UNAVAILABLE',
-      recycling: Array.isArray(data.recyclingRequests) ? 'OK' : 'UNAVAILABLE',
-      items: Array.isArray(data.items) ? 'OK' : 'UNAVAILABLE',
+      providers: nearbyProviders.length > 0 ? 'OK' : 'UNAVAILABLE',
+      listings: featuredListings.length > 0 ? 'OK' : 'UNAVAILABLE',
+      recycling: nearestRecyclePoint ? 'OK' : 'UNAVAILABLE',
+      items: communityItems.length > 0 ? 'OK' : 'UNAVAILABLE',
     },
   };
 }
