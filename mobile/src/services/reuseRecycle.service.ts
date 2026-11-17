@@ -1,6 +1,7 @@
 import {
   addDoc,
   getDocs,
+  getDoc,
   collection,
   doc,
   query,
@@ -362,23 +363,45 @@ const mapRecyclingRequest = (
 
 export const listMyRecyclingRequests = async (
   userId: string,
+  userRole?: string,
 ): Promise<RecyclingRequest[]> =>
   fsCall(async () => {
     requireUser(userId);
 
-    const [owned, assigned] = await Promise.all([
+    const queries = [
       getDocs(
         query(recyclingRef, where('ownerId', '==', userId)),
       ),
       getDocs(
         query(recyclingRef, where('recyclerId', '==', userId)),
       ),
-    ]);
+    ];
+
+    // Recyclers must see all incoming available pickup requests (status: REQUESTED)
+    let isRecycler = userRole === 'RECYCLER';
+    if (!userRole) {
+      try {
+        const uSnap = await getDoc(doc(db, 'users', userId));
+        isRecycler = uSnap.exists() && (uSnap.data()?.role === 'RECYCLER' || uSnap.data()?.role === 'ADMIN');
+      } catch {
+        // ignore
+      }
+    }
+
+    if (isRecycler) {
+      queries.push(
+        getDocs(query(recyclingRef, where('status', '==', 'REQUESTED'))),
+      );
+    }
+
+    const results = await Promise.all(queries);
 
     const unique = new Map<string, RecyclingRequest>();
 
-    [...owned.docs, ...assigned.docs].forEach((d) => {
-      unique.set(d.id, mapRecyclingRequest(d.id, d.data()));
+    results.forEach((snap) => {
+      snap.docs.forEach((d) => {
+        unique.set(d.id, mapRecyclingRequest(d.id, d.data()));
+      });
     });
 
     return [...unique.values()].sort((a, b) =>
