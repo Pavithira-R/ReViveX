@@ -17,22 +17,8 @@ export class MobileBookingService {
   }
 
   async getBookingById(id: string): Promise<ApiResponse<Booking>> {
-    const booking: Booking = {
-      id,
-      repairRequestId: '',
-      customerId: '',
-      providerId: '',
-      appointmentDate: new Date().toISOString(),
-      status: BookingStatus.CONFIRMED,
-      confirmationCode: 'REV-BK-CONFIRMED',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    return {
-      success: true,
-      statusCode: 200,
-      data: booking,
-    };
+    // DATA INTEGRITY (Step 4.5 & 4.6): Query the actual persisted booking from Firestore
+    return repairService.getBooking(id);
   }
 }
 
