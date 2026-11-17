@@ -5,6 +5,7 @@
 
 import { SearchFilters, UnifiedSearchResults } from '../types';
 import {
+  fetchFirestoreItems,
   fetchFirestoreProviders,
   fetchFirestoreListings,
   fetchFirestoreRecyclingRequests,
@@ -16,50 +17,35 @@ import {
   normalizeListing,
   normalizeRecyclePoint,
 } from './pureSearchAndDiscovery';
-import {
-  MOCK_PROVIDERS,
-  MOCK_LISTINGS,
-  MOCK_RECYCLE_POINTS,
-} from '../utils/mockData';
 
 export async function searchUnified(
   filters: SearchFilters
 ): Promise<{ data: UnifiedSearchResults; isOfflineFallback: boolean }> {
-  let isOfflineFallback = false;
+  let itemsRaw: any[] = [];
   let providersRaw: any[] = [];
   let listingsRaw: any[] = [];
   let recycleRaw: any[] = [];
 
   try {
-    const [pRes, lRes, rRes] = await Promise.allSettled([
+    const [iRes, pRes, lRes, rRes] = await Promise.allSettled([
+      fetchFirestoreItems(),
       fetchFirestoreProviders(),
       fetchFirestoreListings(),
       fetchFirestoreRecyclingRequests(),
     ]);
 
+    itemsRaw = iRes.status === 'fulfilled' ? iRes.value : [];
     providersRaw = pRes.status === 'fulfilled' ? pRes.value : [];
     listingsRaw = lRes.status === 'fulfilled' ? lRes.value : [];
     recycleRaw = rRes.status === 'fulfilled' ? rRes.value : [];
   } catch {
+    itemsRaw = [];
     providersRaw = [];
     listingsRaw = [];
     recycleRaw = [];
   }
 
-  // Gracefully fallback to curated items if Firestore collections are empty or unreachable
-  if (providersRaw.length === 0) {
-    providersRaw = MOCK_PROVIDERS as any[];
-    isOfflineFallback = true;
-  }
-  if (listingsRaw.length === 0) {
-    listingsRaw = MOCK_LISTINGS as any[];
-    isOfflineFallback = true;
-  }
-  if (recycleRaw.length === 0) {
-    recycleRaw = MOCK_RECYCLE_POINTS as any[];
-    isOfflineFallback = true;
-  }
-
+  let filteredItems = filterItems(itemsRaw, filters);
   let filteredProviders = rankProvidersByDistance(providersRaw, null, filters);
   let filteredListings = filterListings(listingsRaw, filters);
   let filteredRecycle = filterRecyclingRequests(recycleRaw, filters);
@@ -69,7 +55,7 @@ export async function searchUnified(
     if (filters.actionType !== 'RECYCLE') filteredRecycle = [];
   }
 
-  const totalCount = filteredProviders.length + filteredListings.length + filteredRecycle.length;
+  const totalCount = filteredItems.length + filteredProviders.length + filteredListings.length + filteredRecycle.length;
   const page = filters.page || 1;
   const limit = filters.limit || 10;
   const startIndex = (page - 1) * limit;
@@ -95,7 +81,7 @@ export async function searchUnified(
       recyclePoints: slicedRecycle,
       appliedFilters: filters,
     },
-    isOfflineFallback,
+    isOfflineFallback: false,
   };
 }
 

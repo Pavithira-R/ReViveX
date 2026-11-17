@@ -19,12 +19,6 @@ import {
   DeviceCondition,
 } from '../types';
 import { calculateHaversineDistanceKm } from '../utils/location';
-import {
-  MOCK_PROVIDERS,
-  MOCK_LISTINGS,
-  MOCK_RECYCLE_POINTS,
-  MOCK_URGENT_DONATIONS,
-} from '../utils/mockData';
 
 export interface GenericDomainItem {
   id: string;
@@ -597,10 +591,7 @@ export function buildDiscoveryFeed(data: {
     data.providers || [],
     data.userLocation
   ).slice(0, limit);
-  const normalizedProviders = rankedProviders.map(normalizeProvider);
-  const nearbyProviders: ServiceProviderSummary[] = normalizedProviders.length > 0
-    ? normalizedProviders
-    : MOCK_PROVIDERS.slice(0, limit);
+  const nearbyProviders: ServiceProviderSummary[] = rankedProviders.map(normalizeProvider);
 
   // 2. Featured Listings (Member 5 - SELL or REUSE)
   const filteredListings = filterListings(data.listings || [], { actionType: 'ALL' })
@@ -610,25 +601,19 @@ export function buildDiscoveryFeed(data: {
     })
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, limit);
-  const normalizedListings = filteredListings.map(normalizeListing);
-  const featuredListings: ListingSummary[] = normalizedListings.length > 0
-    ? normalizedListings
-    : MOCK_LISTINGS.filter((l) => l.actionType === 'SELL' || l.actionType === 'REUSE').slice(0, limit);
+  const featuredListings: ListingSummary[] = filteredListings.map(normalizeListing);
 
   // 3. Urgent Donations (Member 5 - DONATE)
   const filteredDonations = filterListings(data.listings || [], { actionType: 'DONATE' })
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, limit);
-  const normalizedDonations = filteredDonations.map(normalizeUrgentDonation);
-  const urgentDonations: UrgentDonationSummary[] = normalizedDonations.length > 0
-    ? normalizedDonations
-    : MOCK_URGENT_DONATIONS.slice(0, limit);
+  const urgentDonations: UrgentDonationSummary[] = filteredDonations.map(normalizeUrgentDonation);
 
   // 4. E-Waste Drop-Off Kiosks / Recyclers (Member 5 - RECYCLING)
   const recyclingList = filterRecyclingRequests(data.recyclingRequests || [], {}).slice(0, 1);
-  const nearestRecyclePoint: RecyclePointSummary = recyclingList.length > 0
+  const nearestRecyclePoint: RecyclePointSummary | null = recyclingList.length > 0
     ? normalizeRecyclePoint(recyclingList[0])
-    : MOCK_RECYCLE_POINTS[0];
+    : null;
 
   // 5. Community Items (Member 2)
   const communityItems = filterItems(data.items || [], { actionType: 'ALL' })
@@ -640,7 +625,7 @@ export function buildDiscoveryFeed(data: {
     nearbyProviders,
     featuredListings,
     urgentDonations,
-    nearestRecyclePoint,
+    nearestRecyclePoint: nearestRecyclePoint as any,
     communityItems: communityItems as any[],
     sourceStatus: {
       providers: nearbyProviders.length > 0 ? 'OK' : 'UNAVAILABLE',

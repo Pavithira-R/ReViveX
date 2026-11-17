@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, BackHandler, StyleSheet, View } from 'react-native';
 import { TabBar, TabKey } from '../components';
 import { COLORS } from '../constants';
 import { useAuth, useProblemReport } from '../context';
@@ -23,7 +23,7 @@ import {
   WriteReviewScreen,
 } from '../screens';
 import { Member3Navigator } from '../features/member3';
-import { Member4Navigator, Member4Route, RepairReviewTarget } from '../features/member4';
+import { Member4Navigator, Member4Route } from '../features/member4';
 import { chatService } from '../services';
 import { Conversation } from '../types';
 
